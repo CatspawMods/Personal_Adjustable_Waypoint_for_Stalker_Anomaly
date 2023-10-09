@@ -997,6 +997,29 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>By default, Cartography Mode shows an icon (white map with a magnifying glass) to indicate smart terrain spots. If you don't need or want to see these for any reason, you can turn them off with this option.</text>
 	</string>
 
+<!-- Added in 1.11 -->
+
+	<string id="st_paw_meters_abbr">
+		<text>m</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_wp">
+		<text>Show distance on waypoint HUD marker</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_wp_desc">
+		<text>Choose when the waypoint HUD marker should show an indicator for distance: never, always, only when Cartography Mode is active, or only when it is not (Normal PDA view). Has no effect when the HUD marker is not enabled.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_pins">
+		<text>Show distance on pin HUD markers</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_pins_desc">
+		<text>Choose when markers for pins on the HUD should show an indicator for distance: never, always, only when Cartography Mode is active, or only when it is not (Normal PDA view). Has no effect without pins set visible on the HUD.</text>
+	</string>
+
+
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>Clear task on waypoint removal</text>

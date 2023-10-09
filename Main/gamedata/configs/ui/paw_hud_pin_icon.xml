@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <w>
-	<marker x="0" y="0" width="20" height="20" stretch="1" alignment="c" location_level="5" />
+	<marker x="0" y="0" width="20" height="20" stretch="1" alignment="c" location_level="5">
+		<distance_sh x="0" y="0" width="1" height="1" font="letterica16" stretch="1" alignment="c" r="0" g="0" b="0" >
+			<distance x="-1" y="-1" width="0" height="0" font="letterica16" stretch="1" alignment="c" r="255" g="255" b="255" />
+		</distance_sh>
+	</marker>
 </w>

@@ -4,7 +4,7 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.10.1
+    Version: 1.11b1
 	Updated: 20231007
 
     You probably shouldn't mess with this, even if you're familiar with 
@@ -13,9 +13,9 @@
     files in configs\scripts\paw, and other sundry things.
 -- ===================================================================--]]
 
-debuglogs                 		= false
+debuglogs                 		= true
 verbose                   		= true
-script_version 					= "1.10.1"
+script_version 					= "1.11b1"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -252,6 +252,22 @@ function on_mcm_load()
 					{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
 					{id = "enabled", type = "check", val = 1, def = true},
 					{id = "wp_hud_icon_enabled", type = "check", val = 1, def = true},
+					{id = "show_dist_wp", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+					{id = "show_dist_pins", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
 					{id = "pingsound", type = "check", val = 1, def = true},
 					{id = "s_device_pda_1", type = "check", val = 1, def = true},
 					{id = "s_device_pda_2", type = "check", val = 1, def = true},
