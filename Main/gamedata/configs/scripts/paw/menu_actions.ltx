@@ -1,0 +1,164 @@
+; This file allows you to customize the context menu options available
+; when right-clicking on mapspots when PAW is active.
+; 
+; enable: setting this to false will hard-killswitch an option to off
+; order	: not currently implemented
+; mode 	: controls when the option is shown, see below
+; text	: translation string to display in the menu option
+; act 	: the action executed by the option - currently only pn_add
+;	 		has any use beyond the existing option for that action
+; icon 	: forces use of this icon - only for action pn_add
+
+;  Modes: 
+;     -1: only when debug mode is enabled
+;      0: disabled completely
+;      1: enabled in normal view only
+;      2: enabled in cartography mode only
+;      4: enabled in both
+
+; ==================================================
+[my_stash_icon]
+; This is an example of how you can add a 
+; new menu option that drops a pin with a
+; specific icon. It is disabled by default.
+;
+; To make your own:
+; 1. Make a copy of everything between the ==
+;    lines, including the [my_stash_icon]
+;    section name at the top.
+; 2. Rename the section to something unique
+;    (different from any other in this file).
+; 3. Change enable to true.
+; 4. Choose any valid icon from icons.ltx and
+;    replace stash_green with that.
+; 5. Change the mode number, if desired.
+; 6. Edit the text as desired - this can be 
+; 	 either a string literal as in the example,
+; 	 or the ID of a valid translation string as 
+; 	 in most of the default functions.
+mode 		= 4
+enable 		= false
+text 		= "Place stash icon"
+act 		= pn_add
+icon 		= stash_green
+; Your new quick pin option should now appear 
+; in the context menu when you right-click on
+; any mapspot. You can make more than one as 
+; long as each has a unique section name.
+; ==================================================
+
+[mping]
+; Ping the map
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_mping
+act 		= mping
+
+[wp_set]
+; Set a new waypoint here when one does not exist yet
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_wp_set
+act         = wp_set
+
+[waypoint_rename]
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_waypoint_rename
+act 		= waypoint_rename
+field 		= name
+
+[waypoint_redesc]
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_waypoint_redesc
+act 		= waypoint_redesc
+field 		= desc
+
+[wp_mov]
+; Move an existing waypoint to here
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_wp_mov
+act         = wp_mov
+
+[wp_del]
+; Remove the existing waypoint
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_wp_del
+act         = wp_del
+
+[pn_add]
+; Add a new map pin
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_pn_add
+act         = pn_add
+
+[pn_del]
+; Delete a map pin
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_pn_del
+act         = pn_del
+
+[pn_ren]
+; Rename a map pin
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_pn_ren
+act         = pn_ren
+
+[hud_vis_on]
+; Shows a pin on the HUD
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_hud_vis_on
+act         = hud_vis_on
+
+[hud_vis_off]
+; Hides a pin from the HUD
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_hud_vis_off
+act         = hud_vis_off
+
+[show_all_pins]
+; Show pins if hidden
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_show_all_pins
+act         = show_pins
+
+[hide_all_pins]
+; Hides pins if shown
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_hide_all_pins
+act         = hide_pins
+
+[pn_clr]
+; Clear all map pins - no confirmation!
+; Disabled by default
+mode        = 0
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_pn_clr
+act         = pn_clr
+
+;[pn_spt]
+; Clear all map pins at this spot - no confirmation
+; Not currently working, don't enable
+;order 		= 7
+;mode        = 2
+;enable      = false
+;text        = ui_mcm_pawsys_pawmenu_pn_spt
+;act         = pn_spt
+
+[cm_dbg]
+; Debug menu
+mode        = -1
+enable      = false
+text        = ui_mcm_pawsys_pawmenu_cm_dbg
+act         = cm_dbg
+

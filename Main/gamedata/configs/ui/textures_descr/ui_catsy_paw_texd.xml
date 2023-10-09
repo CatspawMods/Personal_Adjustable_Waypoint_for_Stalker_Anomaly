@@ -1,0 +1,161 @@
+<!--
+**  Personal Adjustable Waypoint
+**  Author: Catspaw (CatspawMods @ ModDB)
+	Contents: Texture definitions. You probably shouldn't 
+	mess with this unless you know what you're doing.
+
+-->
+<w>
+	<file name ="ui\paw\ui_icons_paw">
+
+		<texture id = "ui_icons_paw_pin_stalker32" x="0" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_redround32" x="32" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_redmodern32" x="64" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_redpush32" x="96" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_yelpush32" x="128" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_whtsimple32" x="160" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_skull32" x="192" y="0" width="32" height="32" />
+
+		<texture id = "ui_icons_paw_pin_stalker64" x="0" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_yelcircle256" x="480" y="0" width="256" height="256" />
+
+		<texture id = "ui_icons_paw_yelcircle256" x="480" y="0" width="256" height="256" />
+
+		<texture id = "ui_icons_paw_reticule256" x="736" y="0" width="256" height="256" />
+
+		<texture id = "ui_icons_paw_reticule128" x="736" y="256" width="128" height="128" />
+
+		<texture id = "ui_icons_paw_magnifier32" x="64" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_loot64" x="128" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_warn64" x="192" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_ak64" x="256" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_signal64" x="320" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_death64" x="384" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_ammo64" x="448" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_rad64" x="512" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_bio64" x="576" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_magn64" x="640" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_pin_bwhr_info64" x="704" y="32" width="64" height="64" />
+		
+		<texture id = "ui_icons_paw_ping_spot" x="768" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_ping_spot_alpha" x="832" y="32" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_hud_waypoint" x="0" y="96" width="128" height="128" />
+
+		<texture id = "ui_paw_menuslide_themes" x="0" y="750" width="274" height="274" />
+		<texture id = "ui_paw_menuslide_main" x="300" y="720" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_pins" x="300" y="770" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_widget" x="300" y="820" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_controls" x="300" y="870" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_badges" x="300" y="920" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_menus" x="300" y="970" width="512" height="50" />
+
+    	<texture id = "ui_paw_mapsquarebg" x="194" y="98" width="70" height="78"/>
+    	<texture id = "ui_paw_mapsquareframe" x="265" y="98" width="70" height="78"/>
+
+	</file>
+
+	<file name ="ui\ui_icon_equipment">
+		<texture id = "ui_icons_paw_badge_army" x="0" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_bandit" x="50" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_csky" x="100" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_dolg" x="150" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_ecolog" x="200" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_freedom" x="250" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_killer" x="300" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_monolith" x="350" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_stalker" x="400" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_isg" x="450" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_greh" x="500" y="50" width="50" height="50" />
+		<texture id = "ui_icons_paw_badge_renegade" x="550" y="50" width="50" height="50" />
+	</file>
+
+	<file name ="ui\paw\ui_icons_paw_body_marks">
+		<texture id = "ui_icons_paw_badge_hr_stalker" 	x="0" y="384" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_bandit"	x="64" y="384" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_dolg" 		x="128" y="384" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_freedom" 	x="192" y="384" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_monolith"	x="256" y="384" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_isg" 		x="320" y="384" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_badge_hr_army" 		x="0" y="448" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_ecolog" 	x="64" y="448" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_csky" 		x="128" y="448" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_killer" 	x="192" y="448" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_renegade" 	x="256" y="448" width="64" height="64" />
+		<texture id = "ui_icons_paw_badge_hr_greh" 		x="320" y="448" width="64" height="64" />
+	
+		<texture id = "ui_icons_paw_badge_uhr_stalker" 	x="0" y="0" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_bandit" 	x="128" y="0" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_dolg" 	x="256" y="0" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_freedom" 	x="384" y="0" width="128" height="128" />
+
+		<texture id = "ui_icons_paw_badge_uhr_army" 	x="0" y="128" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_ecolog" 	x="128" y="128" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_csky" 	x="256" y="128" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_killer"	x="384" y="128" width="128" height="128" />
+
+		<texture id = "ui_icons_paw_badge_uhr_monolith" x="0" y="256" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_isg" 		x="128" y="256" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_renegade" x="256" y="256" width="128" height="128" />
+		<texture id = "ui_icons_paw_badge_uhr_greh" 	x="384" y="256" width="128" height="128" />
+
+		<texture id = "ui_icons_paw_blue_circle"		x="0" y="512" width="64" height="64" />
+		<texture id = "ui_icons_paw_crosshair_white" 	x="64" y="512" width="64" height="64" />
+		<texture id = "ui_icons_paw_crosshair_red" 		x="128" y="512" width="64" height="64" />
+		<texture id = "ui_icons_paw_crosshair_green" 	x="192" y="512" width="64" height="64" />
+
+		<texture id="ui_mapspot_skull_small" x="256" y="512" width="9" height="10" />
+		<texture id="ui_mapspot_skull_large" x="266" y="512" width="11" height="12" />
+		<texture id="ui_AlphaLion_XCorpseMarker-small" x="278" y="512" width="7" height="7" />
+		<texture id="ui_AlphaLion_XCorpseMarker-large" x="286" y="512" width="9" height="9" />
+	</file>
+
+    <file name="ui\ui_common">
+    	<texture id="ui_paw_wnd_title_1" x="3" y="87" width="113" height="25" />
+   	</file>
+
+    <file name="ui\ui_actor_hint_wnd">
+    	<texture id="paw_vanilla_stash_icon_green" x="51" y="562" width="27" height="27" />
+	    <texture id="paw_vanilla_stash_icon_white" x="932" y="932" width="27" height="27" />
+	    <texture id="paw_vanilla_stash_icon_purple" x="962" y="932" width="27" height="27" />
+	    <texture id="paw_vanilla_stash_icon_red"  x="932" y="962" width="27" height="27" />
+   	</file>
+
+	<file name ="ui\paw\paw_hud_indicators">
+		<texture id = "ui_paw_hud_indicator_classic" x="0" y="0" width="138" height="75" />
+		<texture id = "ui_paw_hud_indicator_vertleft" x="0" y="76" width="100" height="154" />
+		<texture id = "ui_paw_hud_indicator_vertright" x="0" y="232" width="100" height="154" />
+		<texture id = "ui_paw_hud_indicator_gamma_left" x="100" y="75" width="136" height="150" />
+		<texture id = "ui_paw_hud_indicator_gamma_right" x="100" y="228" width="136" height="150" />
+		<texture id = "ui_paw_hud_indicator_minimal_h" x="153" y="0" width="94" height="52" />
+		<texture id = "ui_paw_hud_indicator_minimal_v" x="248" y="0" width="92" height="112" />
+		<texture id = "ui_paw_hud_indicator_minicom" x="303" y="46" width="38" height="38" />
+
+
+		<texture id = "ui_paw_menuslide_theme_classic" x="366" y="0" width="146" height="260" />
+		<texture id = "ui_paw_menuslide_theme_gamma" x="366" y="260" width="146" height="191" />
+		<texture id = "ui_paw_menuslide_theme_minimal" x="219" y="417" width="146" height="95" />
+
+	</file>
+
+</w>
+

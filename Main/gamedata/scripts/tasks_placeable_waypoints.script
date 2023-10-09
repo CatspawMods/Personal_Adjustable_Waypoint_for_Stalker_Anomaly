@@ -1,0 +1,2898 @@
+-- ======================================================================
+--[[    Personal Adjustable Waypoint & 
+        Pins Recording Intel, Notes, or Terrain
+        Yes, I see what I did there, and so do you.
+-- ======================================================================
+    Author: Catspaw
+    I post gameplay video on my Youtube channel, Catspaw Adventures: 
+    https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
+
+    Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
+    Version: 1.10.1
+    Updated: 20231007
+
+    You may alter any part of this mod and do whatever you like with it, 
+    just give credit where due.
+
+    Right-click on any visible map point to set/move/remove a waypoint
+    or map pins. Map pins can be named, renamed, removed, and given 
+    custom icons. The waypoint is tracked like a task. Ctrl-T (default) 
+    toggles the current or most recent waypoint on/off.
+
+    To see map points, hold Slash (default, configurable in MCM) to 
+    enter Cartography Mode. In this mode, all terrain smart points are 
+    visible (along with some things that shouldn't be, I'm working on 
+    that). Both the hold and the terrain display are options in MCM.
+
+    While in Cartography Mode, you can also Ping the map from the context 
+    menu, creating a temporary grid of visible mapspots that you can use 
+    for more precise placement.
+
+    Press Apostrophe (default) to drop a Quick Pin at the player's 
+    current location.
+
+    Credits: HarukaSai for the exec() function, RavenAscendant for the 
+    tip about using script zones for arbitrary mapspots and various other
+    bits of help.
+-- ======================================================================
+--  SHORTCUTS, FLAGS, AND SYSTEM STUFF
+    (Most of which you probably shouldn't muck with)
+-- ===================================================================--]]
+script_version          = "1.10.1"
+release_date            = 20231007
+local scriptname        = "tasks_placeable_waypoints"
+local logprefix         = "<PAW> "
+local debuglogs         = false
+local verbose           = true
+-- Verbose being on won't do anything if debuglogs isn't also enabled,
+-- but it will ensure that if anyone has to turn on debug logging, 
+-- their logs will contain the maximum amount of info automatically.
+-- It's noisy and you can turn it off here if you have to.
+-- ======================================================================
+function dl(logtext,...)
+    -- Debug logging - to disable, set debuglogs to false
+    if logtext and debuglogs then 
+        printf (logprefix..logtext,...)
+    end
+end
+
+function vl(logtext,...)
+    -- Verbose logging - to disable, set either debuglogs or verbose to false
+    if logtext and debuglogs and verbose then 
+        dl("[V] "..logtext,...)
+    end
+end
+-- ======================================================================
+mcm_killswitch          = false
+-- Enabling the killswitch will hard-cutoff any attempt 
+-- to load values from MCM, in case that is causing issues.
+disable_mcm_updates     = false
+-- This flag will disable the immediate MCM updates that happen 
+-- when changing icons or sets in-game.
+paw_enabled             = true -- setting false will killswitch the entire addon
+local icoset_changed    = nil
+started                 = false
+waypoint_active         = false
+local welcome_msg_shown = false
+local ts                = game.translate_string
+local tm                = task_manager.get_task_manager()
+local psk               = utils_data.parse_string_keys
+local task_info         = tm.task_info
+-- ======================================================================
+mousewheel_override     = false
+--[[    If set to true, mousewheel_override will skip the autodetection of 
+        mousewheel support and force it to be on. This may have bad results
+        if your binaries don't actually support it.
+
+        Mousewheel support can also be forced on by setting the following
+        MCM config value (not exposed in the menu):
+        
+        pawsys/pawbinds/mwheel_override = true
+--]]
+right_click_override    = false
+-- Similarly with right_click_override, but for the on_map_right_click callback
+mwheel_enabled          = false -- managed at runtime
+mwheel_notify           = true
+mwheel_poll_interval    = 50
+mwheel_next_poll        = time_global()
+local mwheel_exe_ver    = 20230701
+local rclick_exe_ver    = 20230922
+mwheel_avail            = mousewheel_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= mwheel_exe_ver))
+right_click_avail       = right_click_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
+last_clicked_id         = nil
+-- ======================================================================
+local DIK_name              = ui_mcm and ui_mcm.dispaly_key or (function() return "" end)-- typo is in the mcm script
+local default_id            = 15797 -- WP defaults to Rookie Village if missing for any reason to avoid crash
+local mcm_update_throttle   = 3019 -- minimum time between MCM updates of icon/set data
+local next_mcm_update       = time_global()
+local wp_proxcheck_interval = 837 -- Time between checks for waypoint proximity
+local next_wp_proxcheck     = time_global()
+local wp_clear_dist         = 5
+local widget_hide_delay     = 5000
+local next_pin              = time_global()
+local pin_delay             = 1000 -- timeout to prevent dupe actions from registering
+local ping_lifetime         = 10000
+local ping_grid_size        = 10
+local ping_grid_radius      = 10
+local last_rep              = 0
+local last_stat             = 0
+--local rep_hit_amt           = -25
+local max_dynamic_faves     = 5 -- not yet implemented
+local current_active_set    = "pins"
+local active_theme          = "classicauto"
+local current_set_max       = 1
+local current_ico_max       = 1
+placed_waypoint             = nil
+last_waypoint               = nil
+-- ======================================================================
+local toggle_bind           = DIK_keys.DIK_T
+local toggle_mod            = 2
+local quickpin_bind         = DIK_keys.DIK_APOSTROPHE
+local quickpin_mod          = 0
+local cart_mode_hold        = DIK_keys.DIK_SLASH
+local cart_mode_mod         = 0
+local mcm_keybinds          = ui_mcm and ui_mcm.key_hold
+local cart_mode             = false
+cartography_must_hold       = false
+cart_shows_smarts           = true
+-- ======================================================================
+--wp_clear_task               = true -- if enabled, task will be cleared when marker is hidden
+enable_wp_proxcheck         = true
+show_pins                   = true
+--local precise_quick_pin     = true
+-- Setting precise_quick_pin to false reverts to the old "nearest smart"
+-- method of placing a Quick Pin. Not recommended.
+local custom_task_info      = false
+local icon_cycle_active     = false
+local set_cycle_active      = false
+widget_enabled              = true
+widget_active               = true
+hide_widget                 = true
+widget_use_custom_pos       = false
+widget_custom_pos           = {x=491,y=670}
+widget_last_used            = time_global()
+wp_hud_icon_enabled         = true
+-- ======================================================================
+--  STRINGS AND LTX DATA
+-- ======================================================================
+local cartmode              = "cartmode"
+local sep                   = "_"
+local snd_path              = "catspaw\\"
+local snd_ping              = snd_path.."paw_ping"
+local snd_cycle_blip        = snd_path.."paw_blip"
+local use_ping_snd          = true
+local use_ui_snd            = true
+local add_mapspot_functor   = scriptname..".func_add_mapspot"
+local ren_mapspot_functor   = scriptname..".func_ren_mapspot"
+local ren_wp_functor        = scriptname..".func_ren_waypoint"
+local task_id               = "task_placeable_waypoint"
+local pawmenu_path          = "ui_mcm_pawsys_pawmenu_"
+-- Don't change any of these icon definitions. If you want to 
+-- override PAW's pin icons with any of yours, use MCM or 
+-- see below for how to add your own, it's easy.
+current_body_icon           = nil
+body_icon_mode              = "off"
+patch_res                   = "badge"
+local custom_pin_icon       = false
+local default_mapspot       = "paw_pin_redpush32"
+local smart_terrain_icon    = "paw_pin_magnifier32"
+local icon_pingspot         = "paw_ping_alpha50"
+waypoint_mapspot            = "paw_task_default"
+map_pin_icon                = default_mapspot
+force_icon_override         = nil
+-- If force_icon_override is set to anything, PAW will try to use it 
+-- for pins instead of what it normally would.
+-- ======================================================================
+icons_ini           = ini_file_ex("scripts\\paw\\icons.ltx")
+icon_sets_ini       = ini_file_ex("scripts\\paw\\icon_sets.ltx")
+actions_ini         = ini_file_ex("scripts\\paw\\menu_actions.ltx")
+task_ini            = ini_file_ex("scripts\\paw\\task_config.ltx")
+icon_ltx            = icons_ini:collect_section("icons")
+iconset_ltx         = icon_sets_ini:get_sections(true)
+actions_ltx         = actions_ini:get_sections(true)
+task_cfg            = task_ini:collect_section("task_config")
+custom_name         = (task_cfg and task_cfg.name)
+custom_desc         = (task_cfg and task_cfg.desc)
+icons               = icon_ltx
+curr_menu_options   = {}
+icon_sets           = {}
+action_codes        = {}
+action              = {}
+texture_data        = {}
+icon_index          = {}
+set_index           = {}
+local script_zones  = {}
+local pings         = {}
+local pawdata = {
+    pins            = {},
+    dynamic_faves   = {},
+    curr_set_ind    = 1,
+    curr_ico_ind    = 1,
+    curr_set_name   = "faves",
+    curr_ico_name   = default_mapspot,
+}
+pins                = pawdata.pins
+dynamic_faves       = pawdata.dynamic_faves
+
+-- ======================================================================
+valid_clsids = {
+        [clsid.smart_terrain] = true,
+        [clsid.inventory_box_s] = true,
+        [clsid.online_offline_group] = true,
+        [clsid.online_offline_group_s] = true,
+        [112] = true,
+        [140] = true,
+        -- if you need to add a new clsid, it should 
+        -- be formatted like the example above for 140,
+        -- or by the clsid.global_name if you have it
+
+        -- just add them on new lines above this comment
+
+        -- At some point this will be moved into ltx
+    }
+-- ======================================================================
+pda_defs = {
+-- By default, all PDAs support waypointing
+    ["device_pda_1"] = {
+        show_w              = true,
+    },
+    ["device_pda_2"] = {
+        show_w              = true,
+    },
+    ["device_pda_3"] = {
+        show_w              = true,
+    },
+    ["device_pda_milspec"] = {
+        show_w              = true,
+    },
+--  If you use an addon with an unsupported PDA section, add it here
+--  ["device_pda_added_by_your_mod"] = {
+--      show_w              = false,
+--  },
+}
+
+managed_factions = {
+    -- editing this may cause crashes or other unexpected results
+    ["army"]        = true,
+    ["bandit"]      = true,
+    ["csky"]        = true,
+    ["dolg"]        = true,
+    ["ecolog"]      = true,
+    ["freedom"]     = true,
+    ["killer"]      = true,
+    ["monolith"]    = true,
+    ["stalker"]     = true,
+    ["greh"]        = true,
+    ["isg"]         = true,
+    ["renegade"]    = true,
+}
+
+managed_options = {
+    -- editing this may cause context menus to behave oddly
+    ["mping"]           = true,
+    ["wp_set"]          = true,
+    ["wp_mov"]          = true,
+    ["wp_del"]          = true,
+--    ["wp_ren"]      = true,
+    ["waypoint_rename"] = true,
+    ["waypoint_redesc"] = true,
+    ["hud_vis_on"]      = true,
+    ["hud_vis_off"]     = true,
+    ["show_all_pins"]   = true,
+    ["hide_all_pins"]   = true,
+    ["pn_add"]          = true,
+    ["pn_del"]          = true,
+    ["pn_ren"]          = true,
+    ["pn_clr"]          = true,
+    ["pn_spt"]          = true,
+    ["cm_dbg"]          = true,
+}
+
+hud_themes = {
+    ["classicauto"] = {
+        name    = "classicauto",
+        node    = "pawhudind",
+        style   = "full",
+        tex     = "ui_paw_hud_indicator_classic",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=890,y=620},
+        pda_thm = "vertright",
+    },
+    ["classic"] = {
+        name    = "classic",
+        node    = "pawhudind",
+        style   = "full",
+        tex     = "ui_paw_hud_indicator_classic",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=890,y=620},
+    },
+    ["vertright"] = {
+        name    = "vertright",
+        node    = "pawhudind_vertright",
+        style   = "minimal",
+        tex     = "ui_paw_hud_indicator_vertright",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=922,y=440},
+    }, 
+    ["vertleft"] = {
+        name    = "vertleft",
+        node    = "pawhudind_vertleft",
+        style   = "minimal",
+        tex     = "ui_paw_hud_indicator_vertleft",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=4,y=570},
+    }, 
+    ["gamma_right"] = {
+        name    = "gamma_right",
+        node    = "pawhudind_gamma_right",
+        style   = "full",
+        tex     = "ui_paw_hud_indicator_gamma_right",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=888,y=440},
+    }, 
+    ["gamma_left"] = {
+        name    = "gamma_left",
+        node    = "pawhudind_gamma_left",
+        style   = "full",
+        tex     = "ui_paw_hud_indicator_gamma_left",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=4,y=440},
+    }, 
+    ["minimal_h"] = {
+        name    = "minimal_h",
+        node    = "pawhudind_minimal_h",
+        style   = "minimal",
+        tex     = "ui_paw_hud_indicator_minimal_h",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=924,y=645},
+    }, 
+    ["minimal_v"] = {
+        name    = "minimal_v",
+        node    = "pawhudind_minimal_v",
+        style   = "minimal",
+        tex     = "ui_paw_hud_indicator_minimal_v",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=924,y=440},
+    }, 
+    ["minicom"] = {
+        name    = "minicom",
+        node    = "pawhudind_minicom",
+        style   = "compact",
+        tex     = "ui_paw_hud_indicator_minicom",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=820,y=725},
+    }, 
+    ["compact_noui"] = {
+        name    = "compact_noui",
+        node    = "pawhudind_minicom",
+        style   = "compact",
+        file    = "paw_hud_indicator.xml",
+        pos     = {x=820,y=725},
+    }, 
+}
+
+local colors = {
+    dimmed = GetARGB(100, 255, 255, 255),
+    active = GetARGB(255, 255, 255, 255),
+}
+
+local text_colors = {
+    ["clr_255"]     = "%" .. "%c[255,255,255,255]",
+    ["clr_red"]     = "%" .. "%c[255,255,0,0]",
+    ["clr_grn"]   = "%" .. "%c[255,0,255,0]",
+    ["clr_blu"]     = "%" .. "%c[255,0,0,255]",
+    ["clr_lbl"]     = "%" .. "%c[255,0,200,220]",
+    ["clr_yel"]  = "%" .. "%c[255,250,218,94]",
+    ["clr_wht"]   = "%" .. "%c[255,220,220,220]",
+    ["clr_prp"]  = "%" .. "%c[255,138,43,226]"
+}
+
+
+local keybinds = {
+    ["cartmode"] = {
+        enabled = function() return paw_enabled end,
+        hold    = cartography_must_hold,
+        bind    = DIK_keys.DIK_SLASH,
+        name    = "ui_mcm_pawsys_pawbinds_bind_cartmode",
+        action  = function(tf)
+                        if tf == nil then
+                            tf = not cart_mode
+                        end
+                        cartography_mode(tf)
+                  end,
+    },
+    ["quickpin"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_APOSTROPHE,
+        name    = "ui_mcm_pawsys_pawbinds_bind_quickpin",
+        action  = function() drop_quick_pin() end,
+    },
+    ["wptoggle"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_SEMICOLON,
+        mod     = 2,
+        name    = "ui_mcm_pawsys_pawbinds_bind_wptoggle",
+        action  = function() toggle_waypoint() end,
+    },
+    ["set_next"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_PERIOD,
+        mod     = 3,
+        name    = "ui_mcm_pawsys_pawbinds_bind_set_next",
+        action  = function() cycle_items(1,"set") end,
+    },
+    ["set_prev"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_COMMA,
+        mod     = 3,
+        name    = "ui_mcm_pawsys_pawbinds_bind_set_prev",
+        action  = function() cycle_items(-1,"set") end,
+    },
+    ["ico_next"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_PERIOD,
+        name    = "ui_mcm_pawsys_pawbinds_bind_ico_next",
+        action  = function() cycle_items(1,"icon") end,
+    },
+    ["ico_prev"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_COMMA,
+        name    = "ui_mcm_pawsys_pawbinds_bind_ico_prev",
+        action  = function() cycle_items(-1,"icon") end,
+    },
+    ["ico_scroll"] = {
+        enabled = function() return paw_enabled and mwheel_enabled end,
+        bind    = DIK_keys.DIK_Z,
+        name    = "ui_mcm_pawsys_pawbinds_bind_ico_scroll",
+        mod     = 3,
+        hold    = true,
+        action  = function(tf) icon_cycle(true,tf) end,
+    },
+    ["set_scroll"] = {
+        enabled = function() return paw_enabled and mwheel_enabled end,
+        bind    = DIK_keys.DIK_Z,
+        name    = "ui_mcm_pawsys_pawbinds_bind_set_scroll",
+        mod     = 2,
+        hold    = true,
+        action  = function(tf) set_cycle(true,tf) end,
+    },
+}
+
+-- ======================================================================
+--  GENERAL UTILITY FUNCTIONS
+-- ======================================================================
+
+function exec(str,...)
+    if str then
+        str = str_explode(str,"%.")
+        if str[1] and str[2] and _G[ str[1] ] and _G[ str[1] ][ str[2] ] then
+            _G[ str[1] ][ str[2] ](...)
+        else
+            dl("Could not exec function %s", str)
+        end
+    end
+end
+
+
+function delay_exec_of(func,secs,...)
+    if not func then return end
+    secs = secs or 0
+    CreateTimeEvent("pawdelay","paw"..func..tostring(time_global()),secs,func,...)
+end
+
+
+function dotip(tiptext,dur,src,beep,icon,snd)
+    vl("Tip call received: dur %s | src \"%s\" | beep %s\n\"%s\"",dur,src,beep,tiptext)
+    if tiptext == nil then return end
+    db.actor:give_game_news(src or "PAW System", tiptext, icon or "ui_inGame2_Mesta_evakuatsii", 0, dur or 5000)
+
+    if beep then
+        xr_sound.set_sound_play(AC_ID, snd or "pda_tips")
+    end
+end
+
+function roll(val,min,max)
+    if not val and min and max then return end
+    if val > max then
+        return min
+    elseif val < min then
+        return max
+    else
+        return val
+    end
+end
+
+function paw_enabled_check()
+    if not paw_enabled then
+        actor_menu.set_msg(1,game.translate_string("st_paw_system_disabled"),5)
+    end
+    return paw_enabled
+end
+
+function valid_bind(kb)
+    return (kb ~= nil) and (kb ~= "") and (kb ~= "<!!!>")
+end
+
+
+local function bindtext(kb,km)
+    local kbt = ""
+    local kmt = ""
+    local mt = ""
+    local vbkb = valid_bind(kb)
+    local vbkm = km and km > 0
+    if vbkb then
+        kbt = DIK_name(kb)
+    end
+    if vbkm then
+        if km and km < 29 then
+            km = ((km == 1) and 42) or ((km == 2) and 29) or ((km == 3) and 56)
+        end
+        if km then
+            kmt = DIK_name(km)
+        end
+    end
+
+    if vbkb and vbkm then
+        mt = "+"
+    elseif not (vbkb or vbkm) then
+        kmt = "[UNBOUND]"
+        mt = ""
+        kbt = ""
+    end
+
+    return string.format("%s%s%s",kmt,mt,kbt)
+end
+
+-- ======================================================================
+
+function safename(id)
+    if not (id and (id > 0)) then return end
+    local text = "unknown"
+    local se_obj = alife_object(id)
+    if not se_obj then return text end
+    local name = se_obj:name() or "unknown"
+    if pins[id] then
+        text = pins[id].name
+    elseif IsStalker(se_obj) then
+        text = se_obj:character_name()
+    elseif IsMonster(se_obj) then
+        --[[
+            Hack adapted from ui_enemy_health.script
+            This logic acts as a translation layer for
+            any monster kind/species that doesn't line
+            up with the name of its encyclopedia entry
+        --]]
+        local special_cases = {
+            dog             = "blind_dog",
+            bird            = "crow",
+            giant           = "pseudogiant",
+            SM_KARLIK       = "karlik",
+            SM_LURKER       = "lurker",
+            SM_POLTER_G     = "poltergeist",
+            SM_PYRO_G       = "pyrogeist",
+            SM_PSEUDO_G     = "pseudogeist",
+            SM_PSYSUCKER    = "psysucker",
+        }
+        if string.find(se_obj:section(),'rotan') then
+            text = "rat"
+        elseif string.find(se_obj:section(),'psy_dog') then
+            text = "psydog"
+        else
+            local what = ini_sys:r_string_ex(se_obj:section(),"kind") or ini_sys:r_string_ex(se_obj:section(),"species") or nil
+            text = special_cases[what] or what
+        end
+        --text = string.lower(ts("encyclopedia_mutants_"..text))
+        text = ts("encyclopedia_mutants_"..text)
+    elseif (se_obj:clsid() == clsid.smart_terrain) then
+        text = ts("st_"..name.."_name"):gsub("%."," -")
+    elseif (se_obj:clsid() == clsid.script_zone) then
+        text = ts("st_paw_pin_default_name")
+    elseif (se_obj:clsid() == 140) then
+        local _,_,hint = txr_routes.get_route_info(name)
+        if hint then
+            text = ts(hint)
+        else
+            text = ts(name)
+        end            
+    else
+        text = ts(name)
+    end
+    return text
+end
+
+function parse_paw_text(text)
+    if not text then return end
+    local text_subst = {
+        ["$target"] = placed_waypoint and placed_waypoint.name or "",
+        ["$actor"]  = db.actor:character_name(),
+    }
+    return psk(tostring(text),text_subst)
+end
+
+function valid_pda()
+    local dev = db.actor:item_in_slot(8)
+    if dev and pda_defs[dev:section()] then
+        if pda_defs[dev:section()].show_w then return true end
+    else
+        vl("Custom PDA type %s not found in pda_defs, add to that table to enable support",dev and dev:section())
+    end
+    return false
+end
+
+
+function valid_waypoint_target(se_obj)
+    if not se_obj then return end
+    -- can add other smart types to this logic later if needed
+    local clsid = se_obj:clsid()
+    local valid =   (valid_clsids[clsid] ~= nil) or
+                    IsStalker(se_obj) or
+                    isLc(se_obj)
+    return valid
+end
+
+
+function play_sound_for_actor(effect)
+    local snd = xr_sound.get_safe_sound_object(effect)
+    snd:play(db.actor, 0, sound_object.s2d)
+end
+
+
+function add_mapspot(text,id,icon,skip_pin)
+    if not id then return end
+    icon = icon or default_mapspot
+    vl("Adding mapspot %s for id %s with icon %s",text,id,icon)
+    if not skip_pin then
+        if not pins[id] then pins[id] = {} end
+        pins[id].text = text
+    end
+    level.map_add_object_spot(id,icon,text)
+end
+
+
+function remove_mapspot(id,icon)
+    if not (id and icon) then return end
+    vl("Trying to remove mapspot for id %s with icon %s",id,icon)
+    level.map_remove_object_spot(id,icon)
+    level.map_remove_object_spot(id,icon)
+end
+
+--[[
+-- this isn't working yet, don't enable
+function rotate_dynamic_favorites(icon)
+    if not icon then return end
+
+    local mdf = tonumber(max_dynamic_faves) or 0
+    local faves = 0
+    if (mdf and (mdf == 0)) then return end
+    vl("rotate_dynamic_favorites called with new mapspot %s",icon)
+    if dynamic_faves and (type(dynamic_faves) == "table") then
+        faves = #dynamic_faves or 0
+        if faves > 1 then
+            for i = 1,faves do
+                if (faves[i] == icon) then
+                    vl("%s already in favorites, ignoring")
+                    return 
+
+
+            end
+        if faves < mdf then
+            faves = faves + 1
+        elseif (mdf > 1) and (faves >= mdf) then
+            for i = 2,faves do
+                vl("%s was in position %s, shuffling down to %s",dynamic_faves[i],i,i-1)
+                dynamic_faves[i - 1] = dynamic_faves[i]
+            end
+        end
+    else
+        dynamic_faves = {}
+    end
+    dynamic_faves[faves] = icon
+    vl("%s added to top of dynamic_faves",icon)
+end
+--]]
+
+function func_add_mapspot(text,args)
+    local id        = args.id
+    local icon      = args.icon or map_pin_icon
+    if text == "" or text == nil then
+        pins[id] = nil
+        vl("Empty text input returned for pin %s, removing",id)
+    return end
+    vl("func_add_mapspot called for id %s | %s | %s",id,icon,text)
+    add_mapspot(text,id,icon)
+end
+
+function func_ren_mapspot(text,args)
+    local id        = args.id
+    local icon      = map_pin_icon
+    local old_icon  = args.icon
+    if text == "" or text == nil then
+        vl("Empty text input returned for pin %s, making no change",id)
+        text = args.name
+        icon = old_icon
+    end
+    vl("func_ren_mapspot called for id %s | %s | %s",id,icon,text)
+    remove_mapspot(id,old_icon)
+    add_mapspot(text,id,icon)
+end
+
+function func_ren_waypoint(text,args)
+    if text == "" then text = nil end
+    local field = args.field
+    if field == "name" then
+        custom_name         = text
+    elseif field == "desc" then
+        custom_desc         = text
+    end
+end
+
+
+function pins_exist()
+    return not is_empty(pins)
+end
+
+
+function waypoint_task_cleanup()
+    waypoint_active = false
+    placed_waypoint = nil
+end
+
+
+function cancel_task()
+    tm.task_info[task_id] = nil
+    --[[
+    if wp_clear_task then
+        printf("<PAW> Clearing task data")
+        tm.task_info[task_id] = nil
+    else
+        printf("<PAW> Clearing task target")
+        tm.task_info[task_id].current_target = nil
+    end
+    --]]
+    remove_mapspot(placed_waypoint.id, waypoint_mapspot)
+    return true
+end
+
+
+function end_waypoint_task(id)
+    cancel_task()
+    set_pingspot_persistence(id,false)
+end
+
+
+function set_current_waypoint(se_obj)
+    if not se_obj then return end
+    local id        = se_obj.id
+    set_pingspot_persistence(id)
+    if waypoint_active then
+        last_waypoint   = placed_waypoint
+        set_pingspot_persistence(id,false)
+    end
+    placed_waypoint = {
+        id = id,
+        name = safename(id),
+    }
+    waypoint_active = true
+end
+
+function valid_travel_target(id)
+    -- To enable interaction with the Fair Fast Travel
+    -- system addon, allowing fast travel to pins, but 
+    -- only those that we know are within the playable 
+    -- area--ones spawned at a spot where the player was 
+    -- standing at the time.
+    local pin = pins and pins[id]
+    local valid = pin and pin.quick
+    vl("valid_travel_target | id %s is pin: %s | is quick pin %s",pin,valid)
+    return valid
+end
+
+function init_new_pin(id,name,text,icon)
+    if id and not pins[id] then
+        icon = icon or default_mapspot
+        set_pingspot_persistence(id)
+        pins[id] = {
+            id      = id,
+            name    = name or ts("st_paw_pin_default_name"),
+            text    = text or name,
+            icon    = icon,
+            hud     = false
+        }
+        --rotate_dynamic_favorites(icon)
+        vl("New pin initialized: %s (%s) | %s | %s",pins[id].name,id,icon,text)
+    end
+end
+
+
+function register_script_zone(...)
+    local se_obj = alife_create("script_zone",...)
+    if not se_obj then return end
+    local id = se_obj.id
+    local now = time_global()
+    script_zones[id] = {
+        id      = se_obj.id,
+        pos     = se_obj.position,
+        created = now,
+        cleanup = now + ping_lifetime,
+    }
+    vl("Script zone %s spawned for ping spot",id)
+    return se_obj
+end
+
+
+function deregister_script_zone(id)
+    if not id then return end
+    local se_obj = alife_object(id)
+    if not se_obj then return end
+    alife_release(se_obj)
+    script_zones[id] = nil
+    vl("Script zone %s released",id)
+end
+
+
+function generate_scripted_mapspot_at(pos,lv,gv)
+    if not (pos and lv and gv) then return end
+    local sz = register_script_zone(pos,gv,lv)
+    if not sz then return end
+    return sz.id
+end
+
+
+function generate_scripted_mapspot_on(obj)
+    if not (obj and obj.id) then return end
+    local sz = register_script_zone(obj)
+    if not sz then return end
+    return sz.id
+end
+
+
+function spawn_pingspot(pid,pos,lv,gv)
+    if not pid and pos and lv and gv then return end
+    local sz        = register_script_zone(pos,gv,lv)
+    if not sz then return end
+
+    local text      = ts("st_paw_pingspot")
+    local id        = sz.id
+    pings[id]       = script_zones[id]
+    pings[id].pid   = pid
+    add_mapspot(text,id,icon_pingspot,true)
+    -- vl("Spawned temporary pingspot at %s,%s with id %s",pos.x,pos.z,id)
+    return id
+end
+
+
+function despawn_pingspot(id)
+    -- vl("despawn_pingspot(%s): deregistering script zone and nulling ping record",id)
+    deregister_script_zone(id)
+    pings[id] = nil
+end
+
+
+function script_zone_cleanup(ignore_cleanup_time,wipe_all)
+    local now       = time_global()
+    for k,v in pairs(script_zones) do
+        if v.cleanup and (v.cleanup < now) then
+            deregister_script_zone(k)
+        end
+    end
+    dl("script_zone_cleanup completed")
+    return true
+end
+
+function ping_cleanup(pid)
+    dl("Cleaning up after ping %s",pid)
+    local now = time_global()
+    for k,v in pairs(pings) do
+        vl("pid %s id %s cleanup is %s",pid,k,v.cleanup or "disabled")
+        if v.cleanup and
+          (v.pid == pid) and 
+          (v.cleanup < now) then
+            despawn_pingspot(k)
+        end
+    end
+    return true
+end
+
+function set_pingspot_persistence(id,onoff)
+    if not (id and script_zones[id]) then return end
+    if onoff or (onoff == nil) then
+        pings[id] = nil
+        script_zones[id].cleanup = nil
+        dl("Temporary pingspot %s given persistence, it will not be subject to cleanup",id)
+    else
+        script_zones[id].cleanup = time_global()
+        dl("Persistent pingspot %s flagged as unused, it will be subject to cleanup",id)
+    end
+end
+
+function ping_area_around(obj)
+    if not obj then return end
+    local now       = time_global()
+    local pid       = tostring(now)
+    local span      = ping_grid_radius or 10 -- radius of grid in squares
+    local grid      = ping_grid_size or 10 -- dimension of grid squares in game units
+    local rad       = span * grid -- actual ping radius in game units
+    local anch_id   = obj.id
+    local anch_pos  = obj.position
+    local ax        = anch_pos.x
+    local ay        = anch_pos.y
+    local az        = anch_pos.z
+    local gv        = obj.m_game_vertex_id
+    local lv        = game_graph():vertex(gv):level_id()
+
+    for z = (az-(span*grid)),(az+(span*grid)),grid do
+        for x = (ax-(span*grid)),(ax+(span*grid)),grid do
+            local pos = vector():set(x,ay,z)
+            if distance_2d(pos,anch_pos) <= (rad + 1) then
+                spawn_pingspot(pid,pos,gv,lv)
+            end
+        end
+    end
+
+    if use_ping_snd and snd_ping then play_sound_for_actor(snd_ping) end
+
+    CreateTimeEvent("paw_ping_cleanup","ping_"..pid,11,tasks_placeable_waypoints.ping_cleanup,pid)
+end
+
+
+function do_waypoint(act,se_obj,acode,args)
+    args = args or {}
+    if valid_pda() and not (paw_enabled and act) then return end
+    acode = acode or act
+    local id,name
+    if se_obj then
+        id = se_obj.id
+        name = safename(id) or "unknown"
+    end
+    local ac = action_codes[acode]
+
+    dl("Received waypoint call \"%s\" on target %s (id %s)",act,name,id)
+
+    if act == "wp_set" then
+        if not se_obj then
+            dl("do_waypoint called with action %s but no valid se_obj!",act)
+        return end
+        set_current_waypoint(se_obj)
+        tm:give_task("task_placeable_waypoint")
+        waypoint_active = true
+    elseif act == "wp_mov" then
+        if not se_obj then
+            dl("do_waypoint called with action %s but no valid se_obj!",act)
+        return end
+        if tm.task_info[task_id] then
+            local id            = se_obj.id
+            local task          = tm.task_info[task_id]
+            local atsk          = db.actor:get_task(task_id, true)
+            task.target         = id
+            task.current_target = id
+            atsk:change_map_location(task.spot, id)
+            level.map_add_object_spot(id, waypoint_mapspot, "")
+            set_current_waypoint(se_obj)
+        else
+            dl("task_info[task_id] is nil!")
+        end
+        waypoint_active = true
+    elseif act == "wp_del" then
+        end_waypoint_task(id)
+        waypoint_task_cleanup()
+        last_waypoint = nil
+    elseif act == "waypoint_rename" then
+        dl("Received call to rename waypoint")
+        local func = ren_wp_functor
+        local title = ts("ui_mcm_pawsys_pawmenu_waypoint_rename")
+        local itex = "ui_inGame2_PDA_icon_Secondary_mission"
+        args.field = "name"
+        cartography_mode(false)
+        get_text(title,itex,name,func,args)
+    elseif act == "waypoint_redesc" then
+        dl("Received call to redesc waypoint")
+        local func = ren_wp_functor
+        local title = ts("ui_mcm_pawsys_pawmenu_waypoint_redesc")
+        local itex = "ui_inGame2_PDA_icon_Secondary_mission"
+        args.field = "desc"
+        cartography_mode(false)
+        get_text(title,itex,name,func,args)
+    elseif act == "pn_add" then
+        dl("Received call to add new pin to map for %s (%s)",name,id)
+        local func = add_mapspot_functor
+        local icon = icons[ac.icon] or map_pin_icon
+        local itex = texture_for_icon(icon)
+        local title = ts("ui_mcm_pawsys_pawmenu_pn_add")
+        init_new_pin(id,name,ts("st_paw_pin_default_name"),icon)
+        cartography_mode(false)
+        --vl("pin data before input call: %s (%s) % | %",pins[id].name,pins[id].id,pins[id].icon,pins[id].text)
+        get_text(title,itex,nil,func,pins[id])
+    elseif act == "pn_ren" then
+        dl("Received call to rename map pin %s (%s)",name,id)
+        remove_mapspot(id,icon)
+        local func = ren_mapspot_functor
+        local icon = pins[id] and pins[id].icon
+        local itex = texture_for_icon(icon)
+        local name = pins[id] and pins[id].name
+        local title = ts("ui_mcm_pawsys_pawmenu_pn_ren")
+        cartography_mode(false)
+        get_text(title,itex,name,func,pins[id])
+    elseif act == "pn_del" then
+        local icon = pins[id].icon
+        if pins[id].hud then
+            hide_hud_pin(id)
+        end
+        pins[id] = nil
+        remove_mapspot(id,icon)
+    elseif act == "pn_clr" then
+        if not is_empty(hud_pin_objs) then
+            for k,v in pairs(hud_pin_objs) do
+                hide_hud_pin(k)
+            end
+        end
+        empty_table(hud_pin_objs)
+        for k,v in pairs(pins) do
+            local icon = v.icon
+            remove_mapspot(k,icon)
+        end
+        empty_table(pins)
+    elseif act == "mping" then  
+        ping_area_around(se_obj)    
+    elseif act == "hud_vis_on" then
+        pins[id].hud = true
+        show_hud_pin(id)
+    elseif act == "hud_vis_off" then
+        pins[id].hud = false
+        hide_hud_pin(id)
+    elseif act == "show_pins" then
+        show_all_pins(true)
+    elseif act == "hide_pins" then
+        show_all_pins(false)
+    elseif act == "cm_dbg" then
+        local clsid = se_obj:clsid() or "unknown"
+        property_ui:AddItem("[PAW Debug] Mapspot for %s (id %s) has clsid %s)",name,id,clsid)
+    else
+        dl("invalid action %s passed to do_waypoint",act)
+    end    
+end
+
+
+function add_context_option(property_ui,act,maptbl)
+    local ac = action_codes[act]
+    vl("add_context_option \"%s\" | cart_mode is %s",act,cart_mode)
+    if ac and ac.enable then
+        if type(ac.mode) ~= "number" then
+            dl("WARNING: mode (%s) for action %s was not a number, resetting to 0",ac.mode,act)
+            ac.mode = 0
+        end
+
+        --     -1: debug mode only
+        --      0: disabled
+        --      1: enabled in normal view only
+        --      2: enabled in cartography mode only
+        --      4: enabled in both
+        if      ((ac.mode < 0) and debuglogs) or 
+                (ac.mode == 1 and not cart_mode) or 
+                ((ac.mode >= 2) and cart_mode) or 
+                (ac.mode >= 4) then
+
+            local text = ts(ac.text)
+            vl("add_context_option(%s): Adding context option %s",act,text)
+            property_ui:AddItem(text)
+            curr_menu_options[text] = maptbl
+        end
+    else
+        vl("Action %s is missing or not enabled, ignoring",act)
+    end
+end
+
+function nearest_smart_to_actor()
+    vl("nearest_smart_to_actor")
+
+    local levelid = alife():level_id()
+    local smart_nearest,dist_nearest,name_nearest,result
+    for name,smart in pairs(SIMBOARD.smarts_by_names) do
+        if levelid == game_graph():vertex(smart.m_game_vertex_id):level_id() then
+            -- vl("%s is same map as actor",name)
+            local dist = smart.position:distance_to(db.actor:position())
+            if (SIMBOARD.smarts[smart.id]) and (not smart_nearest or (dist < dist_nearest)) then
+                vl("%s (%s) is nearest so far at %s",name,smart.id,dist)
+                smart_nearest = smart
+                dist_nearest = dist
+                name_nearest = name
+            end
+        end
+    end
+
+    if not smart_nearest then
+        dl("!ERROR! No nearby smarts found to actor, this shouldn't be possible")
+    return {id=0,name="oops"} end
+
+    result = {
+        smart   = smart_nearest,
+        id      = smart_nearest.id or 0,
+        dist    = dist_nearest      or 0,
+        name    = name_nearest      or "oops",
+        pos     = smart_nearest.position, -- not used yet
+    }
+    vl("nearest_smart: %s at %s",name_nearest,dist_nearest)
+    return result
+end
+
+
+function show_smarts(onoff)
+    vl("show_smarts: %s",onoff)
+    local toggle = onoff or false
+    local levelid = alife():level_id()
+    local smart_nearest,dist_nearest,name_nearest,result
+    for name,smart in pairs(SIMBOARD.smarts_by_names) do
+        if (SIMBOARD.smarts[smart.id]) then
+            local text = name
+            local id = smart.id
+            local icon = smart_terrain_icon
+            if toggle then
+                -- vl("Adding temporary smart %s (%s) with icon %s",text,id,icon)
+                level.map_add_object_spot(id,icon,text)
+            else
+                -- vl("Removing temporary smart %s (%s)",text,id)
+                level.map_remove_object_spot(id,icon)
+            end
+        end
+    end
+end
+
+
+function drop_quick_pin(id)
+    if not paw_enabled_check() then return end
+    if next_pin > time_global() then return end
+    next_pin = time_global() + pin_delay
+
+    if not id then
+        --if precise_quick_pin then
+            --id = generate_scripted_mapspot_on(db.actor)
+        --else 
+            local smart = nearest_smart_to_actor()
+            id = smart.id or 0
+            if not id then
+                id = generate_scripted_mapspot_on(db.actor)   
+                if not id then return end
+            end
+        --end
+    end
+    
+    local se_obj    = alife_object(id)
+    if not se_obj then return end
+    
+    local name          = se_obj:name() or "none"
+    local icon          = map_pin_icon
+    local mapspot_text  = ts("st_paw_pin_quick_name")
+    local tip_text      = ts("st_paw_pin_dropped")
+    init_new_pin(id,name,mapspot_text,icon)
+    pins[id].quick = true
+    dl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
+    add_mapspot(mapspot_text,id,icon)
+    dotip(tip_text,10000)
+end
+
+
+function toggle_waypoint(force)
+    dl("toggle_waypoint called")
+    if (force ~= nil) then
+        waypoint_active = not force
+    end
+    if not waypoint_active then
+        if last_waypoint then
+            placed_waypoint = last_waypoint
+            local se_obj = alife_object(placed_waypoint.id)
+            if not se_obj then return end
+            do_waypoint("wp_set",se_obj)
+        else
+            dotip("st_paw_no_last_wp")
+        end
+    else
+        last_waypoint = placed_waypoint
+        end_waypoint_task(placed_waypoint.id)
+        waypoint_task_cleanup()
+    end
+end
+
+
+function cartography_mode(onoff)
+    if (onoff == nil) then
+        cart_mode = not cart_mode
+    else
+        cart_mode = onoff or false
+    end
+    vl ("Setting cart_mode to %s and calling show_smarts to toggle",cart_mode)
+    show_smarts(cart_shows_smarts and cart_mode)
+end
+
+
+function get_context_menu_options(property_ui,id,maptbl)
+    empty_table(curr_menu_options)
+    maptbl = maptbl or {}
+    if not id then
+        id = maptbl.object_id
+    end
+    if not paw_enabled and valid_pda() then return end
+    local se_obj = id and (id > 0) and alife_object(id)
+    if not se_obj then return end
+    
+    local name  = se_obj:name() or "undefined"
+    local clsid = se_obj:clsid() or "unknown"
+    local id    = se_obj.id or 0
+    vl("get_context_menu_options: %s (%s) | cls %s",name,id,clsid)
+
+    add_context_option(property_ui,"mping",maptbl)
+    if id and valid_waypoint_target(se_obj) then
+        if pins[id] then
+            vl("Pin exists")
+            add_context_option(property_ui,"pn_del",maptbl)
+            add_context_option(property_ui,"pn_ren",maptbl)
+            if pins[id].hud then
+                add_context_option(property_ui,"hud_vis_off",maptbl)
+            else
+                add_context_option(property_ui,"hud_vis_on",maptbl)
+            end
+        else
+            vl("No pin")
+            add_context_option(property_ui,"pn_add",maptbl)
+        end
+        local name = se_obj:name()
+        if placed_waypoint == nil then
+            vl("No waypoint")
+            add_context_option(property_ui,"wp_set",maptbl)
+        else
+            local wid = placed_waypoint.id or 0
+            local sid = se_obj.id or 0
+            if wid ~= sid then
+                vl("Waypoint exists")
+                add_context_option(property_ui,"wp_mov",maptbl)
+            end
+            vl("Waypoint exists here")
+            add_context_option(property_ui,"wp_del",maptbl)
+            add_context_option(property_ui,"waypoint_rename",maptbl)
+            add_context_option(property_ui,"waypoint_redesc",maptbl)
+        end
+    end
+    --add_context_option(property_ui,"pn_spt")
+    if pins_exist() then
+        if show_pins then
+            add_context_option(property_ui,"hide_all_pins",maptbl)
+        else
+            add_context_option(property_ui,"show_all_pins",maptbl)
+        end
+    end
+    add_context_option(property_ui,"pn_clr",maptbl)
+    for k,v in pairs(action_codes) do
+        local can_add = true
+        if v.act == "pn_add" then
+            can_add = (pins[id] == nil)
+        end
+        local mode = tonumber(v.mode) or 0
+        if can_add and v.enable and (mode > 0) and not managed_options[k] then
+            add_context_option(property_ui,k,id,maptbl)
+        end
+    end
+end
+
+
+function execute_context_menu_option(property_ui,id,level_name,prop)
+    vl("passed id : %s",id)
+    id = last_clicked_id
+    last_clicked_id = nil
+    vl("execute_context_menu_option called for id %s\n| prop: %s\n| action %s)",id,prop,action[prop])
+    if not (paw_enabled and id and valid_pda()) then return end
+    if not (id and (id > 0)) then return end
+    local se_obj = alife_object(id)
+    if not se_obj then return end
+    local ac = action[prop]
+    if ac then
+        local act = action_codes[ac].act
+        do_waypoint(act,se_obj,ac)
+    end
+end
+
+
+function faction_body_icon(comm)
+    vl("faction_body_icon(%s) called",comm)
+    local icon = nil
+    if comm and managed_factions[comm] then
+        local bi    = body_icon_mode or "badge"
+        icon        = "paw_"..patch_res..sep..comm
+        vl("faction_body_icon generated from quality %s for faction %s: %s",patch_res,comm,icon)
+    else
+        vl("not a valid human faction, returning %s from bodies set",current_body_icon)
+    end
+    return icon or current_body_icon
+end
+
+
+function icon_for_pin(pin_name)
+    if icons and pin_name then return icons[pin_name] end
+end
+
+
+function pin_for_icon(icon)
+    if icon and texture_data and texture_data[icon] then return texture_data[icon].id end
+end
+
+
+function texture_for_icon(icon)
+    --printf("texture_for_icon(%s) called",icon)
+    local tex = texture_data and texture_data[icon] and texture_data[icon].t
+    vl("texture_for_icon(%s) returned %s",icon,tex)
+    return tex
+end
+
+function texture_for_set(setname)
+    if not setname then return end
+    local setdata = icon_sets[setname]
+    if not setdata and setdata.active_icon then
+        dl("WARNING: No active icon found for %s",setname)
+    return end
+    vl("active_icon for %s: %s",setname,setdata.active_icon)
+    local td = texture_data[setdata.active_icon]
+    vl("texture exists for %s: %s",setdata.active_icon,td ~= nil)
+    local tex = td.t
+    vl("texture_for_set(%s) returned %s",setname,tex)
+    return tex
+end
+
+function set_or_icon(str)
+    return str and ((str ~= "set") and (str ~= "icon"))
+end
+
+function set_icon_index(set)
+    vl("set_icon_index called for set %s",set)
+    local ii = set_index[set].ii
+    return ii
+end
+
+function set_icon_index_rev(set)
+    vl("set_icon_index_rev called for set %s",set)
+    local ri = set_index[set].ri
+    return ri
+end
+
+function set2ind(skey)
+    local ind = nil
+    vl("set2ind called for set %s, %s sets listed",skey,#set_index)
+    for i=1,#set_index,1 do
+        local k = set_index[i].id
+        if k == skey then
+            ind = i
+        end
+    end
+    vl("set2ind(%s) returned %s",skey,ind)
+    return ind
+end
+
+
+function curr_set_i()
+    return pawdata.curr_set_ind
+end
+
+function next_set_i()
+    return roll(curr_set_i() + 1, 1, #set_index)
+end
+
+function prev_set_i()
+    return roll(curr_set_i() - 1, 1, #set_index)
+end
+
+
+function curr_ico_i()
+    --printf("curr_ico_i returns %s",pawdata.curr_ico_ind)
+    return pawdata.curr_ico_ind
+end
+
+function next_ico_i()
+    local c_ind     = curr_ico_i()
+    local setdata   = icon_sets[pawdata.curr_set_name]
+    return roll(c_ind + 1, 1, #setdata.ii)
+end
+
+function prev_ico_i()
+    local c_ind     = curr_ico_i()
+    local setdata   = icon_sets[pawdata.curr_set_name]
+    return roll(c_ind - 1, 1, #setdata.ii)
+end
+
+function root_patch_name(patch)
+    --printf("root_patch_name called with mapspot %s",patch)
+    local name = patch
+    local pos_paw = string.find(name,"paw_badge_")
+    local pos_qlt = string.find(name,"hr_")
+    if pos_paw and pos_qlt then
+        name = "paw_badge_"..string.sub(patch,pos_qlt+3)
+        vl("root_patch_name strips quality string from %s to get %s",patch,name)
+    else
+        vl("root_patch_name returning %s as-is",patch)
+    end
+    return name
+end
+
+function active_set(newset)
+    vl("active_set(%s) called",newset)
+    if newset and type(newset) == "number" then
+        pawdata.curr_set_ind = clamp(newset,1,#set_index)
+        pawdata.curr_set_name = set_index[pawdata.curr_set_ind].id
+        pawdata.curr_set_data = icon_sets[pawdata.curr_set_name]
+        current_active_set = pawdata.curr_set_name
+        local setdata = pawdata.curr_set_data
+        pawdata.curr_ico_name = setdata.active_icon
+        --printf("calling root_patch_name for current set %s with curr_ico_name %s",pawdata.curr_set_name,pawdata.curr_ico_name)
+        pawdata.curr_ico_ind = setdata.ri[root_patch_name(pawdata.curr_ico_name)]
+        map_pin_icon = pawdata.curr_ico_name
+        vl("active set is now %s (%s), current icon %s (%s)",pawdata.curr_set_name,pawdata.curr_set_ind,pawdata.curr_ico_name,pawdata.curr_ico_ind)
+    end
+    return pawdata.curr_set_name
+end
+
+function get_next_icon()
+    local setdata = pawdata.curr_set_data
+    return setdata.ii[next_ico_i()]
+end
+
+function get_prev_icon()
+    --printf("get_prev_icon called, prev_ico_i() is %s",prev_ico_i())
+    local setdata = pawdata.curr_set_data
+    return setdata.ii[prev_ico_i()]
+end
+
+function active_icon(newico)
+    if newico and type(newico) == "number" then
+        vl("Setting new icon to index %s",newico)
+        local setdata = pawdata.curr_set_data
+        pawdata.curr_ico_ind = clamp(newico,1,setdata.inum)
+        pawdata.curr_ico_name = setdata.ii[pawdata.curr_ico_ind]
+        setdata.active_icon = pawdata.curr_ico_name
+        map_pin_icon = pawdata.curr_ico_name
+    end
+    return pawdata.curr_ico_name
+end
+
+function notify_icon_change(newset)
+    local setdata = pawdata.curr_set_data
+    local icon = setdata.active_icon
+    local td = texture_data[icon]
+    local tex = td.t
+    local tiptext = ts("st_paw_change_icon").." "..ts("ui_mcm_lst_"..icon)
+    if newset then
+        tiptext = ts("st_paw_change_set").." "..ts(setdata.name).."\n"..tiptext
+    end
+    dotip(tiptext,2,nil,false,tex)    
+end
+
+
+
+function cycle_icons(cycle_dir,dotip)
+    --printf("cycle_icons: curr_set: %s (%s)",pawdata.curr_set_name,pawdata.curr_set_ind)
+    if cycle_dir and type(cycle_dir) ~= "number" then return end
+    local setdata = pawdata.curr_set_data
+    local next_ind = roll(pawdata.curr_ico_ind + cycle_dir,1,setdata.inum)
+    active_icon(next_ind)
+    if use_ui_snd then play_sound_for_actor(snd_cycle_blip) end
+    if dotip then notify_icon_change() end
+end
+
+function cycle_sets(cycle_dir,dotip)
+    if cycle_dir and type(cycle_dir) ~= "number" then return end
+    local next_ind = roll(pawdata.curr_set_ind + cycle_dir,1,#set_index)
+    active_set(next_ind)
+    play_sound_for_actor(snd_cycle_blip)
+    if dotip then notify_icon_change(true) end
+end
+
+function icon_cycle(change,val)
+    if not mwheel_enabled then return end
+    if change then
+        icon_cycle_active = val
+        if not mwheel_notify then return icon_cycle_active end
+        if icon_cycle_active then
+            dotip(ts("st_paw_cycling_icons"))
+        else
+            dotip(ts("st_paw_mwheel_normal"))
+        end
+    end
+    return icon_cycle_active
+end
+
+function set_cycle(change,val)
+    if not mwheel_enabled then return end
+    if change then
+        set_cycle_active = val
+        if not mwheel_notify then return icon_cycle_active end
+        if set_cycle_active then
+            dotip(ts("st_paw_cycling_sets"))
+        else
+            dotip(ts("st_paw_mwheel_normal"))
+        end     
+    end
+    return set_cycle_active
+end
+
+function cycle_items(cycle_dir,item_type,dotip)
+    if (item_type == nil) then
+        if icon_cycle() then
+            item_type = "icon"
+        elseif set_cycle() then
+            item_type = "set"
+        end
+    end
+    if not icoset_changed then icoset_changed = {} end
+    if item_type == "icon" then
+        icoset_changed.i = true
+        vl("cycling icons: %s",cycle_dir)
+        cycle_icons(cycle_dir,dotip)
+    elseif item_type == "set" then
+        icoset_changed.s = true
+        vl("cycling sets: %s",cycle_dir)
+        cycle_sets(cycle_dir,dotip)
+    end
+end
+
+
+function show_all_pins(onoff)
+    show_pins = onoff
+    if onoff then
+        vl("Showing all recorded pins")
+        for id,pin in pairs(pins) do
+            local icon = pin.icon
+            local mapspot_text = pin.text
+            vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
+            add_mapspot(mapspot_text,id,icon)
+        end
+    else
+        vl("Hiding stored pins from map")
+        for id,pin in pairs(pins) do
+            remove_mapspot(id,pin.icon)
+        end        
+    end
+end
+
+
+function load_mcm(pawpath,default)
+    local val = ui_mcm and ui_mcm.get("pawsys/"..pawpath)
+    if val ~= nil then
+        return val
+    else
+        return default
+    end
+end
+
+
+function on_option_change()
+    -- Sync all MCM values and propagate changes
+    if ui_mcm and not mcm_killswitch then
+        debuglogs               = load_mcm("pawgen/debuglogs",debuglogs)
+        catsy_paw_mcm.debuglogs = debuglogs
+
+        if load_mcm("pawgen/wipe_all") then
+            ui_mcm.set("pawsys/pawgen/wipe_all",false)
+            dl("MCM: Wiping all pin data per player request")
+            do_waypoint("pn_clr")
+        end
+
+        paw_enabled             = load_mcm("pawgen/enabled",paw_enabled)
+        wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
+        if wp_hud_icon_enabled then
+            show_hud_waypoint()
+        else
+            hide_hud_waypoint()
+        end
+        welcome_msg_shown       = load_mcm("pawgen/welcome_msg_shown",welcome_msg_shown)
+        wp_clear_dist           = load_mcm("pawgen/wp_clear_dist",wp_clear_dist)
+        --wp_clear_task           = load_mcm("pawgen/wp_clear_task",wp_clear_task)
+        enable_wp_proxcheck     = wp_clear_dist and wp_clear_dist > 0
+        mcm_update_throttle     = load_mcm("pawgen/mcm_update_throttle",mcm_update_throttle)
+        mwheel_poll_interval    = load_mcm("pawgen/mwheel_poll_interval",mwheel_poll_interval)
+        -- These last two options are not in the MCM menu, but can be manually set as overrides
+
+        for k,v in pairs(keybinds) do
+            local kb = load_mcm("pawbinds/bind_"..k)
+            local km = load_mcm("pawbinds/modk_"..k)
+            local vbkb = valid_bind(kb)
+            local vbkm = valid_bind(km)
+            if vbkb then
+                keybinds[k].bind = kb
+            end
+            if vbkm then
+                keybinds[k].mod = km
+            end
+        end
+
+
+        for k,v in pairs(action_codes) do
+            local m = load_mcm("pawmenu/"..k)
+            if m ~= nil then
+                action_codes[k].mode = tonumber(m) or 0
+                vl("MCM: Loading action code mode %s for %s",m,k)
+            else
+                vl("MCM: No value found for %s, leaving unchanged",k)
+            end
+        end
+
+        cartography_must_hold   = not load_mcm("pawbinds/cartmode_toggle",cartography_must_hold)
+        keybinds[cartmode].hold = cartography_must_hold
+        cart_shows_smarts       = load_mcm("pawbinds/cart_shows_smarts",cart_shows_smarts)
+        mwheel_notify           = load_mcm("pawbinds/mwheel_notify")
+        local tmp               = ui_mcm.get("pawsys/pawbinds/mwheel_enabled")
+        if tmp and type(tmp) == "number" then
+            tmp                 = (tmp ~= 0)
+        end
+        mwheel_enabled          = tmp and mwheel_avail
+        
+        tmp                     = ui_mcm.get("pawsys/pawbinds/mwheel_override")
+        if tmp ~= nil then
+            dl("MCM override found for mwheel_avail (old = %s | new = %s)",mwheel_avail,tmp)
+            mwheel_avail        = tmp
+        end
+
+        tmp                     = ui_mcm.get("pawsys/pawbinds/right_click_override")
+        -- if set to true, will force on_map_right_click support on
+        if tmp ~= nil then
+            dl("MCM override found for right_click_avail (old = %s | new = %s)",right_click_avail,tmp)
+            right_click_override= tmp
+        end        
+        
+        tmp                     = ui_mcm.get("pawsys/pawgen/disable_mcmups")
+        if tmp ~= nil then
+            dl("MCM override found for disable_mcm_updates (old = %s | new = %s)",disable_mcm_updates,tmp)
+            disable_mcm_updates = tmp
+        end
+
+        tmp                     = load_mcm("pawgen/pingsound")
+        if tmp ~= nil then
+            use_ping_snd        = tmp
+        end
+
+        --[[
+        local mdf           = clamp(tonumber(ui_mcm.get("pawsys/pawpins/fave_recent")),0,10)
+        if mdf and (mdf ~= max_dynamic_faves) then
+            local old_mdf = max_dynamic_faves
+            max_dynamic_faves = mdf
+            dl("new max_dynamic_faves: %s (was %s)",mdf,old_mdf)
+            if dynamic_faves and (not is_empty(dynamic_faves)) and
+                    (max_dynamic_faves > 0) then
+                local df = {}
+                for i = 1,max_dynamic_faves do
+                    if dynamic_faves[i] then
+                        vl("dynamic_fave[%s]: %s",i,dynamic_faves[i])
+                        df[i] = dynamic_faves[i]
+                    end
+                end
+                dynamic_faves = df
+            end
+        end
+        --]]
+
+        patch_res           = ui_mcm.get("pawsys/pawpins/patch_res") or "badge"
+        local bi            = ui_mcm.get("pawsys/pawpins/milpda_body_icon")
+        local pig           = ui_mcm.get("pawsys/pawpins/pin_icon_group")
+        --local mp            = ui_mcm.get("pawsys/pawpins/poi_icon_"..(pig or ""))
+        local cbi           = ui_mcm.get("pawsys/pawpins/poi_icon_bodies")
+
+        for k,v in pairs(icons) do
+            if managed_factions[k] then
+                local newbadge  = "paw_"..patch_res..sep..k
+                vl("MCM: icon for %s was %s, is now %s",k,v,newbadge)
+                icons[k]        = newbadge
+            end
+        end
+
+        load_active_icoset_data()
+        local icon = pig and icon_sets[pig] and icon_sets[pig].active_icon or default_mapspot
+        icon_sets["bodies"].active_icon = icons[cbi]
+        dl("MCM: body icon mode %s | paw icon %s",bi,cbi)
+        map_pin_icon = icon
+        current_active_set = pig
+
+        dl("MCM: icon %s | icon set: %s",icon,pig)
+
+        local cp            = ui_mcm.get("pawsys/pawpins/use_custom_pin_icon") or false
+        if cp then
+            custom_pin_icon = true
+            map_pin_icon    = ui_mcm.get("pawsys/pawpins/custom_pin_icon") or map_pin_icon
+            dl("MCM: Overriding default icon with custom value: %s",map_pin_icon)
+        else
+            custom_pin_icon = false
+        end
+        if force_icon_override then
+            dl("MCM: Script hardcoded to override map_pin_icon with %s",force_icon_override)
+            map_pin_icon = force_icon_override
+            default_mapspot = force_icon_override
+        end
+        if (bi and ish_kill_tracker) then
+            body_icon_mode = bi
+            current_body_icon = icons[cbi] or default_mapspot
+            ish_kill_tracker.use_paw_icon = (bi == "set") or (bi == "fac")
+    widget_enabled = load_mcm("pawhud/widget_enable",widget_enabled)
+    active_theme = load_mcm("pawhud/active_theme",active_theme)
+    if not hud_themes[active_theme] then active_theme = "classicauto" end
+    widget_custom_pos = {
+        x = load_mcm("pawhud/pos_x"),
+        y = load_mcm("pawhud/pos_y")
+    }
+    widget_use_custom_pos = load_mcm("pawhud/custompos")
+    widget_hide_delay = (tonumber(load_mcm("pawhud/autohide",widget_hide_delay)) * 1000)
+    use_ui_snd = load_mcm("pawhud/hudsound")
+
+    ui_mcm.set("pawsys/pawgen/mcm_ver",script_version)
+        end
+
+    end
+    if ish_kill_tracker and item_milpda then ish_kill_tracker.on_option_change() end
+    active_set(icon_sets[current_active_set].i)
+    if db.actor and get_hud() then
+        reset_indicator()
+    end
+end
+
+
+function load_active_icoset_data()
+    if not ui_mcm then return end
+    vl("Loading MCM values for sets and icons")
+    local path = "pawsys/pawpins/poi_icon_"
+    for k,v in pairs(icon_sets) do
+        local val = ui_mcm.get(path..k)
+        local icon = icons[val]
+        --printf("loading "..path..k..": %s | icons %s | icons[%s]: %s",val,icons,val,icons[val])
+        vl("Loading active icon for %s: %s = %s",k,val,icon)
+        icon_sets[k].default = val
+        icon_sets[k].active_icon = icon
+    end
+    local setname = ui_mcm.get("pawsys/pawpins/pin_icon_group")
+    if set_index[setname] then
+        active_set(set_index[setname])
+    end
+end
+
+function update_mcm_icoset_data()
+    if not ui_mcm then return end
+    if icoset_changed then
+        vl("Updating MCM settings after set/icon change",icoset_changed)
+        local curr_set = pawdata.curr_set_name
+        if icoset_changed and icoset_changed.s then
+            ui_mcm.set("pawsys/pawpins/pin_icon_group",curr_set)
+        end
+        local path = "pawsys/pawpins/poi_icon_"..curr_set
+        local active_pin = pin_for_icon(icon_sets[curr_set].active_icon)
+        ui_mcm.set(path,active_pin)
+    end
+    icoset_changed = nil
+end
+
+function check_waypoint_proximity(id)
+    local se_obj = id and alife_object(id)
+    if not (se_obj and se_obj.online) then return end
+    local szpos = se_obj.position
+    local dist = szpos:distance_to(db.actor:position()) or 0
+    if dist <= wp_clear_dist then
+        toggle_waypoint(false)
+    end
+end
+
+function tick()
+    if not paw_enabled then
+        UnregisterScriptCallback("actor_on_update")
+    end
+    local now = time_global()
+    if enable_wp_proxcheck and waypoint_active and (next_wp_proxcheck <= now) then
+        next_wp_proxcheck = now + wp_proxcheck_interval
+        check_waypoint_proximity(placed_waypoint and placed_waypoint.id)
+    end
+    if disable_mcm_updates then return end
+    if (next_mcm_update > now) or not icoset_changed then return end
+    next_mcm_update = now + mcm_update_throttle
+    update_mcm_icoset_data()
+end
+
+function paw_welcome_message()
+    if welcome_msg_shown then return true end
+    vl("Welcome message not shown yet, displaying to player")
+    welcome_msg_shown = true
+    if ui_mcm then
+        ui_mcm.set("pawsys/pawgen/welcome_msg_shown",true)
+    end
+    local player_name = alife():actor():character_name()
+    local kb        = keybinds
+    toggle_bind     = kb["wptoggle"].bind
+    toggle_mod      = kb["wptoggle"].mod
+    quickpin_bind   = kb["quickpin"].bind
+    quickpin_mod    = kb["quickpin"].mod
+    cart_mode_hold  = kb["cartmode"].bind
+    cart_mode_mod   = kb["cartmode"].mod
+    local toggle_btxt = bindtext(toggle_bind,toggle_mod)
+    local quickpin_btxt = bindtext(quickpin_bind,quickpin_mod)
+    local cartmode_btxt = bindtext(cart_mode_hold,cart_mode_mod)
+    local welcome_msg = string.format(ts("st_pawsys_welcome_msg"),toggle_btxt,quickpin_btxt,cartmode_btxt,player_name)
+    welcome_msg = psk(welcome_msg,text_colors)
+    dotip(welcome_msg,10000)
+    return true
+end
+-- ======================================================================
+--      UI ELEMENTS
+-- ======================================================================
+
+-- ======================================================================
+--[[    TEXT INPUT WINDOW
+    Originally adapted from parts of the vanilla backpack stash script
+
+    A more generic, parameterized version used to ship with PAW as its 
+    own mod (ui_get_input.script)
+-- ====================================================================]]
+
+InputGUI = nil
+
+function get_text(title_txt,icon_tex,prepop,func,args)
+    dl("get_text called:\nTitle: %s\nIcon: %s\nExisting text: %s",title_txt,icon_tex,prepop)
+    tex = texdef or tex_defs
+    args = args or {}
+    
+    if not InputGUI then
+        InputGUI = UITextInputWnd(title_txt,icon_tex,prepop,func,args)
+    end
+    
+    if InputGUI and not InputGUI:IsShown() then
+        InputGUI:Reset(title_txt,icon_tex,prepop,func,args)
+        InputGUI:ShowDialog(true)
+        Register_UI("UITextInputWnd","get_text")
+    end
+end
+
+-- ======================================================================
+
+class "UITextInputWnd" (CUIScriptWnd)
+
+function UITextInputWnd:__init(title_txt,icon_tex,prepop,func,args) super()
+    vl("UITextInputWnd:__init:\nTitle: %s\nIcon: %s\nExisting text: %s",title_txt,icon_tex,prepop)
+    self.title_txt  = title_txt
+    self.icon_tex   = icon_tex
+    self.prepop     = prepop
+    self.func       = func
+    self.args       = args
+    self:InitControls()
+    self:InitCallBacks()
+end
+
+function UITextInputWnd:__finalize()
+end
+
+function UITextInputWnd:InitControls()
+    --printf("UITextInputWnd:InitControls")
+    self:SetWndRect(Frect():set(0,0,1024,768))
+    self:SetAutoDelete(true)
+
+    local tex = {
+        file    = "paw_input_window.xml",
+        tbar    = "titlebar",
+        paw     = "paw",
+        icon    = "icon",
+        text    = "text",
+        root    = "dialog",
+        bg      = "background",
+        input   = "input",
+        ok      = "btn_ok",
+        cancel  = "btn_cancel",
+    }
+
+    local xml       = CScriptXmlInit()
+    local tbar      = tex.root..":"..tex.tbar
+    local paw       = tbar..":"..tex.paw
+    local icon      = tbar..":"..tex.icon
+    local text      = tbar..":"..tex.text
+    local bg        = tex.root..":"..tex.bg
+    local cancel    = tex.root..":"..tex.cancel
+    local input     = tex.root..":"..tex.input
+    local ok        = tex.root..":"..tex.ok
+
+    xml:ParseFile   (tex.file)
+
+    self.dialog     = xml:InitStatic(tex.root, self)
+    xml:InitStatic(bg, self.dialog)
+    self.tbar       = xml:InitStatic(tbar,self.dialog)
+    self.paw        = xml:InitTextWnd(paw,self.tbar)
+    self.paw:SetText("PAW".." "..script_version)
+    self.paw:SetFont(GetFontSmall())
+    self.icon       = xml:InitStatic(icon, self.tbar)
+    if self.icon_tex then
+        self.icon:InitTexture(self.icon_tex)
+    else
+        dl("Empty icon texture passed to input window")
+    end
+    self.text       = xml:InitTextWnd(text, self.tbar)
+    self.text:SetText(self.title_txt)
+    self.text:SetFont(GetFontGraffiti22Russian())
+
+    self.input      = xml:InitEditBox(input,self.dialog)
+    self:Register(self.input,"fld_input")
+    self.input:SetText(self.prepop)
+
+    local btn       = xml:Init3tButton(cancel, self.dialog)
+    self:Register(btn,tex.cancel)
+
+    btn             = xml:Init3tButton(ok, self.dialog)
+    self:Register(btn,tex.ok)
+end
+
+
+function UITextInputWnd:InitCallBacks()
+    self:AddCallback("btn_ok", ui_events.BUTTON_CLICKED, self.OnAccept, self)
+    self:AddCallback("btn_cancel", ui_events.BUTTON_CLICKED, self.Close, self)
+end
+
+
+function UITextInputWnd:Reset(title_txt,icon_tex,prepop,func,args)
+    self.icon_tex   = icon_tex
+    self.title_txt  = title_txt
+    self.prepop     = prepop
+    self.func       = func
+    self.args       = args    
+    if self.title_txt then
+        self.text:SetText(self.title_txt)
+    end
+    if self.icon_tex then
+        self.icon:InitTexture(self.icon_tex)
+    end
+    self.input:SetText("")
+end
+
+
+function UITextInputWnd:Update()
+    CUIScriptWnd.Update(self)
+end
+
+
+function UITextInputWnd:OnAccept()
+    local text_input = self.input:GetText()
+    if text_input == "" then text_input = nil end
+    dl("OnAccept: text_input is %s",text_input)
+    if self.func then
+        exec(self.func,text_input,self.args)
+    end
+    self:Close()
+end
+
+
+function UITextInputWnd:OnKeyboard(dik, keyboard_action)
+    local res = CUIScriptWnd.OnKeyboard(self,dik,keyboard_action)
+    if (res == false) then
+        local bind = dik_to_bind(dik)
+        if keyboard_action == ui_events.WINDOW_KEY_PRESSED then
+            if dik == DIK_keys.DIK_ESCAPE then
+                self:Close()
+            end
+        end
+    end
+    return res
+end
+
+
+function UITextInputWnd:Close()
+    self:HideDialog()
+    Unregister_UI("UITextInputWnd")
+end
+
+-- ======================================================================
+--[[    ICON AND SET HUD INDICATOR
+    See the hud_themes table and PAW's MCM menu for more info
+-- ====================================================================]]
+
+
+GUI = nil
+
+class "UIPAWIndicator" (CUIScriptWnd)
+
+function UIPAWIndicator:__init() super()
+    vl("PAW init called, active theme is %s | widget_active %s | widget_enabled %s",active_theme,widget_active,widget_enabled)
+    if not widget_enabled then return end
+    self.theme = hud_themes[active_theme]
+    self:InitControls()
+    self:DrawIndicator(self.theme)
+    get_hud():AddDialogToRender(self)
+    RegisterScriptCallback("actor_on_net_destroy", self)
+end
+
+
+function UIPAWIndicator:__finalize()
+end
+
+
+function UIPAWIndicator:Reset(theme)
+    vl("UIPAWIndicator:Reset called with theme %s",theme and theme.name)
+    if not theme then theme = self.theme end
+    self.dialog:Show(false)
+    self.dialog = nil
+    self:InitControls()
+    self:DrawIndicator(theme)
+end
+
+function UIPAWIndicator:Destroy()
+    get_hud():RemoveDialogToRender(self)
+end
+
+
+function UIPAWIndicator:SetTheme(theme_name)
+    vl("UIPAWIndicator:SetTheme called with theme_name %s",theme_name)
+    local theme = hud_themes and hud_themes[theme_name]
+    if theme then
+        self.dialog:Show(false)
+        active_theme = theme_name or active_theme
+        self.theme = hud_themes[active_theme]
+        self:Reset(theme)
+    end
+end
+
+
+function UIPAWIndicator:actor_on_net_destroy()
+    get_hud():RemoveDialogToRender(self)
+end
+
+
+function UIPAWIndicator:DrawIndicator(theme)
+    vl("UIPAWIndicator:DrawIndicator called with theme %s | self %s",theme and theme.name,self.theme)
+    local pos = theme.pos
+    if widget_use_custom_pos then pos = widget_custom_pos end
+    local xml = CScriptXmlInit()
+    xml:ParseFile(theme.file)
+
+    self.dialog = xml:InitStatic(theme.node, self)
+    self.dialog:SetWndPos(vector2():set(pos.x,pos.y))
+    if theme.tex then self.dialog:InitTexture(theme.tex) end
+    self.box_curr = xml:InitStatic(theme.node..":curr", self.dialog)
+    self.box_curr:InitTexture(texture_for_icon(self.icon_curr))
+
+    if theme.style ~= "compact" then
+        self.box_prev = xml:InitStatic(theme.node..":prev", self.dialog)
+        self.box_prev:InitTexture(texture_for_icon(get_prev_icon()))
+
+        self.box_next = xml:InitStatic(theme.node..":next", self.dialog)
+        self.box_next:InitTexture(texture_for_icon(get_next_icon()))
+
+        self.box_head = xml:InitStatic(theme.node..":head",self.dialog)
+        self.box_text = xml:InitTextWnd(theme.node..":head",self.box_head)
+        self.box_prev:SetTextureColor(colors.dimmed)
+        self.box_next:SetTextureColor(colors.dimmed)
+    end
+    if theme.style == "full" then
+        self.box_text:SetText(ts("ui_mcm_lst_pawsys_pg_"..self.set_curr))
+        self.box_head2 = xml:InitStatic(theme.node..":head2",self.dialog)
+        self.box_text2 = xml:InitTextWnd(theme.node..":head2",self.box_head2)
+        self.box_text2:SetText(ts("ui_mcm_lst_"..self.icon_curr))
+    elseif theme.style == "minimal" then
+        self.box_text:SetText(ts("ui_mcm_lst_"..self.icon_curr))
+    end
+    vl("UIPAWIndicator:DrawIndicator completed")
+end
+
+
+function UIPAWIndicator:InitControls()
+    self.pda_active = item_device.is_pda_active()
+    self.icon_curr = active_icon()
+    self.set_curr = pawdata.curr_set_name
+    vl("UIPAWIndicator:InitControls: active icon is %s",self.icon_curr)
+end
+
+
+function UIPAWIndicator:Update(force)
+    CUIScriptWnd.Update(self)
+    self.dialog:Show(false)
+    local theme = self.theme
+
+    if not main_hud_shown() then return end
+    local pda_changed = false
+
+    if self.pda_active ~= item_device.is_pda_active() then
+        pda_changed = true
+    end
+    if item_device.is_pda_active() then
+        local thm = theme.pda_thm
+        if thm then
+            
+            theme = hud_themes[thm]
+        end
+    end
+    if pda_changed then
+        vl("PDA mode has changed, resetting theme")
+        self:Reset(theme)
+    end
+
+    if theme.tex then self.dialog:InitTexture(theme.tex) end
+    local pos = theme.pos
+    if widget_use_custom_pos then
+        pos = widget_custom_pos
+    end
+    
+    self.dialog:SetWndPos(vector2():set(pos.x,pos.y))
+
+    local acticon = pawdata.curr_ico_name
+    if (self.icon_curr ~= acticon) or (self.set_curr ~= pawdata.curr_set_name) then
+        vl("UIPAWIndicator:Update - icon/set has changed (new curr icon: %s)",acticon)
+        self.set_curr = pawdata.curr_set_name
+        self.icon_curr = acticon
+        self.box_curr:InitTexture(texture_for_icon(self.icon_curr))
+        if theme.style ~= "compact" then
+            self.box_prev:InitTexture(texture_for_icon(get_prev_icon()))
+            self.box_next:InitTexture(texture_for_icon(get_next_icon()))
+        end
+        if theme.style == "full" then
+            self.box_text:SetText(ts("ui_mcm_lst_pawsys_pg_"..self.set_curr))
+            self.box_text2:SetText(ts("ui_mcm_lst_"..self.icon_curr))
+        elseif theme.style == "minimal" then
+            self.box_text:SetText(ts("ui_mcm_lst_"..self.icon_curr))
+        end
+        widget_last_used = time_global()
+        widget_active = true
+    end
+    if widget_hide_delay > 0 then
+        if time_global() > widget_last_used + widget_hide_delay then widget_active = false end
+    end
+    self.dialog:Show(widget_active)
+end
+
+
+function reset_indicator()
+    vl("Resetting PAW indicator")
+    if GUI then GUI:Destroy() end
+    if not widget_enabled then return end
+    vl("Re-initializing PAW indicator")
+    GUI = UIPAWIndicator()
+end
+
+
+function show_indicator(tf)
+    if not GUI and widget_enabled then return end
+    if show_indicator == nil then
+        widget_active = -widget_active
+    else
+        widget_active = (tf == true) or false
+    end        
+    GUI:Show(widget_active)
+end
+
+
+-- ======================================================================
+--[[    WAYPOINT AND PIN HUD ICONS
+    Some pieces adapted from GT's "HUD Ubisoft Friendly" addon
+-- ====================================================================]]
+
+function correct_ratio(element)
+    local ratio_w = 1024/(device().width)
+    local ratio_h = 768/(device().height)
+    
+    local w = element:GetWidth()
+    local h = element:GetHeight()
+
+    --element:SetWndSize(vector2():set( (w * ratio_w) , (h * ratio_h) ))
+    element:SetWndSize(vector2():set( (w) , (h * ratio_h) ))
+end
+
+
+function scale_by_dist(element,dist,h,v,fade_dist,min,mid,max)
+    dist = clamp(dist,0,max)
+    local nh = h
+    local nv = v
+    local alpha = 255
+    if (dist < min) then
+        if dist < fade_dist then
+            alpha = alpha * (dist / fade_dist)
+        end
+        nh = h + ((1 - (dist / min)) * (h * 0.5))
+        nv = v + ((1 - (dist / min)) * (v * 0.5))
+    elseif dist > mid then
+        nh = h - (((dist - mid) / (max - mid)) * (h * 0.3))
+        nv = v - (((dist - mid) / (max - mid)) * (v * 0.3))
+    end
+    if fade_dist > 0 then
+        element:SetTextureColor(GetARGB(alpha,255,255,255))
+    end
+    --local arh = utils_xml.is_widescreen() and (nh * (4/3)) or nh
+    --printf("scale_by_dist for h %s -> %s | v %s -> %s: h corrected to %s",h,nh,v,nv,arh)
+    --return arh,nv
+    return nh,nv
+end
+
+
+--[[
+function actor_has_los(obj_or_id)
+    if not obj_or_id then return end
+    local obj = obj_or_id
+    if type(obj_or_id) == "number" then
+        obj = get_object_by_id(obj_or_id)
+    end
+    local pos = obj:position()
+    local range = 800
+    local ray = demonized_geometry_ray.geometry_ray({
+        ray_range = range,
+        ignore_object = obj,
+        flags = 3,
+    })
+    local res = ray:get(pos, device().cam_pos:sub(pos):normalize())
+    return math.abs(res.distance - range) < 3
+end
+--]]
+
+function get_screen_coords(id)
+    local pos = nil
+    local obj = db.storage[id] and db.storage[id].object or level.object_by_id(id)
+    
+    if (obj and (IsStalker(obj) or IsMonster(obj))) then
+        pos = obj and utils_obj.safe_bone_pos(obj,"bip01_head")
+    elseif (obj and (type(obj.position) == "function")) then
+        local tmp = obj:position()
+        pos = tmp and vector():set(tmp.x,tmp.y + 1,tmp.z)
+    end
+    
+    if (pos == nil) then
+        local se = alife_object(id)
+        if not (se and se.online) then
+            return nil
+        elseif (se:clsid() == clsid.online_offline_group_s) then
+            local i = se:commander_id()
+            local npc = i and db.storage[i] and db.storage[i].object or level.object_by_id(i)
+            pos = npc and utils_obj.safe_bone_pos(npc,"bip01_head")
+        else
+            local tmp = se and se.position
+            pos = tmp and vector():set(tmp.x,tmp.y + 1,tmp.z)
+        end
+    end
+    
+    local vec = pos and game.world2ui(vector():set(pos.x,pos.y + 0.5,pos.z),false)
+    if (vec and (vec.x ~= -9999) and (vec.y ~= 0)) then
+        return vec
+    end
+    
+    return nil
+end
+
+-- ======================================================================
+
+HUD_MT = nil
+
+function show_hud_waypoint()
+    if not db.actor then return end
+    if (HUD_MT == nil) then
+        HUD_MT = UIPAWHUDWaypoint()
+        get_hud():AddDialogToRender(HUD_MT)
+    end
+end
+
+function hide_hud_waypoint()
+    if not db.actor then return end
+    if (HUD_MT ~= nil) then
+        HUD_MT:ShowDialog(false)
+        get_hud():RemoveDialogToRender(HUD_MT)
+        HUD_MT = nil
+    end
+end
+
+function update_hud_waypoint()
+    if not db.actor then return end
+    if (HUD_MT ~= nil) then
+        HUD_MT:Update(true)
+    end
+end
+
+-- ======================================================================
+
+class "UIPAWHUDWaypoint" (CUIScriptWnd)
+
+function UIPAWHUDWaypoint:__init() super()
+    self:InitControls()
+    RegisterScriptCallback("actor_on_net_destroy", self)
+end
+
+
+function UIPAWHUDWaypoint:__finalize()
+end
+
+
+function UIPAWHUDWaypoint:InitControls()
+    self:SetAutoDelete(true)
+    self.xml = CScriptXmlInit()
+    self.xml:ParseFile("paw_hud_wp_icon.xml")
+    
+    self.marker = self.xml:InitStatic("marker",self)
+    --self.border = self.xml:InitStatic("marker:border",self.marker)
+end
+
+
+function UIPAWHUDWaypoint:Destroy()
+    get_hud():RemoveDialogToRender(self)
+end
+
+
+function UIPAWHUDWaypoint:actor_on_net_destroy()
+    get_hud():RemoveDialogToRender(self)
+end
+
+
+function UIPAWHUDWaypoint:Update()
+    CUIScriptWnd.Update(self)
+    if (main_hud_shown() or axr_main.binoc_is_zoomed or axr_main.scoped_weapon_is_zoomed) then
+        local vec = placed_waypoint and placed_waypoint.id and get_screen_coords(placed_waypoint.id)
+        if (vec) then
+            self.marker:SetWndPos(vec)
+            --[[
+            if actor_has_los(get_object_by_id(placed_waypoint.id)) then
+                self.marker:SetTextureColor(colors.active)
+            else
+                self.marker:SetTextureColor(colors.dimmed)
+            end
+            --]]
+            local obj = get_object_by_id(placed_waypoint.id)
+            if obj then
+                local dist = db.actor:position():distance_to(obj:position())
+                local h,v = scale_by_dist(self.marker,dist,24,24,-1,50,100,200)
+                self.marker:SetWndSize(vector2():set(h,v))
+                --correct_ratio(self.marker)
+            end
+            self.marker:Show(true)
+            return
+        end
+        self.marker:Show(false)
+    else
+        self.marker:Show(false)
+    end
+end
+
+-- ======================================================================
+
+hud_pin_objs = {}
+
+function update_hud_pins()
+    for k,v in pairs(hud_pin_objs) do
+        v:Update(true)
+    end
+end
+
+function hide_hud_pin(id)
+    if not id then return end
+    if hud_pin_objs[id] then
+        get_hud():RemoveDialogToRender(hud_pin_objs[id])
+        hud_pin_objs[id] = nil
+    end
+end
+
+function show_hud_pin(id)
+    vl("show_hud_pin called for pin ID %s",id)
+    --if not id and pins and pins[id] then return end
+    if hud_pin_objs[id] then
+        hide_hud_pin(id)
+    end
+    hud_pin_objs[id] = UIPAWHUDPin(id)
+    get_hud():AddDialogToRender(hud_pin_objs[id])
+end
+
+function init_hud_pins()
+    for k,v in pairs(pins) do
+        local id = v and v.id
+        if id and v.hud then
+            local se_obj = alife_object(id)
+            if se_obj.online then
+                show_hud_pin(id)
+            end
+        end
+    end
+end
+
+-- ======================================================================
+
+class "UIPAWHUDPin" (CUIScriptWnd)
+
+function UIPAWHUDPin:__init(id) super()
+    --printf("UIPAWHUDPin:__init(%s)",id)
+    self.pin_id = id
+    self.pin_obj = get_object_by_id(id)
+    self.pin_se_obj = alife_object(id)
+    self:InitControls(id)
+    RegisterScriptCallback("actor_on_net_destroy", self)
+end
+
+
+function UIPAWHUDPin:__finalize()
+end
+
+
+function UIPAWHUDPin:InitControls(id)
+    --printf("UIPAWHUDPin:InitControls(%s)",id)
+    self:SetAutoDelete(true)
+    self.xml = CScriptXmlInit()
+    self.xml:ParseFile("paw_hud_pin_icon.xml")
+    self.marker = self.xml:InitStatic("marker",self)
+    local tex = texture_for_icon(pins[id].icon)
+    --printf("initializing texture for icon %s: %s",pins[id].icon,tex)
+    self.marker:InitTexture(tex)
+end
+
+
+function UIPAWHUDPin:Destroy()
+    get_hud():RemoveDialogToRender(self)
+end
+
+
+function UIPAWHUDPin:actor_on_net_destroy()
+    get_hud():RemoveDialogToRender(self)
+end
+
+local next_log = 0
+function UIPAWHUDPin:Update()
+    if not self.pin_se_obj.online then
+        self.marker:Show(false)
+        return
+    end
+    CUIScriptWnd.Update(self)
+    if (main_hud_shown() or axr_main.binoc_is_zoomed or axr_main.scoped_weapon_is_zoomed) then
+        local vec = self.pin_id and get_screen_coords(self.pin_id)
+        if (vec) then
+            self.marker:SetWndPos(vec)
+            local dist = db.actor:position():distance_to(self.pin_obj:position())
+            local h,v = scale_by_dist(self.marker,dist,24,24,-1,50,100,200)
+            if time_global() > next_log  then
+                --printf("h %s | v %s",h,v)
+                next_log = time_global() + 1000
+            end
+            self.marker:SetWndSize(vector2():set(h,v*2))
+            correct_ratio(self.marker)
+            self.marker:Show(true)
+            return
+        end
+        self.marker:Show(false)
+    else
+        self.marker:Show(false)
+    end
+end
+
+
+-- ======================================================================
+--  CALLBACKS
+-- ======================================================================
+
+function update_hud_on_show_hide()
+    update_hud_waypoint()
+    update_hud_pins()
+end
+
+local mod_keys = {
+    [DIK_keys.DIK_LSHIFT]   = {pressed=false,code=1},
+    [DIK_keys.DIK_LCONTROL] = {pressed=false,code=2},
+    [DIK_keys.DIK_LMENU]    = {pressed=false,code=3},
+}
+local mod_key_codes = {
+    [1] = DIK_keys.DIK_LSHIFT,
+    [2] = DIK_keys.DIK_LCONTROL,
+    [3] = DIK_keys.DIK_LMENU,
+}
+local function mod_key_pressed(key)
+    if ui_mcm then
+        return ui_mcm.get_mod_key(key)
+    else
+        return mod_keys and mod_keys[key] and mod_keys[key].pressed
+    end
+end
+
+local function mod_key_held()
+    return 
+        mod_keys[DIK_keys.DIK_LSHIFT].pressed or
+        mod_keys[DIK_keys.DIK_LCONTROL].pressed or
+        mod_keys[DIK_keys.DIK_LMENU].pressed
+end
+
+function on_key_press(key)
+    --if not active_binds[key] then return end
+    --printf("Monitored keybind %s pressed",key)
+    local args
+    if mod_keys[key] then
+        mod_keys[key].pressed = true
+        return
+    end
+    --local keyname = DIK_name(key)
+    --vl("on_key_press(%s) : %s\nModifiers held: Shift %s | Ctrl %s | Alt %s",key,keyname,mod_key_pressed(1),mod_key_pressed(2),mod_key_pressed(3))
+    for k,v in pairs(keybinds) do
+        if v and v.enabled then
+            --local bindtxt = bindtext(v.bind,v.mod)
+            --vl("** Checking keybind %s (bind %s | mod %s | hold %s)",k,bindtxt,v.bind,v.mod,v.hold)
+            if (key == v.bind) and mod_key_pressed(v.mod) then
+                --vl("on_key_press(%s): keybind %s matched %s with bind %s and mod %s",key,k,bindtxt,v.bind,mod)
+                if v.hold then
+                    args = true
+                end
+                v.action(args)
+                return
+            end
+        end
+    end
+    --vl("on_key_press: no matching keybind for %s",keyname)
+end
+
+
+function on_key_release(key)
+    local do_action = false
+    if mod_keys[key] then
+        mod_keys[key].pressed = false
+    end
+
+    --local keyname = DIK_name(key)
+    --vl("on_key_release(%s) : %s\nModifiers held: Shift %s | Ctrl %s | Alt %s",key,keyname,mod_key_pressed(1),mod_key_pressed(2),mod_key_pressed(3))
+    for k,v in pairs(keybinds) do
+        if v and v.enabled and v.hold then
+            --local bindtxt = bindtext(v.bind,v.mod)
+            --vl("** Checking keybind %s: %s (bind %s | mod %s | hold %s)",k,bindtxt,v.bind,v.mod,v.hold)
+            if (key == v.bind) and mod_key_pressed(v.mod) then
+                --vl("on_key_release(%s): keybind %s matched %s with bind %s and mod %s",key,k,bindtxt,v.bind,mod)
+                v.action(false)
+                return
+            end
+        end
+    end
+--[[
+    for k,v in pairs(keybinds) do
+        if v and v.enabled then
+            local mod = mod_key_codes[v.mod]
+            if v.hold then
+                vl("on_key_release(%s): keybind %s is a hold",DIK_name(key),k)
+                if mod and (not v.bind) and (key == mod) then
+                    vl("on_key_release(%s): keybind %s has mod key but no primary bind, and matched mod %s",key,k,DIK_name(mod))
+                    do_action = true
+                    args = false
+                elseif (key == v.bind) and mod_key_pressed(v.mod) then
+                    vl("on_key_release(%s): keybind %s matched bind %s and mod %s",key,k,DIK_name(v.bind),DIK_name(mod))
+                    do_action = true
+                    args = false
+                end
+            elseif (key == v.bind) and mod_key_pressed(v.mod) then
+                vl("on_key_release(%s): keybind %s matched bind %s and mod %s",key,k,DIK_name(v.bind),DIK_name(mod))
+                do_action = true
+            end
+        end
+        if do_action then
+            v.action(args)
+            return
+        end
+    end
+    --]]
+end
+
+
+function on_map_right_click(property_ui, map_table)
+    if not map_table then return end
+    if map_table.object_id ~= 65535 then return end
+
+    local pos = map_table.pos
+    local se_obj = register_script_zone(pos,map_table.lvid,map_table.gvid)
+    map_table.object_id = se_obj.id
+    
+    if not se_obj then
+        dl("<PAW> Right-click capture failed - unable to find or create valid se_obj")
+        return
+    else
+        if mod_key_pressed(1) then
+            -- LSHIFT : unused
+        elseif mod_key_pressed(2) then
+            -- LCTRL : Set/Move Waypoint
+            if waypoint_active then
+                do_waypoint("wp_mov",se_obj)
+            else
+                do_waypoint("wp_set",se_obj)
+            end
+            return
+        elseif mod_key_pressed(3) then
+            -- LALT : Add Pin
+            do_waypoint("pn_add",se_obj)
+            return
+        end
+        dl("<PAW> Passing right-click to get_context_menu_options with id %s and pos %s",se_obj.id,pos)
+        last_clicked_id = se_obj.id
+        get_context_menu_options(property_ui,se_obj.id,map_table)
+    end
+end
+
+function map_spot_menu_add_property(property_ui,id)
+    last_clicked_id = id
+    get_context_menu_options(property_ui,id)
+end
+
+
+function map_spot_menu_property_clicked(property_ui,id,level_name,prop)
+    execute_context_menu_option(property_ui,id,level_name,prop)
+end
+
+
+function load_file_data()
+    dl("<PAW> Loading file data and populating tables")
+    local attr_tex  = "texture"
+    local minimap   = "mini_map"
+    local levelmap  = "level_map"
+    local ind       = 0
+    xml             = CScriptXmlInit()
+    xml:ParseFile("map_spots.xml")
+    for k,v in pairs(icons) do
+        local tex,th,tw
+        local spot  = v
+        xml:NavigateToRoot()
+        th    = xml:ReadAttribute(spot,0,"height")
+        tw    = xml:ReadAttribute(spot,0,"width")
+        xml:NavigateToNode(spot,0)
+        --printf("ReadAttribute for %s attempt 1: h %s w %s",v,th,tw)
+        vl("trying to find texture data for %s | %s",k,v)
+        if xml:NodeExist(attr_tex,0) then
+            tex   = xml:ReadValue(attr_tex,0)
+            vl("texture node found with value %s",tex)
+        else
+            --printf("no texture node in %s, looking for subtypes",v)
+            local spotnode = ""
+            local typ = ""
+            if xml:NodeExist(minimap) then
+                spotnode = xml:ReadAttribute(minimap,0,"spot")
+                typ = minimap
+            end
+            if xml:NodeExist(levelmap) then
+                spotnode = xml:ReadAttribute(levelmap,0,"spot")
+                typ = levelmap
+            end
+            if spotnode ~= "" then
+                xml:NavigateToRoot()
+                th    = xml:ReadAttribute(spotnode,0,"height")
+                tw    = xml:ReadAttribute(spotnode,0,"width")
+                vl("ReadAttribute for %s: h %s w %s",v,th,tw)
+                xml:NavigateToNode(spotnode,0)
+                tex   = xml:ReadValue(attr_tex,0)
+                vl("%s node found: %s",typ,spotnode)
+            end
+        end
+
+        texture_data[spot] = {
+            id      = k,
+            t       = tex,
+            h       = th,
+            w       = tw,
+        }
+        ind = ind + 1
+        icon_index[ind] = {
+            id      = k,
+            icon    = spot,
+            data    = texture_data[spot],
+        }
+        vl("Texture for %s: %s (%sx%s)",spot,tex,tw,th)
+    end
+    current_ico_max = ind
+    for k,v in pairs(texture_data) do
+        dl("texture_data(%s): tex %s | id %s | %sx%s",k,v.t,v.id,v.w,v.h)
+    end
+
+    ind = 0
+    for w, _ in pairs(iconset_ltx) do
+        local iconset_ltx_prefix = "iconset_"
+        local icons_pos = string.find(w,iconset_ltx_prefix)
+        if icons_pos == 1 then
+            local group = string.sub(w,icons_pos+string.len(iconset_ltx_prefix))
+            local set_cfg = icon_sets_ini:collect_section(w)
+            local name = set_cfg.name
+            local def = set_cfg.default
+            local sec_list = group.."_icons"
+            ind = ind + 1
+            icon_sets[group] = {
+                name        = name,
+                group       = group,
+                default     = def,
+                active_icon = icons[def],
+                i           = ind,
+            }
+            local setdata = icon_sets[group]
+            set_index[ind] = {
+                id = group,
+                data = setdata,
+            }
+            dl("Found icon set %s with group %s, section %s",setdata.name,group,sec_list)
+            set_index[ind].ii   = {}
+            setdata.ii = {}
+            setdata.ri = {}
+            local iconlist      = {}
+            local il            = icon_sets_ini:collect_section(sec_list)
+            local i             = 0
+            for k,_ in pairs(il) do
+                i = i + 1
+                local spot = icons[k]
+                vl("set %s iconlist: icons[%s] = %s",group,k,spot)
+                iconlist[spot] = texture_data[spot].t
+                set_index[ind].ii[i] = spot
+                setdata.ii[i] = spot
+                setdata.ri[spot] = i
+            end
+            setdata.inum = i
+            setdata.icons = iconlist
+        end
+    end
+    current_set_max = ind
+    dl("Loading menu actions from actions_ini")
+    for w, _ in pairs(actions_ltx) do
+        action_codes[w] = actions_ini:collect_section(w)
+        local ac = action_codes[w]
+        local opt_loc = ts(ac.text)
+        local isnum = ac and ac.mode and (type(ac.mode) == "number")
+        if isnum then
+            ac.mode = clamp(ac.mode,0,4)
+        else
+            ac.mode = 0
+        end
+        ac.enable = (ac.enable == "true")
+        action[opt_loc] = w
+        if verbose then
+            vl("Initializing menu action:\n%s = %s",opt_loc,action[opt_loc])
+            for k,v in pairs(ac) do vl("%s = %s",k,v) end
+            vl("action[\"%s\"] = %s",opt_loc,action[opt_loc])
+        end
+    end
+    dl(logprefix.."All file data loaded")
+    --utils_data.print_table(icon_sets)
+    started = true
+    printf(logprefix.."Personal Adjustable Waypoint started")
+end
+
+
+function load_state(data)
+    dl("load_state: Checking for saved PAW data")
+
+    local ps = data.pawsys
+    local pd = data.pawdata
+    if ps then
+        vl("load_state: pawsys found, loading")
+        placed_waypoint = ps.current_waypoint
+        last_waypoint = ps.last_waypoint
+        custom_name = ps.custom_name
+        custom_desc = ps.custom_desc
+        dynamic_faves = ps.dynamic_faves or dynamic_faves
+        pins = ps.pins
+        if placed_waypoint then waypoint_active = true end
+        welcome_msg_shown = ps.welcome_msg_shown
+
+    end
+    if pd and pd.valid then
+        dl("load_state: pawdata found, loading")
+        pawdata = pd
+        pins = pawdata.pins
+        dynamic_faves = pawdata.dynamic_faves
+    else
+        dl("load_state: pawdata not found, initializing")
+        pawdata.curr_set_name = "pins"
+        pawdata.curr_set_data = icon_sets[pawdata.curr_set_name]
+        local setdata = pawdata.curr_set_data
+        pawdata.curr_set_ind = setdata.i
+        pawdata.curr_ico_name = setdata.active_icon
+        pawdata.curr_ico_ind = setdata.ri[root_patch_name(setdata.active_icon)]
+        vl("pawdata: set %s (%s) | icon %s (%s)",pawdata.curr_set_name,pawdata.curr_set_ind,pawdata.curr_ico_name,pawdata.curr_ico_ind)
+    end
+end
+
+
+function save_state(data)
+    update_mcm_icoset_data()
+    dl("save_state: Cleaning up script zones")
+    script_zone_cleanup()
+    dl("save_state: Saving waypoint data")
+    data.paw_waypoint_info = nil
+    data.pawsys = {}
+    data.pawsys.current_waypoint    = placed_waypoint
+    data.pawsys.last_waypoint       = last_waypoint
+    data.pawsys.custom_name         = custom_name
+    data.pawsys.custom_desc         = custom_desc
+    data.pawsys.dynamic_faves       = dynamic_faves
+    data.pawsys.welcome_msg_shown   = welcome_msg_shown
+    data.pawsys.pins = {}
+    pawdata.valid = true
+    data.pawdata = pawdata
+    dl("save_state: Saving player's pins")
+    data.pawsys.pins = pins
+end
+
+function actor_on_update()
+    tick()
+end
+
+function actor_on_first_update()
+    on_option_change()
+    active_set(icon_sets[current_active_set].i)
+    show_all_pins(true)
+    if waypoint_active then
+        local id = placed_waypoint.id
+        local se_obj = alife_object(id)
+        if not se_obj then return end
+        local savelast = last_waypoint
+        do_waypoint("wp_mov",se_obj)
+        last_waypoint = savelast
+    end
+    reset_indicator()
+    if wp_hud_icon_enabled then 
+        show_hud_waypoint()
+    else
+        hide_hud_waypoint()
+    end
+    init_hud_pins()
+    if not welcome_msg_shown then
+        CreateTimeEvent("paw_welcome_message",0,5,paw_welcome_message)
+    end
+end
+
+
+function actor_on_net_destroy()
+    script_zone_cleanup()
+    hide_hud_waypoint()
+    empty_table(hud_pin_objs)
+end
+
+function on_mouse_wheel(scroll_dir, flags)
+    if not mwheel_enabled then
+        UnregisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
+        return
+    end
+    if not (icon_cycle_active or set_cycle_active) then return end
+    if actor_menu.inventory_opened() then return end
+
+    flags.ret_value = false
+    local now = time_global()
+    if now < mwheel_next_poll then return end
+    mwheel_next_poll = now + mwheel_poll_interval
+    -- local cycle_dir = ((scroll_dir == 0) and -1) or scroll_dir
+    local cycle_dir = scroll_dir
+    if cycle_dir == 0 then cycle_dir = -1 end
+    vl("scroll_dir: %s | cycle_dir: %s",scroll_dir,cycle_dir)
+    cycle_items(cycle_dir)
+end
+
+
+function on_game_start()
+    if mwheel_avail then
+        RegisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
+    end
+    RegisterScriptCallback("actor_on_update",actor_on_update)
+    RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
+    RegisterScriptCallback("on_option_change",on_option_change)
+    RegisterScriptCallback("actor_on_first_update",actor_on_first_update)
+    RegisterScriptCallback("load_state",load_state)
+    RegisterScriptCallback("save_state",save_state)
+    if right_click_avail then
+        RegisterScriptCallback("on_map_right_click",on_map_right_click)
+    end
+    RegisterScriptCallback("map_spot_menu_add_property",map_spot_menu_add_property)
+    RegisterScriptCallback("map_spot_menu_property_clicked",map_spot_menu_property_clicked)
+    RegisterScriptCallback("on_key_press",on_key_press)
+    RegisterScriptCallback("on_key_release",on_key_release)
+    RegisterScriptCallback("GUI_on_show",update_hud_on_show_hide)
+    RegisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)    
+    on_option_change()
+end
+
+
+-- ======================================================================
+--  TASK FUNCTORS
+-- ======================================================================
+
+
+task_functor.waypoint_task_target_functor = function (task_id,field,p,tsk)
+    if not paw_enabled then return end
+    -- vl("waypoint_task_target_functor called with task_id %s | field %s",task_id,field)
+
+    if placed_waypoint == nil then
+        dl("WARNING: waypoint_task_target_functor called but placed_waypoint is nil, cancelling waypoint task to avoid crash")
+        cancel_task()
+        waypoint_task_cleanup()
+        return default_id
+    end
+
+    if (field == "target") then
+        tsk.target = placed_waypoint.id
+        tsk.current_target = placed_waypoint.id
+        return placed_waypoint.id
+    end
+end
+
+
+task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
+    -- vl("waypoint_task_text_functor called with task_id %s | field %s",task_id,field)
+    if (field == "title") then
+        -- vl("custom_name: %s")
+        return custom_name or ts("st_paw_placed_waypoint")..(": "..placed_waypoint.name or "")
+    elseif (field == "descr") then
+        -- vl("custom_desc: %s")
+        return custom_desc or ts("st_paw_proceed")
+    end
+end
+
+load_file_data()

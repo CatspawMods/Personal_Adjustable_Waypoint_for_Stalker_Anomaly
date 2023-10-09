@@ -1,0 +1,669 @@
+-- ======================================================================
+--[[	Personal Adjustable Waypoint
+-- ======================================================================
+ 	MCM initialization script
+ 	Author: Catspaw (CatspawMods @ ModDB)
+	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
+    Version: 1.10.1
+	Updated: 20231007
+
+    You probably shouldn't mess with this, even if you're familiar with 
+    MCM's menus. It involves a fair bit of black magic, and updates the 
+    Pin Sets menu dynamically based on the contents of the pin_set_*.ltx 
+    files in configs\scripts\paw, and other sundry things.
+-- ===================================================================--]]
+
+debuglogs                 		= false
+verbose                   		= true
+script_version 					= "1.10.1"
+local scriptname           		= "catsy_paw_mcm"
+local logprefix                 = "<PAW_MCM> "
+local paw 						= tasks_placeable_waypoints
+printf(logprefix.."Forcing %s.script to load first",paw)
+paw.load_me 					= function() end
+-- Force tasks_placeable_waypoints to load first using an empty monkeypatch
+local ts                        = game.translate_string
+local icon_sets_ini             = ini_file_ex("scripts\\paw\\icon_sets.ltx")
+local iconset_ltx               = icon_sets_ini:get_sections(true)
+local icon_sets                 = {}
+local icons_ini                 = ini_file_ex("scripts\\paw\\icons.ltx")
+local icon_ltx                  = icons_ini:collect_section("icons")
+local icons                     = icon_ltx
+local pawmenu_path              = "ui_mcm_pawsys_pawmenu_"
+local actions_ini               = ini_file_ex("scripts\\paw\\menu_actions.ltx")
+local actions_ltx               = actions_ini:get_sections(true)
+local action_codes              = {}
+local action                    = {}
+local dynamic_faves 			= {}
+
+
+function dl(logtext,...)
+    -- Debug logging
+    if logtext and debuglogs then 
+        printf(logprefix..logtext,...)
+    end
+end
+
+
+function vl(logtext,...)
+    -- Verbose logging
+    if logtext and debuglogs and verbose then 
+        dl("[V] "..logtext,...)
+    end
+end
+
+function load_ltx_data()
+    for w, _ in pairs(iconset_ltx) do
+        local iconset_ltx_prefix = "iconset_"
+        local icons_pos = string.find(w,iconset_ltx_prefix)
+        if icons_pos == 1 then
+            local group = string.sub(w,icons_pos+string.len(iconset_ltx_prefix))
+            local set_cfg = icon_sets_ini:collect_section(w)
+
+            local name = set_cfg.name
+            local def = set_cfg.default
+            local sec_list = group.."_icons"
+            dl("default icon for icon_sets_ini:collect_section(%s): %s",sec_list,def)
+            local iconlist = icon_sets_ini:collect_section(sec_list)
+            for k,v in pairs(iconlist) do
+                dl("Adding icon to drop-down list: %s",k)
+            end
+
+
+            dl("Found icon set %s with group %s, section %s",ts(name),group,sec_list)
+            icon_sets[group] = {
+                name    	= name,
+                group   	= group,
+                default 	= def,
+                active_icon = icons[def],
+                icons   	= iconlist,
+            }
+            local ig = icon_sets[group].icons
+            dl("Final values loaded for icon_set[%s] (%s):\nIcons: ",group,ts(name))
+
+
+            for k,v in pairs(ig) do
+                dl("%s = %s",k,v)
+            end
+        end
+    end
+    dl("Loading menu actions from actions_ini")
+    for w, _ in pairs(actions_ltx) do
+        action_codes[w] = actions_ini:collect_section(w)
+        local ac = action_codes[w]
+        local opt_loc = ts(pawmenu_path..ac.text)
+        local isnum = ac and ac.mode and (type(ac.mode) == "number")
+        if isnum then
+        	ac.mode = clamp(ac.mode,0,4)
+        else
+        	ac.mode = 0
+        end
+        ac.enable = (ac.enable == "true")
+        action[opt_loc] = w
+        if verbose then
+            vl("Initializing menu action:\n%s = %s",opt_loc,action[opt_loc])
+            for k,v in pairs(ac) do vl("%s = %s",k,v) end
+            vl("action[\"%s\"] = %s",opt_loc,action[opt_loc])
+        end
+    end
+    table.sort(icons)
+    table.sort(icon_sets)
+    table.sort(action_codes)
+end
+load_ltx_data()
+
+
+local function populate_set_list()
+	dl("populate_set_list called")
+	local ig = icon_sets
+	local pg = "pawsys_pg_"
+	local ind = 1
+	local content = {}
+	content[ind] = {"faves",pg.."faves"}
+	dl("adding favorites to first index: {%s,%s}",content[1][1],content[1][2])
+	for g,_ in pairs (ig) do
+		if g ~= "faves" then
+			ind = ind +1
+			table.insert(content,ind,{g,pg..g})
+			dl("adding %s to list at index %s: {%s,%s}",g,ind,content[ind][1],content[ind][2])
+		end
+	end
+	return content
+end
+
+local function populate_icon_list(group)
+	dl("populate_icon_list called for group %s",group)
+	local ig = icon_sets[group].icons
+	local content = {}
+	for icon,_ in pairs (ig) do
+		local ic = icons[icon]
+		if ic then 
+			local entry = {icon,icons[icon]}
+			table.insert(content,entry)
+			vl("populate_icon_list adding option for group %s: {%s,%s}",group,entry[1],entry[2])
+		else
+			dl("WARNING: member %s not found in icons.ltx! Check your customizations.",icon)
+		end
+	end
+	--[[
+	printf("#dynamic_faves: %s",dynamic_faves and #dynamic_faves)
+	dynamic_faves = paw and paw.dynamic_faves
+	if dynamic_faves and not is_empty(dynamic_faves) then
+		for i = 1,#dynamic_faves do
+			local entry = {dynamic_faves[i],dynamic_faves[i]}
+			table.insert(content,entry)
+			dl("populate_icon_list adding dynamic_faves option: {%s,%s}",entry[1],entry[2])
+		end
+	end
+	--]]
+	return content
+end
+
+function populate_set_menus()
+	dl("populate_set_menus called")
+	local poi ="poi_icon_"
+
+	local recfaves = {{0,"pawsys_cmenu_off"},}
+	for i = 1,10 do table.insert(recfaves,{i,"paw_last_"..tostring(i)}) end
+
+	local gr = {
+		{id = "header", 		type= "slide", 	link= "ui_paw_menuslide_pins", size= {512,50}, spacing= 20},
+		{id = "indicator", 		type= "image", 	ui_hook_functor={catsy_paw_mcm.init_mcm_header_ind}},
+		{id = "pin_icon_group", type= "list", 	on_selection_functor = {catsy_paw_mcm.mcm_on_value_select}, val = 0, def = "pins", content = populate_set_list()},
+		{id = "divider", 		type= "line"},
+		--{id = "fave_recent", type = "list", val = 2, def = 5, content = recfaves},
+	}
+
+	local newentry = {
+		id = poi.."faves",
+		type = "list",
+		val = 0,
+		def = icon_sets["faves"].default,
+		ui_hook_functor = {catsy_paw_mcm.init_mcm_set_ind},
+		on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+		content = populate_icon_list("faves")
+	}
+	table.insert(gr,newentry)
+	for g,_ in pairs(icon_sets) do
+		if g ~= "faves" then
+			dl("populate_set_menus adding entry for icon set %s",g)
+			local ig = icon_sets[g]
+			newentry = {
+				id = poi..g,
+				type = "list",
+				val = 0,
+				def = ig.default,
+				ui_hook_functor = {catsy_paw_mcm.init_mcm_set_ind},
+				on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+				content = populate_icon_list(g)
+			}
+			dl("newentry.id %s | type %s | val %s | def %s | content: %s",newentry.id,newentry.type,newentry.val,newentry.def,newentry.content)
+			table.insert(gr,newentry)
+		end
+	end
+	table.insert(gr,{id = "divider", type = "line"})
+	table.insert(gr,{id = "header", type= "slide", link= "ui_paw_menuslide_badges", size= {512,50}, spacing= 20})
+
+	table.insert(gr,{id = "patch_res", type = "list", val = 0, def = "badge", 
+						content = {
+							   {"badge","pawsys_cfg_badge_res"},
+							   {"badge_hr","pawsys_cfg_badge_hr_res"},
+							   {"badge_uhr","pawsys_cfg_badge_uhr_res"},
+							}
+						})
+	table.insert(gr,{id = "milpda_body_icon", type = "list", val = 0, def = "bodyoff", 
+						content = {
+							   {"off","pawsys_cfg_bodyoff"},
+							   {"fac","pawsys_cfg_bodyfac"},
+							   {"set","pawsys_cfg_bodyset"},
+							}
+						})
+	table.insert(gr,{id = "use_custom_pin_icon", type = "check", val = 1, def = false})
+	table.insert(gr,{id = "custom_pin_icon", type = "input", val = 0, def = "user_defined"})
+	vl("results for populate_set_menus:")
+	if verbose then
+		for k,v in pairs(gr) do
+			local st = "{"
+		    for m,o in pairs(v) do
+		    	st = st..m.."="..tostring(o)..","
+		    end
+		    st = st.."}"
+		    vl(st)
+		end 
+	end
+
+	return gr
+end
+
+function tbl_to_mcm_string(tbl)
+    for k,v in pairs(v) do
+    	st = st..k.."="..tostring(v)..","
+    end
+    st = st.."}"
+    vl("tbl_to_mcm_string returned %s",st)
+    return st
+end
+
+-- ======================================================================
+
+function on_mcm_load()
+	op = { id = "pawsys", gr={
+			{ id = "pawgen", sh=true, gr={
+					{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
+					{id = "enabled", type = "check", val = 1, def = true},
+					{id = "wp_hud_icon_enabled", type = "check", val = 1, def = true},
+					{id = "pingsound", type = "check", val = 1, def = true},
+					{id = "s_device_pda_1", type = "check", val = 1, def = true},
+					{id = "s_device_pda_2", type = "check", val = 1, def = true},
+					{id = "s_device_pda_3", type = "check", val = 1, def = true},
+					{id = "s_device_pda_milspec", type = "check", val = 1, def = true},
+					--{id = "wp_clear_task", type = "check", val = 1, def = true},
+					{id = "wp_clear_dist", type = "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+					{id = "disable_mcmups", type = "check", val = 1, def = false},
+					{id = "wipe_all", type = "check", val = 1, def = false},
+					{id = "welcome_msg_shown", type = "check", val = 1, def = false},
+					{id = "debuglogs", type = "check", val = 1, def = false},
+					{id = "pawlink", type = "desc", text = "ui_mcm_paw_moddb_link"},
+					{id = "milpda", type = "desc", text = "ui_mcm_paw_milpda_link"},
+					{id = "modbin", type = "desc", text = "ui_mcm_paw_modded_binaries"},
+				},
+			},
+
+			{ id = "pawpins", sh=true, gr=populate_set_menus()},
+
+			{ id = "pawhud", sh=true, gr={
+					{id = "header", type= "slide", link= "ui_paw_menuslide_widget", size= {512,50}, spacing= 20},
+					{id = "header", type = "desc", text = "ui_mcm_pawsys_pawhud_widgetinfo"},
+					{id = "divider", type = "line"},
+					{id = "widget_enable", type = "check", val = 1, def = true},
+					{id = "hudsound", type = "check", val = 1, def = true},
+					{id = "autohide", type = "track", val = 2, min = 0, max = 120, step = 1, def = 5},
+					{id = "divider", type = "line"},
+					{id = "active_theme", type = "list", val = 0, def = "classicauto", 
+						content = {
+						   {"classicauto","theme_classicauto"},
+						   {"classic","theme_classic"},
+						   {"vertright","theme_vertright"},
+						   {"vertleft","theme_vertleft"},
+						   {"gamma_right","theme_gamma_right"},
+						   {"gamma_left","theme_gamma_left"},
+						   {"minimal_h","theme_minimal_h"},
+						   {"minimal_v","theme_minimal_v"},
+						   {"minicom","theme_minicom"},
+						   {"compact_noui","theme_compact_noui"},
+						}
+					},
+					{id = "custompos", type = "check", val = 1, def = false},
+					{id = "pos_x", type = "input", val = 2, min = 0, max = 1024, def = 491},
+					{id = "pos_y", type = "input", val = 2, min = 0, max = 768, def = 670},
+
+					{id = "divider", type = "line"},
+
+					{id = "themedesc", type = "desc", text = "ui_mcm_themes_list"},
+					{id = "themes1", type= "image", link= "ui_paw_menuslide_themes", size= {274,274}, spacing= 20},
+
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_classicauto"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_classic"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_vertright"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_vertleft"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_gamma_left"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_gamma_right"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_minimal_h"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_minimal_v"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_minicom"},
+					{id = "themelist", type = "desc", text = "ui_mcm_themes_compact_noui"},
+					{id = "divider", type = "line"},
+	            },
+			},
+
+			{ id = "pawbinds", sh=true, gr={
+					{id = "header", type= "slide", link= "ui_paw_menuslide_controls", size= {512,50}, spacing= 20},
+					{id = "mwheel_enabled", type = "check", val = 1, def = true},
+					{id = "mwheel_notify", type = "check", val = 1, def = true},
+	                {id = "bind_set_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z},
+	                {id = "modk_set_scroll", type = ui_mcm.kb_mod_radio, val = 2, def = 2, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+	                {id = "bind_ico_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z },
+	                {id = "modk_ico_scroll", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+
+					{id = "divider", type = "line"},
+
+	                {id = "bind_cartmode", type = "key_bind", val = 2, def = DIK_keys.DIK_SLASH },
+	                {id = "modk_cartmode", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+					{id = "cartmode_toggle", type = "check", val = 1, def = false},
+					{id = "cart_shows_smarts", type = "check", val = 1, def = true},
+
+					{id = "divider", type = "line"},
+
+	                {id = "bind_wptoggle", type = "key_bind", val = 2, def = DIK_keys.DIK_SEMICOLON },
+	                {id = "modk_wptoggle", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+	                {id = "bind_quickpin", type = "key_bind", val = 2, def = DIK_keys.DIK_APOSTROPHE },
+	                {id = "modk_quickpin", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+
+					{id = "divider", type = "line"},
+
+	                {id = "bind_set_next", type = "key_bind", val = 2, def = 52 },
+	                {id = "modk_set_next", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+
+	                {id = "bind_set_prev", type = "key_bind", val = 2, def = 51 },
+	                {id = "modk_set_prev", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+	                {id = "bind_ico_next", type = "key_bind", val = 2, def = 52 },
+	                {id = "modk_ico_next", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+	                {id = "bind_ico_prev", type = "key_bind", val = 2, def = 51 },
+	                {id = "modk_ico_prev", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+					{id = "divider", type = "line"},
+		        },
+			},
+
+			{ id = "pawmenu", sh=true, gr={
+				-- Virtualize in ltx like the others at some point
+					{id = "header", type= "slide", link= "ui_paw_menuslide_menus", size= {512,50}, spacing= 20},
+					{id = "headertxt", type = "desc", text = "ui_mcm_pawsys_pawmenu_headertxt"},
+
+					{id = "wp_set", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+					{id = "wp_mov", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "waypoint_rename", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "waypoint_redesc", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "wp_del", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "pn_add", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "pn_del", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "pn_ren", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "show_all_pins", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "hide_all_pins", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "pn_clr", type = "list", val = 2, def = 0,
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "mping", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+					--[[
+					{id = "pn_spt", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+					--]]
+				},
+			},
+	 	}
+	}
+
+	return op
+end
+
+--[[=====================================================================
+	Everything after this point is fuckin voodoo magic, man
+
+	Dependent on and called only by the custom MCM functors added in:
+	zzzzz_monkey_paw_ui_mcm.script
+-- ====================================================================]]	
+
+local icoset 		= {}
+icoset._changed 	= {}
+local xml 			= CScriptXmlInit()
+local box_pname, ui_img
+
+function get_cached_pin_for_set(setname)
+	if not setname then return end
+	local sid = "poi_icon_" .. setname
+	local pcur = icoset._changed[sid]
+	if pcur == nil then
+		pcur = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..setname, {val=0})				
+		if pcur == nil then
+			local setdata = icon_sets[setname]
+			pcur = ui_mcm.UIMCM:GetDefaultValue(path,icoset_id,{def=(setdata and setdata.default or "redpush32"),val=0})
+		end
+	end
+	return pcur
+end
+
+
+function populate_mcm_set_ind(opt)
+	local wnd = icoset and icoset[opt]
+	local tdata = paw and paw.texture_data
+	if not wnd and tdata then return end
+	local pin = (icoset and icoset._changed and icoset._changed[opt]) or axr_main.config:r_value("mcm", "pawsys/pawpins/"..opt, {val=0})
+	local icon = icons[pin]
+	local tex = tdata and tdata[icon] and tdata[icon].t
+	wnd:InitTexture(tex or "ui_icons_paw_pin_redpush32")
+end
+
+
+function init_mcm_set_ind(anchor, handlers, v, flags)
+	local opt = v and v.id
+	if not opt then return end
+	if handlers and (type(handlers) == "table") then
+		-- This is a newer version of the functor with a different container position
+		anchor = handlers.ctrl
+	end
+	local opt_box = xml:InitStatic("paw_mcm_indicator:mini_left",anchor)
+	opt_box:InitTexture("ui_paw_mapsquareframe")
+	icoset[opt] = xml:InitStatic("paw_mcm_indicator:mini_left:icon",opt_box)
+	populate_mcm_set_ind(opt)
+end
+
+
+function init_mcm_header_ind(anchor, handlers, v, flags)
+	vl("init_mcm_header_ind called")
+	icoset 			= {}
+	icoset._changed = {}	
+	local path = "pawsys/pawpins"
+	icoset.set_curr = axr_main.config:r_value("mcm", path.."/pin_icon_group", {val=0}) or "pins"
+	icoset.pin_curr = axr_main.config:r_value("mcm", path.."/poi_icon_"..icoset.set_curr, {val=0})
+	if not icoset.pin_curr then	
+		local setdata 	= icon_sets[icoset.set_curr]
+		local icoset_id = "poi_icon_"..icoset.set_curr
+		icoset.pin_curr = ui_mcm.UIMCM:GetDefaultValue(path,icoset_id,{def=(setdata and setdata.default or "redpush32"),val=0})
+	end
+	icoset.ico_curr = icons[icoset.pin_curr]
+	icoset.tex_curr = "ui_icons_paw_pin_redpush32"
+	local tdata = paw and paw.texture_data
+	if tdata then
+		icoset.tex_curr = tdata and tdata[icoset.ico_curr] and tdata[icoset.ico_curr].t
+	end
+	local icon_text_head1 = ts("ui_mcm_paw_current_active_pin")
+	local icon_text_head2 = ts("ui_mcm_lst_"..icoset.ico_curr)
+	local icon_text_head3 = ts("ui_mcm_paw_pinmenu_header")
+	icoset.txt_curr = icon_text_head2
+	vl("Current set: %s (%s) | icon %s | texture %s",icoset.txt_curr,icoset.set_curr,icoset.ico_curr,icoset.tex_curr)
+	
+	local pawind = "paw_mcm_indicator"
+
+    xml:ParseFile("paw_hud_indicator.xml")
+	box_wnd 	= xml:InitStatic(pawind,anchor)
+	box_wnd:SetWndSize(vector2():set(563,40))
+	box_img		= xml:InitStatic(pawind..":curr",box_wnd)
+	ui_img 		= xml:InitStatic(pawind..":curr:icon",box_img)
+	box_img:InitTexture("ui_paw_mapsquarebg")
+	ui_img:InitTexture(icoset.tex_curr or "ui_icons_paw_pin_redpush32")
+	box_head 	= xml:InitTextWnd(pawind..":head",box_wnd)
+	box_pname 	= xml:InitTextWnd(pawind..":pname",box_wnd)
+	box_desc 	= xml:InitTextWnd(pawind..":desc",box_wnd)
+    box_head:SetText(icon_text_head1)
+    box_pname:SetText(icon_text_head2)
+    box_desc:SetText(icon_text_head3)
+end
+
+
+function mcm_on_value_select(path,opt,value,v)
+	vl("Callback received: MCM value select for %s/%s: %s",path,opt,value)
+	if path == "pawsys/pawpins" then
+		local icon_change = false
+		icoset._changed[opt] = value
+		local icoset_id = "poi_icon_"..icoset.set_curr
+		if opt == "pin_icon_group" then
+			icon_change = true
+			icoset.set_curr = value
+			if icoset.set_curr == nil then
+				icoset.set_curr = ui_mcm.UIMCM:GetDefaultValue(path,"pin_icon_group",{def="pins",val=0})
+			end
+			icoset_id = "poi_icon_"..icoset.set_curr
+		end
+
+		icoset.pin_curr = get_cached_pin_for_set(icoset.set_curr)
+		icoset.ico_curr = icons[icoset.pin_curr]
+		icoset.tex_curr = "ui_icons_paw_pin_redpush32"
+		local tdata = paw and paw.texture_data
+		if tdata then
+			icoset.tex_curr = tdata and tdata[icoset.ico_curr] and tdata[icoset.ico_curr].t
+			if icoset[opt] then
+				dl("Updating texture for list item %s",opt)
+				populate_mcm_set_ind(opt)
+			end
+		end
+		if icoset.tex_curr then
+			ui_img:InitTexture(icoset.tex_curr)
+		end
+	    box_pname:SetText(ts("ui_mcm_lst_"..icoset.ico_curr))
+
+		vl("New current set: %s | icon %s | texture %s",icoset.set_curr,icoset.ico_curr,icoset.tex_curr)
+	end
+end
+
+
