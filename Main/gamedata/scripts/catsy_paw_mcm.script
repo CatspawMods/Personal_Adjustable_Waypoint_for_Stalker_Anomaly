@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.11b1
-	Updated: 20231007
+    Version: 1.11-b2
+	Updated: 20231010
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -15,7 +15,7 @@
 
 debuglogs                 		= true
 verbose                   		= true
-script_version 					= "1.11b1"
+script_version 					= "1.11-b2"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -260,7 +260,15 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
-					{id = "show_dist_pins", type = "list", val = 2, def = 2, 
+					{id = "show_dist_pins", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+					{id = "show_hint_pins", type = "list", val = 2, def = 2, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
 						   {1,"pawsys_cmenu_norm"},

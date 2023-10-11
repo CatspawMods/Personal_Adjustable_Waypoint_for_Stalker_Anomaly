@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.11b1
-    Updated: 20231007
+    Version: 1.11-b2
+    Updated: 20231010
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -38,8 +38,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.11b1"
-release_date            = 20231007
+script_version          = "1.11-b2"
+release_date            = 20231010
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local debuglogs         = axr_main.config:r_value("mcm", "pawsys/pawgen/debuglogs", {val=0})
@@ -104,6 +104,7 @@ mwheel_avail            = mousewheel_override or (MODDED_EXES_VERSION and (MODDE
 right_click_avail       = right_click_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
 last_clicked_id         = nil
 -- ======================================================================
+local unsquish_ratio        = 1
 local DIK_name              = ui_mcm and ui_mcm.dispaly_key or (function() return "" end)-- typo is in the mcm script
 local default_id            = 15797 -- WP defaults to Rookie Village if missing for any reason to avoid crash
 local mcm_update_throttle   = 3019 -- minimum time between MCM updates of icon/set data
@@ -156,12 +157,12 @@ widget_custom_pos           = {x=491,y=670}
 widget_last_used            = time_global()
 wp_hud_icon_enabled         = true
 show_marker_dist = {
-    ["pins"]  = 2,
-    ["wp"]    = 2,
+    ["pins"]  = 4,
+    ["wp"]    = 4,
 }
 show_marker_hint = {
-    ["pins"]  = 1,
-    ["wp"]    = 0,
+    ["pins"]  = 4,
+    ["wp"]    = 0, -- not implemented yet
 }
 -- ======================================================================
 --  STRINGS AND LTX DATA
@@ -648,14 +649,10 @@ function play_sound_for_actor(effect)
 end
 
 
-function add_mapspot(text,id,icon,skip_pin)
+function add_mapspot(text,id,icon)
     if not id then return end
     icon = icon or default_mapspot
     vl("Adding mapspot %s for id %s with icon %s",text,id,icon)
-    if not skip_pin then
-        if not pins[id] then pins[id] = {} end
-        pins[id].text = text
-    end
     level.map_add_object_spot(id,icon,text)
 end
 
@@ -710,6 +707,7 @@ function func_add_mapspot(text,args)
         vl("Empty text input returned for pin %s, removing",id)
     return end
     vl("func_add_mapspot called for id %s | %s | %s",id,icon,text)
+    pins[id].text = text
     add_mapspot(text,id,icon)
 end
 
@@ -722,6 +720,7 @@ function func_ren_mapspot(text,args)
         text = args.name
         icon = old_icon
     end
+    pins[id].text = text
     vl("func_ren_mapspot called for id %s | %s | %s",id,icon,text)
     remove_mapspot(id,old_icon)
     add_mapspot(text,id,icon)
@@ -866,7 +865,7 @@ function spawn_pingspot(pid,pos,lv,gv)
     local id        = sz.id
     pings[id]       = script_zones[id]
     pings[id].pid   = pid
-    add_mapspot(text,id,icon_pingspot,true)
+    add_mapspot(text,id,icon_pingspot)
     -- vl("Spawned temporary pingspot at %s,%s with id %s",pos.x,pos.z,id)
     return id
 end
@@ -1568,12 +1567,27 @@ function load_mcm(pawpath,default)
     end
 end
 
-function marker_dist_shown(wpin)
-    local mode = show_marker_dist and tonumber(show_marker_dist[wpin])
-    local shown = mode and ((mode >= 4) or
+function marker_hint_shown(wpin)
+    local mode = show_marker_hint and tonumber(show_marker_hint[wpin])
+    local shown = mode and (
+        (mode >= 4) or
         ((mode >= 2) and cart_mode) or 
         ((mode == 1) and not cart_mode) or 
-        ((mode < 0) and debuglogs))
+        ((mode < 0) and debuglogs)
+        )
+    --printf("marker_hint_shown for %s with mode %s: %s",wpin,mode,shown)
+    return shown
+end
+
+
+function marker_dist_shown(wpin)
+    local mode = show_marker_dist and tonumber(show_marker_dist[wpin])
+    local shown = mode and (
+        (mode >= 4) or
+        ((mode >= 2) and cart_mode) or 
+        ((mode == 1) and not cart_mode) or 
+        ((mode < 0) and debuglogs)
+        )
     return shown
 end
 
@@ -1593,11 +1607,12 @@ function on_option_change()
         wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
         if wp_hud_icon_enabled then
             show_marker_dist["wp"]      = tonumber(load_mcm("pawgen/show_dist_wp",show_marker_dist["wp"]))
-            show_marker_dist["pins"]    = tonumber(load_mcm("pawgen/show_dist_pins",show_marker_dist["pins"]))
             show_hud_waypoint()
         else
             hide_hud_waypoint()
         end
+        show_marker_dist["pins"]    = tonumber(load_mcm("pawgen/show_dist_pins",show_marker_dist["pins"]))
+        show_marker_hint["pins"]    = tonumber(load_mcm("pawgen/show_hint_pins",show_marker_hint["pins"]))
         welcome_msg_shown       = load_mcm("pawgen/welcome_msg_shown",welcome_msg_shown)
         wp_clear_dist           = load_mcm("pawgen/wp_clear_dist",wp_clear_dist)
         --wp_clear_task           = load_mcm("pawgen/wp_clear_task",wp_clear_task)
@@ -1742,6 +1757,7 @@ function on_option_change()
     if ish_kill_tracker and item_milpda then ish_kill_tracker.on_option_change() end
     active_set(icon_sets[current_active_set].i)
     if db.actor and get_hud() then
+        unsquish_ratio  = (device().height / device().width) / (768 / 1024)
         reset_indicator()
     end
 end
@@ -2095,9 +2111,9 @@ end
 function UIPAWIndicator:Update(force)
     CUIScriptWnd.Update(self)
     self.dialog:Show(false)
-    local theme = self.theme
+    if not (widget_enabled and main_hud_shown()) then return end
 
-    if not main_hud_shown() then return end
+    local theme = self.theme
     local pda_changed = false
 
     if self.pda_active ~= item_device.is_pda_active() then
@@ -2174,40 +2190,37 @@ end
     Some pieces adapted from GT's "HUD Ubisoft Friendly" addon
 -- ====================================================================]]
 
-function correct_ratio(element)
-    local ratio_w = 1024/(device().width)
-    local ratio_h = 768/(device().height)
-    
+function unsquish_aspect(element)
     local w = element:GetWidth()
     local h = element:GetHeight()
-
-    --element:SetWndSize(vector2():set( (w * ratio_w) , (h * ratio_h) ))
-    element:SetWndSize(vector2():set( (w) , (h * ratio_h) ))
+    element:SetWndSize(vector2():set((w*unsquish_ratio),h))
 end
 
 
-function scale_by_dist(element,dist,h,v,fade_dist,min,mid,max)
+function scale_by_dist(element,dist,w,h,fade_dist,min,mid,max,unsquish)
     dist = clamp(dist,0,max)
+    local nw = w
     local nh = h
-    local nv = v
     local alpha = 255
     if (dist < min) then
         if dist < fade_dist then
             alpha = alpha * (dist / fade_dist)
         end
+        nw = w + ((1 - (dist / min)) * (w * 0.5))
         nh = h + ((1 - (dist / min)) * (h * 0.5))
-        nv = v + ((1 - (dist / min)) * (v * 0.5))
     elseif dist > mid then
+        nw = w - (((dist - mid) / (max - mid)) * (w * 0.3))
         nh = h - (((dist - mid) / (max - mid)) * (h * 0.3))
-        nv = v - (((dist - mid) / (max - mid)) * (v * 0.3))
     end
     if fade_dist > 0 then
         element:SetTextureColor(GetARGB(alpha,255,255,255))
     end
-    --local arh = utils_xml.is_widescreen() and (nh * (4/3)) or nh
-    printf("scale_by_dist for %sx%s element:\nh %s -> %s | v %s -> %s",element:GetWidth(),element:GetHeight(),h,nh,v,nv)
-    --return arh,nv
-    return nh,nv
+    if unsquish then
+        --printf("correcting width %s for aspect ratio difference %s: %s",nw,unsquish_ratio,nw * unsquish_ratio)
+        nw = nw * unsquish_ratio
+    end
+    --printf("scale_by_dist for %sx%s element:\nw %s -> nw %s | h %s -> nh %s",element:GetWidth(),element:GetHeight(),w,nw,h,nh)
+    return nw,nh
 end
 
 
@@ -2357,7 +2370,7 @@ function UIPAWHUDWaypoint:Update()
             local obj = get_object_by_id(placed_waypoint.id)
             if obj then
                 local dist = db.actor:position():distance_to(obj:position())
-                local h,v = scale_by_dist(self.marker,dist,24,24,-1,50,100,200)
+                local h,v = scale_by_dist(self.marker,dist,30,30,-1,50,100,200,true)
                 self.marker:SetWndSize(vector2():set(h,v))
                 if marker_dist_shown("wp") then
                     local pos = self.marker:GetWndPos()
@@ -2446,17 +2459,35 @@ function UIPAWHUDPin:InitControls(id)
     self.xml:ParseFile("paw_hud_pin_icon.xml")
     self.marker = self.xml:InitStatic("marker",self)
     local tex = texture_for_icon(pins[id].icon)
+    local name = pins[id].text
     --printf("initializing texture for icon %s: %s",pins[id].icon,tex)
     self.marker:InitTexture(tex)
 
-    self.dist       = self.xml:InitStatic("marker:distance_sh:distance",self)
+    self.label      = self.xml:InitStatic("marker:label",self.marker)
+    self.label:TextControl():SetTextColor( GetARGB(255,230,230,230) )
+    self.label:TextControl():SetFont(GetFontSmall())
+    self.label_sh    = self.xml:InitStatic("marker:label_sh",self.label)
+    self.label_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
+    self.label_sh:TextControl():SetFont(GetFontSmall())
+    self.lref       =  self.xml:InitStatic("marker:label_sh",self.label)
+    self.label:TextControl():SetText(name)
+    self.label_sh:TextControl():SetText(name)
+    self.lref:TextControl():SetText(name)
+    self.lref:AdjustWidthToText()
+    local label_width = self.lref:GetWidth()
+    self.lref:Show(false)
+    self.name_text = nil
+    vl("Adding label %s to pin %s (w = %s)",name,self.pin_id,label_width)
+
+    self.dist       = self.xml:InitStatic("marker:distance",self)
     self.dist:TextControl():SetTextColor( GetARGB(255,230,230,230) )
     self.dist:TextControl():SetFont(GetFontSmall())
     self.dist_sh    = self.xml:InitStatic("marker:distance_sh",self.dist)
     self.dist_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
     self.dist_sh:TextControl():SetFont(GetFontSmall())
     self.dist_sh:SetWndPos(vector2():set(1,1))
-    self.wref       = self.xml:InitStatic("marker:distance_sh:distance",self.dist)
+    self.last_dist = nil
+    self.wref       = self.xml:InitStatic("marker:distance",self.dist)
     self.wref:TextControl():SetFont(GetFontSmall())
     self.wref:Show(false)    
 end
@@ -2474,6 +2505,8 @@ end
 function UIPAWHUDPin:ShowMarker(onoff)
     self.dist:Show(onoff and marker_dist_shown("pins"))
     self.dist_sh:Show(onoff and marker_dist_shown("pins"))
+    self.label:Show(onoff and marker_hint_shown("pins"))
+    self.label_sh:Show(onoff and marker_hint_shown("pins"))
     self.marker:Show(onoff)
 end
 
@@ -2485,22 +2518,39 @@ function UIPAWHUDPin:Update()
     CUIScriptWnd.Update(self)
     if (main_hud_shown() or axr_main.binoc_is_zoomed or axr_main.scoped_weapon_is_zoomed) then
         local vec = self.pin_id and get_screen_coords(self.pin_id)
+
         if (vec) then
             self.marker:SetWndPos(vec)
-            local dist = db.actor:position():distance_to(self.pin_obj:position())
-            local h,v = scale_by_dist(self.marker,dist,24,24,-1,50,100,200)
-            self.marker:SetWndSize(vector2():set(h,v*2))
-            correct_ratio(self.marker)
+            local dist          = db.actor:position():distance_to(self.pin_obj:position())
+            local h,v           = scale_by_dist(self.marker,dist,24,24,-1,50,100,200,true)
+            self.marker:SetWndSize(vector2():set(h,v))
+            local name          = pins[self.pin_id].text
+            local name_changed  = (name ~= self.name_text)
+
+            if name_changed and marker_hint_shown("pins") then
+                vl("Pin name %s has changed to %s, refreshing indicator",self.name_text,name)
+                self.name_text  = name
+                self.label:TextControl():SetText(name)
+                self.label_sh:TextControl():SetText(name)
+                self.lref:TextControl():SetText(name)
+                self.lref:AdjustWidthToText()
+                local tw        = self.lref:GetWidth()
+                self.label:SetWndPos(vector2():set((h * .5) - (tw * .377),-6))-- dirty hack to center the text
+                self.label_sh:SetWndPos(vector2():set(1,1))
+            end
+
             if marker_dist_shown("pins") then
-                local pos = self.marker:GetWndPos()
-                local dist_txt = string.format("%.1f",dist)..ts("st_paw_meters_abbr")
+                self.last_dist  = dist
+                local pos       = self.marker:GetWndPos()
+                local dist_txt  = string.format("%.1f",dist)..ts("st_paw_meters_abbr")
                 self.dist:TextControl():SetText(dist_txt)
                 self.dist_sh:TextControl():SetText(dist_txt)
                 self.wref:TextControl():SetText(dist_txt)
                 self.wref:AdjustWidthToText()
-                local tw = self.wref:GetWidth()
-                self.dist:SetWndPos(vector2():set(pos.x - (tw / 2) - 1, pos.y + v - 8))
+                local tw        = self.wref:GetWidth()
+                self.dist:SetWndPos(vector2():set(pos.x - (tw * .5), pos.y + v - 9))
             end
+
             self:ShowMarker(true)
             return
         end
@@ -2776,9 +2826,9 @@ function load_file_data()
         action_codes[w] = actions_ini:collect_section(w)
         local ac = action_codes[w]
         local opt_loc = ts(ac.text)
-        printf("<PAW> ac.mode: %s | type: %s | as num: %s | <0: %s",ac and ac.mode,ac and type(ac.mode),ac and tonumber(ac.mode),ac and (tonumber(ac.mode) > 0))
+        vl("<PAW> ac.mode: %s | type: %s | as num: %s | <0: %s",ac and ac.mode,ac and type(ac.mode),ac and tonumber(ac.mode),ac and (tonumber(ac.mode) > 0))
         ac.mode = clamp(tonumber(ac and ac.mode) or 0,0,4)
-        printf("<PAW> ac.mode now: %s",ac.mode)
+        vl("<PAW> ac.mode now: %s",ac.mode)
         ac.enable = (ac.enable == "true")
         action[opt_loc] = w
         if verbose then
