@@ -1004,6 +1004,7 @@
 
 	<string id="st_paw_unknown">
 		<text>Неопознанный</text>
+	</string>
 
 	<string id="st_paw_stash">
 		<text>тайник</text>
