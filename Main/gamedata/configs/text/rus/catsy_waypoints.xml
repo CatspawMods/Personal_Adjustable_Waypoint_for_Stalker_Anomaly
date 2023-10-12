@@ -971,7 +971,6 @@
 		<text>Система PAW отключена</text>
 	</string>
 
-
 <!-- Added in 1.10 -->
 
 	<string id="ui_mcm_paw_current_active_pin">
@@ -998,7 +997,49 @@
 		<text>По умолчанию в режиме Картография отображается значок (белая карта с лупой), указывающий на "умные" участки местности. Если по каким-либо причинам их отображение не нужно или нежелательно, их можно отключить с помощью этой опции.</text>
 	</string>
 
+<!-- Added in 1.11 -->
+	<string id="st_paw_meters_abbr">
+		<text>м</text>
+	</string>
 
+	<string id="st_paw_unknown">
+		<text>Неопознанный</text>
+
+	<string id="st_paw_stash">
+		<text>тайник</text>
+	</string>
+
+	<string id="st_paw_squad">
+		<text>отряд</text>
+	</string>
+	
+	<string id="st_paw_npc_pda_equipped">
+		<text>В данный момент вы используете КПК, извлеченный из тела NPC, а не свой собственный. Экипируйте КПК игрока, чтобы использовать путевые точки, маркеры карты или другие функции системы PAW.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_wp">
+		<text>Отображение расстояния на HUD-маркере путевой точки</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_wp_desc">
+		<text>Выберите, когда HUD-маркер путевой точки должен показывать индикатор расстояния: никогда, всегда, только когда активен режим картографии или только когда он не активен (обычный вид КПК). Эта опция не влияет, если HUD-маркер не включен.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_pins">
+		<text>Отображение расстояния на штыревых маркерах HUD</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_dist_pins_desc">
+		<text>Выберите, когда маркеры булавок на HUD должны показывать индикатор расстояния: никогда, всегда, только когда активен режим картографии, или только когда он не активен (обычный вид PDA). Данная опция не имеет эффекта, если на HUD не установлены видимые булавки.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_hint_pins">
+		<text>Отображение текстовой метки на маркерах HUD</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_show_hint_pins_desc">
+		<text>Выберите, когда маркеры булавок на HUD должны отображать свою текстовую метку над пиктограммой: никогда, всегда, только когда активен режим картографии или только когда он не активен (обычный вид PDA). Не имеет эффекта при отсутствии видимых на HUD точек.</text>
+	</string>
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>Очистка задачи при удалении путевой точки</text>
