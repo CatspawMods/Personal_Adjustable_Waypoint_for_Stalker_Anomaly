@@ -94,7 +94,7 @@
 	</pawhudind_compact_noui>
 
 	<paw_mcm_indicator x="0" y="0" width="563" height="50">
-		<desc complex_mode="1" x="0" y="16" width="280" height="24" stretch="1">
+		<desc complex_mode="1" x="10" y="16" width="270" height="24" stretch="1">
 			<text r="200" g="200" b="200" align="l" vert_align="c" stretch="1" font="letterica16"/>
 		</desc>
 		<curr x="283" y="0" width="41" height="50" stretch="1" align="c" vert_align="c">

@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.11-b2
-	Updated: 20231010
+    Version: 1.12
+	Updated: 20231013
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -13,9 +13,12 @@
     files in configs\scripts\paw, and other sundry things.
 -- ===================================================================--]]
 
-debuglogs                 		= true
+debuglogs         				= axr_main.config:r_value("mcm", "pawsys/pawgen/debuglogs", {val=0})
+if debuglogs == nil then
+    debuglogs 					= false   -- Controls debug logging if you don't have MCM
+end
 verbose                   		= true
-script_version 					= "1.11-b2"
+script_version 					= "1.12"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -23,6 +26,8 @@ printf(logprefix.."Forcing %s.script to load first",paw)
 paw.load_me 					= function() end
 -- Force tasks_placeable_waypoints to load first using an empty monkeypatch
 local ts                        = game.translate_string
+local psk               		= utils_data.parse_string_keys
+local text_colors 				= paw.text_colors
 local icon_sets_ini             = ini_file_ex("scripts\\paw\\icon_sets.ltx")
 local iconset_ltx               = icon_sets_ini:get_sections(true)
 local icon_sets                 = {}
@@ -65,7 +70,7 @@ function load_ltx_data()
             local sec_list = group.."_icons"
             dl("default icon for icon_sets_ini:collect_section(%s): %s",sec_list,def)
             local iconlist = icon_sets_ini:collect_section(sec_list)
-            for k,v in pairs(iconlist) do
+            for k,v in spairs(iconlist) do
                 dl("Adding icon to drop-down list: %s",k)
             end
 
@@ -135,7 +140,7 @@ local function populate_icon_list(group)
 	dl("populate_icon_list called for group %s",group)
 	local ig = icon_sets[group].icons
 	local content = {}
-	for icon,_ in pairs (ig) do
+	for icon,_ in spairs (ig) do
 		local ic = icons[icon]
 		if ic then 
 			local entry = {icon,icons[icon]}
@@ -276,16 +281,16 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
+					{id = "wp_clear_dist", type = "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+					{id = "tip_on_icoset_change", type = "check", val = 1, def = true},
 					{id = "pingsound", type = "check", val = 1, def = true},
 					{id = "s_device_pda_1", type = "check", val = 1, def = true},
 					{id = "s_device_pda_2", type = "check", val = 1, def = true},
 					{id = "s_device_pda_3", type = "check", val = 1, def = true},
 					{id = "s_device_pda_milspec", type = "check", val = 1, def = true},
-					--{id = "wp_clear_task", type = "check", val = 1, def = true},
-					{id = "wp_clear_dist", type = "track", val = 2, min = 0, max = 50, step = 1, def = 5},
 					{id = "disable_mcmups", type = "check", val = 1, def = false},
-					{id = "wipe_all", type = "check", val = 1, def = false},
 					{id = "welcome_msg_shown", type = "check", val = 1, def = false},
+					{id = "wipe_all", type = "check", val = 1, def = false},
 					{id = "debuglogs", type = "check", val = 1, def = false},
 					{id = "pawlink", type = "desc", text = "ui_mcm_paw_moddb_link"},
 					{id = "milpda", type = "desc", text = "ui_mcm_paw_milpda_link"},
@@ -342,6 +347,8 @@ function on_mcm_load()
 
 			{ id = "pawbinds", sh=true, gr={
 					{id = "header", type= "slide", link= "ui_paw_menuslide_controls", size= {512,50}, spacing= 20},
+					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_mousewheel_head"},
+
 					{id = "mwheel_enabled", type = "check", val = 1, def = true},
 					{id = "mwheel_notify", type = "check", val = 1, def = true},
 	                {id = "bind_set_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z},
@@ -362,6 +369,8 @@ function on_mcm_load()
 		                }},
 
 					{id = "divider", type = "line"},
+					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_cartmode_head"},
+					{id = "featuredesc", type = "desc", text = "ui_mcm_paw_cartmode_desc"},
 
 	                {id = "bind_cartmode", type = "key_bind", val = 2, def = DIK_keys.DIK_SLASH },
 	                {id = "modk_cartmode", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
@@ -375,6 +384,31 @@ function on_mcm_load()
 					{id = "cart_shows_smarts", type = "check", val = 1, def = true},
 
 					{id = "divider", type = "line"},
+					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_crosshair_target_head"},
+					{id = "featuredesc", type = "desc", text = "ui_mcm_paw_crosshair_target_desc"},
+
+	                {id = "bind_wp_target_obj", type = "key_bind", val = 2, def = DIK_keys.DIK_SEMICOLON },
+	                {id = "modk_wp_target_obj", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+
+	                {id = "bind_pin_target_obj", type = "key_bind", val = 2, def = DIK_keys.DIK_APOSTROPHE },
+	                {id = "modk_pin_target_obj", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+
+					{id = "pin_auto_visible", type = "check", val = 1, def = true},
+
+					{id = "divider", type = "line"},
+					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_generalbinds_head"},
 
 	                {id = "bind_wptoggle", type = "key_bind", val = 2, def = DIK_keys.DIK_SEMICOLON },
 	                {id = "modk_wptoggle", type = ui_mcm.kb_mod_radio, val = 2, def = 0, hint = "mcm_kb_modifier", 
@@ -588,6 +622,19 @@ function get_cached_pin_for_set(setname)
 end
 
 
+function mcm_targetdesc_text(anchor, handlers, opts, flags)
+	printf("mcm_targetdesc_text called")
+	--[[
+	local desc = handlers and handlers.desc
+	if not desc then return end
+	local tx = desc:TextControl():GetText()
+	local text = ts("ui_mcm_pawsys_crosshair_target_text_color")
+	text = psk(text,text_colors)
+	desc:TextControl():SetText(text)
+	printf("<PAW-MCM> Existing text: %s\n\nNew text: %s",tx,text)
+	--]]
+end
+
 function populate_mcm_set_ind(opt)
 	local wnd = icoset and icoset[opt]
 	local tdata = paw and paw.texture_data
@@ -599,8 +646,8 @@ function populate_mcm_set_ind(opt)
 end
 
 
-function init_mcm_set_ind(anchor, handlers, v, flags)
-	local opt = v and v.id
+function init_mcm_set_ind(anchor, handlers, opts, flags)
+	local opt = opts and opts.id
 	if not opt then return end
 	if handlers and (type(handlers) == "table") then
 		-- This is a newer version of the functor with a different container position
@@ -613,7 +660,7 @@ function init_mcm_set_ind(anchor, handlers, v, flags)
 end
 
 
-function init_mcm_header_ind(anchor, handlers, v, flags)
+function init_mcm_header_ind(anchor, handlers, opts, flags)
 	vl("init_mcm_header_ind called")
 	icoset 			= {}
 	icoset._changed = {}	

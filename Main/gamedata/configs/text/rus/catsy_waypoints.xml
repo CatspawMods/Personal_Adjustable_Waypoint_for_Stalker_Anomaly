@@ -111,7 +111,7 @@
 	</string>
 
 	<string id = "ui_mcm_pawsys_pawbinds_quickpinkb_desc">
-		<text>При нажатии этой клавиши "Быстрый маркер" будет установлен в ближайшей действительной точке ландшафта текущего местоположения игрока.</text>
+		<text>При нажатии этой клавиши "Быстрый маркер" будет установлен в ближайшей действительной точке ландшафта текущего местоположения игрока. Если у вас установлен аддон Fair Fast Travel, то Quick Pins можно использовать в качестве мест быстрого перемещения.</text>
 	</string>
 
 	<string id = "ui_mcm_pawsys_pawbinds_bind_cartmode">
@@ -1002,6 +1002,22 @@
 		<text>м</text>
 	</string>
 
+	<string id="st_paw_unknown">
+		<text>Неопознанный</text>
+	</string>
+
+	<string id="st_paw_stash">
+		<text>тайник</text>
+	</string>
+
+	<string id="st_paw_squad">
+		<text>отряд</text>
+	</string>
+	
+	<string id="st_paw_npc_pda_equipped">
+		<text>В данный момент вы используете КПК, извлеченный из тела NPC, а не свой собственный. Экипируйте КПК игрока, чтобы использовать путевые точки, маркеры карты или другие функции системы PAW.</text>
+	</string>
+
 	<string id="ui_mcm_pawsys_pawgen_show_dist_wp">
 		<text>Отображение расстояния на HUD-маркере путевой точки</text>
 	</string>
@@ -1025,7 +1041,81 @@
 	<string id="ui_mcm_pawsys_pawgen_show_hint_pins_desc">
 		<text>Выберите, когда маркеры булавок на HUD должны отображать свою текстовую метку над пиктограммой: никогда, всегда, только когда активен режим картографии или только когда он не активен (обычный вид PDA). Не имеет эффекта при отсутствии видимых на HUD точек.</text>
 	</string>
-	
+
+<!-- Added in 1.12 -->
+
+	<string id="ui_mcm_lst_pawsys_pg_npcs">
+		<text>NPC и сервисы</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawpins_poi_icon_npcs">
+		<text>Значок по умолчанию для NPC и служб</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_diamond_friendly">
+		<text>Друг (бриллиантовый-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_diamond_neutral">
+		<text>Нейтрал (бриллиантовый-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_diamond_enemy">
+		<text>Враг (бриллиантовый-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_chevron_friendly">
+		<text>Друг (шевронный-стиль</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_chevron_neutral">
+		<text>Нейтрал (шевронный-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_chevron_enemy">
+		<text>Враг (шевронный-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_flag_friendly">
+		<text>Друг (флаг-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_flag_neutral">
+		<text>Нейтрал (флаг-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_flag_enemy">
+		<text>Враг (флаг-стиль)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_mechanic">
+		<text>NPC Механик</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_trader">
+		<text>Торговец NPC</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_guide">
+		<text>NPC-проводник</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_food_trader">
+		<text>Торговец продуктами питания NPC</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_medic">
+		<text>NPC-медик</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_sleep_zone">
+		<text>Спальная зона</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_obj_briefcase">
+		<text>Контейнерный объект</text>
+	</string>
+
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>Очистка задачи при удалении путевой точки</text>

@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.11-b2
-    Updated: 20231010
+    Version: 1.12
+    Updated: 20231014
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -38,15 +38,15 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.11-b2"
-release_date            = 20231010
+script_version          = "1.12"
+release_date            = 20231014
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
-local debuglogs         = axr_main.config:r_value("mcm", "pawsys/pawgen/debuglogs", {val=0})
+debuglogs               = axr_main.config:r_value("mcm", "pawsys/pawgen/debuglogs", {val=0})
 if debuglogs == nil then
     debuglogs = false   -- Controls debug logging if you don't have MCM
 end
-local verbose           = true
+verbose                 = true
 -- Verbose being on won't do anything if debuglogs isn't also enabled,
 -- but it will ensure that if anyone has to turn on debug logging, 
 -- their logs will contain the maximum amount of info automatically.
@@ -81,6 +81,8 @@ local ts                = game.translate_string
 local tm                = task_manager.get_task_manager()
 local psk               = utils_data.parse_string_keys
 local task_info         = tm.task_info
+local floor,ceil        = math.floor,math.ceil
+local pow,sqrt          = math.pow,math.sqrt
 -- ======================================================================
 mousewheel_override     = false
 --[[    If set to true, mousewheel_override will skip the autodetection of 
@@ -139,11 +141,12 @@ local mcm_keybinds          = ui_mcm and ui_mcm.key_hold
 local cart_mode             = false
 cartography_must_hold       = false
 cart_shows_smarts           = true
+tip_on_icoset_change        = false
 -- ======================================================================
 --wp_clear_task               = true -- if enabled, task will be cleared when marker is hidden
 enable_wp_proxcheck         = true
 show_pins                   = true
---local precise_quick_pin     = true
+local precise_quick_pin     = true
 -- Setting precise_quick_pin to false reverts to the old "nearest smart"
 -- method of placing a Quick Pin. Not recommended.
 local custom_task_info      = false
@@ -156,12 +159,13 @@ widget_use_custom_pos       = false
 widget_custom_pos           = {x=491,y=670}
 widget_last_used            = time_global()
 wp_hud_icon_enabled         = true
+pin_hud_icon_default        = true
 show_marker_dist = {
     ["pins"]  = 4,
     ["wp"]    = 4,
 }
 show_marker_hint = {
-    ["pins"]  = 4,
+    ["pins"]  = 2,
     ["wp"]    = 0, -- not implemented yet
 }
 -- ======================================================================
@@ -388,7 +392,7 @@ local colors = {
     active = GetARGB(255, 255, 255, 255),
 }
 
-local text_colors = {
+text_colors = {
     ["clr_255"]     = "%" .. "%c[255,255,255,255]",
     ["clr_red"]     = "%" .. "%c[255,255,0,0]",
     ["clr_grn"]   = "%" .. "%c[255,0,255,0]",
@@ -413,6 +417,21 @@ local keybinds = {
                         cartography_mode(tf)
                   end,
     },
+
+    ["wp_target_obj"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_SEMICOLON,
+        mod     = 3,
+        name    = "ui_mcm_pawsys_pawbinds_bind_wp_target",
+        action  = function() wp_target_obj() end,
+    },   
+    ["pin_target_obj"] = {
+        enabled = function() return paw_enabled end,
+        bind    = DIK_keys.DIK_APOSTROPHE,
+        mod     = 3,
+        name    = "ui_mcm_pawsys_pawbinds_bind_pin_target",
+        action  = function() pin_target_obj() end,
+    }, 
     ["quickpin"] = {
         enabled = function() return paw_enabled end,
         bind    = DIK_keys.DIK_APOSTROPHE,
@@ -422,7 +441,6 @@ local keybinds = {
     ["wptoggle"] = {
         enabled = function() return paw_enabled end,
         bind    = DIK_keys.DIK_SEMICOLON,
-        mod     = 2,
         name    = "ui_mcm_pawsys_pawbinds_bind_wptoggle",
         action  = function() toggle_waypoint() end,
     },
@@ -431,26 +449,26 @@ local keybinds = {
         bind    = DIK_keys.DIK_PERIOD,
         mod     = 3,
         name    = "ui_mcm_pawsys_pawbinds_bind_set_next",
-        action  = function() cycle_items(1,"set") end,
+        action  = function() cycle_items(1,"set",tip_on_icoset_change) end,
     },
     ["set_prev"] = {
         enabled = function() return paw_enabled end,
         bind    = DIK_keys.DIK_COMMA,
         mod     = 3,
         name    = "ui_mcm_pawsys_pawbinds_bind_set_prev",
-        action  = function() cycle_items(-1,"set") end,
+        action  = function() cycle_items(-1,"set",tip_on_icoset_change) end,
     },
     ["ico_next"] = {
         enabled = function() return paw_enabled end,
         bind    = DIK_keys.DIK_PERIOD,
         name    = "ui_mcm_pawsys_pawbinds_bind_ico_next",
-        action  = function() cycle_items(1,"icon") end,
+        action  = function() cycle_items(1,"icon",tip_on_icoset_change) end,
     },
     ["ico_prev"] = {
         enabled = function() return paw_enabled end,
         bind    = DIK_keys.DIK_COMMA,
         name    = "ui_mcm_pawsys_pawbinds_bind_ico_prev",
-        action  = function() cycle_items(-1,"icon") end,
+        action  = function() cycle_items(-1,"icon",tip_on_icoset_change) end,
     },
     ["ico_scroll"] = {
         enabled = function() return paw_enabled and mwheel_enabled end,
@@ -503,8 +521,14 @@ function dotip(tiptext,dur,src,beep,icon,snd)
     end
 end
 
+
+function round2(n)
+    return (math.floor(n * 100) / 100)
+end
+
+
 function roll(val,min,max)
-    if not val and min and max then return end
+    if not (val and min and max) then return end
     if val > max then
         return min
     elseif val < min then
@@ -526,7 +550,7 @@ function valid_bind(kb)
 end
 
 
-local function bindtext(kb,km)
+function bindtext(kb,km)
     local kbt = ""
     local kmt = ""
     local mt = ""
@@ -555,19 +579,61 @@ local function bindtext(kb,km)
     return string.format("%s%s%s",kmt,mt,kbt)
 end
 
+
 -- ======================================================================
 
 function safename(id)
     if not (id and (id > 0)) then return end
-    local text = "unknown"
-    local se_obj = alife_object(id)
+    local text      = ts("st_paw_unknown")
+    local se_obj    = alife_object(id)
     if not se_obj then return text end
-    local name = se_obj:name() or "unknown"
+    local name      = se_obj:name() or text
+    local cls       = se_obj:clsid()
+
     if pins[id] then
-        text = pins[id].name
-    elseif IsStalker(se_obj) then
+        -- If there's a pin for this ID, use its label above all else
+        text = pins[id].text or pins[id].name
+        vl("%s (%s) is a pin: %s",name,id,text)
+    elseif (cls == clsid.script_zone) then
+        text = ts("st_paw_pin_default_name")
+        vl("%s (%s) is a script zone: %s",name,id,text)
+    elseif (cls == clsid.script_restr) then
+        local _,_,hint = txr_routes.get_route_info(name)
+        if hint then
+            text = hint and ts(hint) or text
+        else
+            text = ts(name)
+        end
+        vl("%s (%s) is a level transition: %s",name,id,text)
+    elseif (cls == clsid.smart_terrain) then
+        text = ts("st_"..name.."_name"):gsub("%."," -")
+        vl("%s (%s) is a smart terrain: %s",name,id,text)
+    elseif (cls == clsid.online_offline_group_s) then
+        local comm = se_obj.player_id
+        local sq = ts("st_paw_squad")
+        if managed_factions[comm] then
+            text = ts(comm)
+        end
+        text = text.." "..sq
+        if debuglogs then
+            text = text..": "..name
+        end
+        vl("%s (%s) is NPC squad with faction %s: %s",name,id,comm,text)
+    elseif IsInvbox(nil,cls) then
+        local locst = "st_"..name.."_name"
+        text    = ts(locst)
+        if text == locst then
+            dl("No localization found for stash %s",locst)
+            text = ts("st_paw_unknown").." "..ts("st_paw_stash")
+            if debuglogs then
+                text = text..": "..name
+            end
+        end
+        vl("%s (%s) is a stash marker: %s",name,id,text)
+    elseif IsStalker(nil,cls) then
         text = se_obj:character_name()
-    elseif IsMonster(se_obj) then
+        vl("%s (%s) is a stalker: %s",name,id,text)
+    elseif IsMonster(nil,cls) then
         --[[
             Hack adapted from ui_enemy_health.script
             This logic acts as a translation layer for
@@ -595,38 +661,32 @@ function safename(id)
         end
         --text = string.lower(ts("encyclopedia_mutants_"..text))
         text = ts("encyclopedia_mutants_"..text)
-    elseif (se_obj:clsid() == clsid.smart_terrain) then
-        text = ts("st_"..name.."_name"):gsub("%."," -")
-    elseif (se_obj:clsid() == clsid.script_zone) then
-        text = ts("st_paw_pin_default_name")
-    elseif (se_obj:clsid() == 140) then
-        local _,_,hint = txr_routes.get_route_info(name)
-        if hint then
-            text = ts(hint)
-        else
-            text = ts(name)
-        end            
+        vl("%s (%s) is a creature: %s",name,id,text)
     else
         text = ts(name)
+        if text == name then
+            text = ts(name.."_name")
+            if text == name.."_name" then
+                text = name
+                dl("No localization or other name found for object %s (%s)",name,id)
+            end
+        end
     end
+    dl("safename returns %s for %s",text,name)
     return text
 end
 
-function parse_paw_text(text)
-    if not text then return end
-    local text_subst = {
-        ["$target"] = placed_waypoint and placed_waypoint.name or "",
-        ["$actor"]  = db.actor:character_name(),
-    }
-    return psk(tostring(text),text_subst)
-end
 
 function valid_pda()
     local dev = db.actor:item_in_slot(8)
-    if dev and pda_defs[dev:section()] then
-        if pda_defs[dev:section()].show_w then return true end
+    local sec = dev and dev:section()
+    if dev and pda_defs[sec] then
+        if pda_defs[sec].show_w then return true end
+    elseif item_device.device_npc_pda[sec] then
+        local text = ts("st_paw_npc_pda_equipped")
+        dotip(text)
     else
-        vl("Custom PDA type %s not found in pda_defs, add to that table to enable support",dev and dev:section())
+        dl("WARNING: Equipped PDA %s not found in pda_defs - if this is a valid player PDA, add to that table to enable support",sec)
     end
     return false
 end
@@ -857,7 +917,7 @@ end
 
 
 function spawn_pingspot(pid,pos,lv,gv)
-    if not pid and pos and lv and gv then return end
+    if not (pid and pos and lv and gv) then return end
     local sz        = register_script_zone(pos,gv,lv)
     if not sz then return end
 
@@ -952,7 +1012,7 @@ function do_waypoint(act,se_obj,acode,args)
     local id,name
     if se_obj then
         id = se_obj.id
-        name = safename(id) or "unknown"
+        name = safename(id)
     end
     local ac = action_codes[acode]
 
@@ -978,6 +1038,7 @@ function do_waypoint(act,se_obj,acode,args)
             atsk:change_map_location(task.spot, id)
             level.map_add_object_spot(id, waypoint_mapspot, "")
             set_current_waypoint(se_obj)
+            xr_sound.set_sound_play(AC_ID, "pda_tips")
         else
             dl("task_info[task_id] is nil!")
         end
@@ -1024,8 +1085,9 @@ function do_waypoint(act,se_obj,acode,args)
         get_text(title,itex,name,func,pins[id])
     elseif act == "pn_del" then
         local icon = pins[id].icon
-        if pins[id].hud then
-            hide_hud_pin(id)
+        if hud_pin_objs[id] then
+            get_hud():RemoveDialogToRender(hud_pin_objs[id])
+            hud_pin_objs[id] = nil
         end
         pins[id] = nil
         remove_mapspot(id,icon)
@@ -1058,7 +1120,7 @@ function do_waypoint(act,se_obj,acode,args)
         property_ui:AddItem("[PAW Debug] Mapspot for %s (id %s) has clsid %s)",name,id,clsid)
     else
         dl("invalid action %s passed to do_waypoint",act)
-    end    
+    end
 end
 
 
@@ -1147,22 +1209,83 @@ function show_smarts(onoff)
 end
 
 
-function drop_quick_pin(id)
+function wp_target_obj()
+    dl("wp_target_obj called")
+    local obj = level.get_target_obj()
+    local id = obj and obj:id()
+    vl("ID returned by level.get_target_obj is %s | obj exists: %s",id,obj ~= nil)
+    if id and (id > 0) then
+        local se_obj = alife_object(id)
+        if not se_obj and valid_waypoint_target(se_obj) then return end
+
+        if placed_waypoint then
+            if id == placed_waypoint.id then
+                vl("Waypoint is currently active on %s (%s), disabling",se_obj:name(),id)
+                --do_waypoint("wp_del",se_obj)
+                toggle_waypoint()
+            else
+                vl("Waypoint is currently active, moving to %s (%s)",se_obj:name(),id)
+                do_waypoint("wp_mov",se_obj)
+            end
+        else
+            vl("No current waypoint, setting to target object %s (%s)",se_obj:name(),id)
+            do_waypoint("wp_set",se_obj)
+        end
+    end
+end
+
+
+function pin_target_obj()
+    local obj = level.get_target_obj()
+    local id = obj and obj:id()
+    if id and (id > 0) then
+        local se_obj = alife_object(id)
+        if not se_obj and valid_waypoint_target(se_obj) then return end
+        local name = safename(id)
+        if pins and pins[id] then
+            local hint = pins[id].text or pins[id].name or ts("st_paw_pin_default_name")
+            local text = string.format(ts("st_paw_pin_removed_from_target"),name,hint)
+            text = psk(text,text_colors)
+
+            do_waypoint("pn_del",se_obj)
+            dotip(text,5,nil,false)
+        else
+            local hint  = ts("st_paw_pin_default_name")
+            drop_quick_pin(id,hint,true,true)
+
+            local icon  = ts("ui_mcm_lst_"..pawdata.curr_ico_name)
+            local nxtb  = keybinds["ico_next"].text
+            local prvb  = keybinds["ico_prev"].text
+            local text  = string.format(ts("st_paw_pin_added_to_target"),name,icon,nxtb,prvb)
+            text = psk(text,text_colors)
+            dotip(text,5,nil,false)
+            if pin_hud_icon_default then
+                show_hud_pin(id)
+            end
+        end
+    end
+end
+
+
+function drop_quick_pin(id,force_text,no_tip,no_fast_travel)
     if not paw_enabled_check() then return end
     if next_pin > time_global() then return end
     next_pin = time_global() + pin_delay
 
     if not id then
-        --if precise_quick_pin then
-            --id = generate_scripted_mapspot_on(db.actor)
-        --else 
+        id = generate_scripted_mapspot_on(db.actor)
+        --[[
+        if precise_quick_pin then
+            id = generate_scripted_mapspot_on(db.actor)
+        else 
             local smart = nearest_smart_to_actor()
             id = smart.id or 0
             if not id then
                 id = generate_scripted_mapspot_on(db.actor)   
                 if not id then return end
             end
-        --end
+        end
+        --]]
     end
     
     local se_obj    = alife_object(id)
@@ -1170,13 +1293,13 @@ function drop_quick_pin(id)
     
     local name          = se_obj:name() or "none"
     local icon          = map_pin_icon
-    local mapspot_text  = ts("st_paw_pin_quick_name")
+    local mapspot_text  = force_text or ts("st_paw_pin_quick_name")
     local tip_text      = ts("st_paw_pin_dropped")
     init_new_pin(id,name,mapspot_text,icon)
-    pins[id].quick = true
+    pins[id].quick = not no_fast_travel
     dl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
     add_mapspot(mapspot_text,id,icon)
-    dotip(tip_text,10000)
+    if not no_tip then dotip(tip_text,10000) end
 end
 
 
@@ -1219,7 +1342,7 @@ function get_context_menu_options(property_ui,id,maptbl)
     if not id then
         id = maptbl.object_id
     end
-    if not (paw_enabled and valid_pda()) then return end
+    if not paw_enabled then return end
     local se_obj = id and (id > 0) and alife_object(id)
     if not se_obj then return end
     
@@ -1333,7 +1456,7 @@ end
 function texture_for_set(setname)
     if not setname then return end
     local setdata = icon_sets[setname]
-    if not setdata and setdata.active_icon then
+    if not (setdata and setdata.active_icon) then
         dl("WARNING: No active icon found for %s",setname)
     return end
     vl("active_icon for %s: %s",setname,setdata.active_icon)
@@ -1591,6 +1714,159 @@ function marker_dist_shown(wpin)
     return shown
 end
 
+
+function mcm_reload_general_settings()
+    if not ui_mcm then return end
+    paw_enabled             = load_mcm("pawgen/enabled",paw_enabled)
+    wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
+    if wp_hud_icon_enabled then
+        show_marker_dist["wp"]      = tonumber(load_mcm("pawgen/show_dist_wp",show_marker_dist["wp"]))
+        show_hud_waypoint()
+    else
+        hide_hud_waypoint()
+    end
+    show_marker_dist["pins"]    = tonumber(load_mcm("pawgen/show_dist_pins",show_marker_dist["pins"]))
+    show_marker_hint["pins"]    = tonumber(load_mcm("pawgen/show_hint_pins",show_marker_hint["pins"]))
+    tip_on_icoset_change    = load_mcm("pawgen/tip_on_icoset_change",tip_on_icoset_change)
+    pin_hud_icon_default    = load_mcm("pawgen/pin_auto_visible",pin_auto_visible)
+    welcome_msg_shown       = load_mcm("pawgen/welcome_msg_shown",welcome_msg_shown)
+    wp_clear_dist           = load_mcm("pawgen/wp_clear_dist",wp_clear_dist)
+    --wp_clear_task           = load_mcm("pawgen/wp_clear_task",wp_clear_task)
+    enable_wp_proxcheck     = wp_clear_dist and wp_clear_dist > 0
+    mcm_update_throttle     = load_mcm("pawgen/mcm_update_throttle",mcm_update_throttle)
+    mwheel_poll_interval    = load_mcm("pawgen/mwheel_poll_interval",mwheel_poll_interval)
+    -- These last two options are not in the MCM menu, but can be manually set as overrides
+end
+
+function mcm_reload_keybind_table()
+    if not ui_mcm then return end
+    for k,v in pairs(keybinds) do
+        local kb = load_mcm("pawbinds/bind_"..k)
+        local km = load_mcm("pawbinds/modk_"..k)
+        local vbkb = valid_bind(kb)
+        local vbkm = valid_bind(km)
+        if vbkb then
+            keybinds[k].bind = kb
+        end
+        if vbkm then
+            keybinds[k].mod = km
+        end
+        keybinds[k].text = bindtext(kb,km)
+    end
+end
+
+function mcm_reload_keybind_settings()
+    cartography_must_hold   = not load_mcm("pawbinds/cartmode_toggle",cartography_must_hold)
+    keybinds[cartmode].hold = cartography_must_hold
+    cart_shows_smarts       = load_mcm("pawbinds/cart_shows_smarts",cart_shows_smarts)
+    mwheel_notify           = load_mcm("pawbinds/mwheel_notify")
+
+    local tmp               = ui_mcm.get("pawsys/pawbinds/mwheel_enabled")
+    if tmp and type(tmp) == "number" then
+        tmp                 = (tmp ~= 0)
+    end
+    mwheel_enabled          = tmp and mwheel_avail
+    
+    tmp                     = ui_mcm.get("pawsys/pawbinds/mwheel_override")
+    if tmp ~= nil then
+        dl("MCM override found for mwheel_avail (old = %s | new = %s)",mwheel_avail,tmp)
+        mwheel_avail        = tmp
+    end
+
+    tmp                     = ui_mcm.get("pawsys/pawbinds/right_click_override")
+    -- if set to true, will force on_map_right_click support on
+    if tmp ~= nil then
+        dl("MCM override found for right_click_avail (old = %s | new = %s)",right_click_avail,tmp)
+        right_click_override= tmp
+    end        
+    
+    tmp                     = ui_mcm.get("pawsys/pawgen/disable_mcmups")
+    if tmp ~= nil then
+        dl("MCM override found for disable_mcm_updates (old = %s | new = %s)",disable_mcm_updates,tmp)
+        disable_mcm_updates = tmp
+    end
+
+    tmp                     = load_mcm("pawgen/pingsound")
+    if tmp ~= nil then
+        use_ping_snd        = tmp
+    end
+end
+
+function mcm_reload_pin_settings()
+    patch_res           = ui_mcm.get("pawsys/pawpins/patch_res") or "badge"
+    local bi            = ui_mcm.get("pawsys/pawpins/milpda_body_icon")
+    local pig           = ui_mcm.get("pawsys/pawpins/pin_icon_group")
+    --local mp            = ui_mcm.get("pawsys/pawpins/poi_icon_"..(pig or ""))
+    local cbi           = ui_mcm.get("pawsys/pawpins/poi_icon_bodies")
+
+    for k,v in pairs(icons) do
+        if managed_factions[k] then
+            local newbadge  = "paw_"..patch_res..sep..k
+            vl("MCM: icon for %s was %s, is now %s",k,v,newbadge)
+            icons[k]        = newbadge
+        end
+    end
+
+    load_active_icoset_data()
+    local icon          = pig and icon_sets[pig] and icon_sets[pig].active_icon or default_mapspot
+    icon_sets["bodies"].active_icon = icons[cbi]
+    dl("MCM: body icon mode %s | paw icon %s",bi,cbi)
+    map_pin_icon        = icon
+    current_active_set  = pig
+
+    dl("MCM: icon %s | icon set: %s",icon,pig)
+
+    local cp            = ui_mcm.get("pawsys/pawpins/use_custom_pin_icon") or false
+    if cp then
+        custom_pin_icon = true
+        map_pin_icon    = ui_mcm.get("pawsys/pawpins/custom_pin_icon") or map_pin_icon
+        dl("MCM: Overriding default icon with custom value: %s",map_pin_icon)
+    else
+        custom_pin_icon = false
+    end
+    if force_icon_override then
+        dl("MCM: Script hardcoded to override map_pin_icon with %s",force_icon_override)
+        map_pin_icon    = force_icon_override
+        default_mapspot = force_icon_override
+    end
+
+    if (bi and ish_kill_tracker) then
+        body_icon_mode      = bi
+        current_body_icon   = icons[cbi] or default_mapspot
+        ish_kill_tracker.use_paw_icon = (bi == "set") or (bi == "fac")
+        widget_enabled      = load_mcm("pawhud/widget_enable",widget_enabled)
+        active_theme        = load_mcm("pawhud/active_theme",active_theme)
+        if not hud_themes[active_theme] then active_theme = "classicauto" end
+        widget_custom_pos = {
+            x = load_mcm("pawhud/pos_x"),
+            y = load_mcm("pawhud/pos_y")
+        }
+        widget_use_custom_pos   = load_mcm("pawhud/custompos")
+        widget_hide_delay       = (tonumber(load_mcm("pawhud/autohide",widget_hide_delay)) * 1000)
+        use_ui_snd              = load_mcm("pawhud/hudsound")
+    end
+
+    --[[
+    local mdf           = clamp(tonumber(ui_mcm.get("pawsys/pawpins/fave_recent")),0,10)
+    if mdf and (mdf ~= max_dynamic_faves) then
+        local old_mdf = max_dynamic_faves
+        max_dynamic_faves = mdf
+        dl("new max_dynamic_faves: %s (was %s)",mdf,old_mdf)
+        if dynamic_faves and (not is_empty(dynamic_faves)) and
+                (max_dynamic_faves > 0) then
+            local df = {}
+            for i = 1,max_dynamic_faves do
+                if dynamic_faves[i] then
+                    vl("dynamic_fave[%s]: %s",i,dynamic_faves[i])
+                    df[i] = dynamic_faves[i]
+                end
+            end
+            dynamic_faves = df
+        end
+    end
+    --]]
+end
+
 function on_option_change()
     -- Sync all MCM values and propagate changes
     if ui_mcm and not mcm_killswitch then
@@ -1603,37 +1879,10 @@ function on_option_change()
             do_waypoint("pn_clr")
         end
 
-        paw_enabled             = load_mcm("pawgen/enabled",paw_enabled)
-        wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
-        if wp_hud_icon_enabled then
-            show_marker_dist["wp"]      = tonumber(load_mcm("pawgen/show_dist_wp",show_marker_dist["wp"]))
-            show_hud_waypoint()
-        else
-            hide_hud_waypoint()
-        end
-        show_marker_dist["pins"]    = tonumber(load_mcm("pawgen/show_dist_pins",show_marker_dist["pins"]))
-        show_marker_hint["pins"]    = tonumber(load_mcm("pawgen/show_hint_pins",show_marker_hint["pins"]))
-        welcome_msg_shown       = load_mcm("pawgen/welcome_msg_shown",welcome_msg_shown)
-        wp_clear_dist           = load_mcm("pawgen/wp_clear_dist",wp_clear_dist)
-        --wp_clear_task           = load_mcm("pawgen/wp_clear_task",wp_clear_task)
-        enable_wp_proxcheck     = wp_clear_dist and wp_clear_dist > 0
-        mcm_update_throttle     = load_mcm("pawgen/mcm_update_throttle",mcm_update_throttle)
-        mwheel_poll_interval    = load_mcm("pawgen/mwheel_poll_interval",mwheel_poll_interval)
-        -- These last two options are not in the MCM menu, but can be manually set as overrides
-
-        for k,v in pairs(keybinds) do
-            local kb = load_mcm("pawbinds/bind_"..k)
-            local km = load_mcm("pawbinds/modk_"..k)
-            local vbkb = valid_bind(kb)
-            local vbkm = valid_bind(km)
-            if vbkb then
-                keybinds[k].bind = kb
-            end
-            if vbkm then
-                keybinds[k].mod = km
-            end
-        end
-
+        mcm_reload_general_settings()
+        mcm_reload_keybind_table()
+        mcm_reload_keybind_settings()
+        mcm_reload_pin_settings()
 
         for k,v in pairs(action_codes) do
             local m = load_mcm("pawmenu/"..k)
@@ -1644,116 +1893,9 @@ function on_option_change()
                 vl("MCM: No value found for %s, leaving unchanged",k)
             end
         end
-
-        cartography_must_hold   = not load_mcm("pawbinds/cartmode_toggle",cartography_must_hold)
-        keybinds[cartmode].hold = cartography_must_hold
-        cart_shows_smarts       = load_mcm("pawbinds/cart_shows_smarts",cart_shows_smarts)
-        mwheel_notify           = load_mcm("pawbinds/mwheel_notify")
-        local tmp               = ui_mcm.get("pawsys/pawbinds/mwheel_enabled")
-        if tmp and type(tmp) == "number" then
-            tmp                 = (tmp ~= 0)
-        end
-        mwheel_enabled          = tmp and mwheel_avail
-        
-        tmp                     = ui_mcm.get("pawsys/pawbinds/mwheel_override")
-        if tmp ~= nil then
-            dl("MCM override found for mwheel_avail (old = %s | new = %s)",mwheel_avail,tmp)
-            mwheel_avail        = tmp
-        end
-
-        tmp                     = ui_mcm.get("pawsys/pawbinds/right_click_override")
-        -- if set to true, will force on_map_right_click support on
-        if tmp ~= nil then
-            dl("MCM override found for right_click_avail (old = %s | new = %s)",right_click_avail,tmp)
-            right_click_override= tmp
-        end        
-        
-        tmp                     = ui_mcm.get("pawsys/pawgen/disable_mcmups")
-        if tmp ~= nil then
-            dl("MCM override found for disable_mcm_updates (old = %s | new = %s)",disable_mcm_updates,tmp)
-            disable_mcm_updates = tmp
-        end
-
-        tmp                     = load_mcm("pawgen/pingsound")
-        if tmp ~= nil then
-            use_ping_snd        = tmp
-        end
-
-        --[[
-        local mdf           = clamp(tonumber(ui_mcm.get("pawsys/pawpins/fave_recent")),0,10)
-        if mdf and (mdf ~= max_dynamic_faves) then
-            local old_mdf = max_dynamic_faves
-            max_dynamic_faves = mdf
-            dl("new max_dynamic_faves: %s (was %s)",mdf,old_mdf)
-            if dynamic_faves and (not is_empty(dynamic_faves)) and
-                    (max_dynamic_faves > 0) then
-                local df = {}
-                for i = 1,max_dynamic_faves do
-                    if dynamic_faves[i] then
-                        vl("dynamic_fave[%s]: %s",i,dynamic_faves[i])
-                        df[i] = dynamic_faves[i]
-                    end
-                end
-                dynamic_faves = df
-            end
-        end
-        --]]
-
-        patch_res           = ui_mcm.get("pawsys/pawpins/patch_res") or "badge"
-        local bi            = ui_mcm.get("pawsys/pawpins/milpda_body_icon")
-        local pig           = ui_mcm.get("pawsys/pawpins/pin_icon_group")
-        --local mp            = ui_mcm.get("pawsys/pawpins/poi_icon_"..(pig or ""))
-        local cbi           = ui_mcm.get("pawsys/pawpins/poi_icon_bodies")
-
-        for k,v in pairs(icons) do
-            if managed_factions[k] then
-                local newbadge  = "paw_"..patch_res..sep..k
-                vl("MCM: icon for %s was %s, is now %s",k,v,newbadge)
-                icons[k]        = newbadge
-            end
-        end
-
-        load_active_icoset_data()
-        local icon = pig and icon_sets[pig] and icon_sets[pig].active_icon or default_mapspot
-        icon_sets["bodies"].active_icon = icons[cbi]
-        dl("MCM: body icon mode %s | paw icon %s",bi,cbi)
-        map_pin_icon = icon
-        current_active_set = pig
-
-        dl("MCM: icon %s | icon set: %s",icon,pig)
-
-        local cp            = ui_mcm.get("pawsys/pawpins/use_custom_pin_icon") or false
-        if cp then
-            custom_pin_icon = true
-            map_pin_icon    = ui_mcm.get("pawsys/pawpins/custom_pin_icon") or map_pin_icon
-            dl("MCM: Overriding default icon with custom value: %s",map_pin_icon)
-        else
-            custom_pin_icon = false
-        end
-        if force_icon_override then
-            dl("MCM: Script hardcoded to override map_pin_icon with %s",force_icon_override)
-            map_pin_icon = force_icon_override
-            default_mapspot = force_icon_override
-        end
-        if (bi and ish_kill_tracker) then
-            body_icon_mode = bi
-            current_body_icon = icons[cbi] or default_mapspot
-            ish_kill_tracker.use_paw_icon = (bi == "set") or (bi == "fac")
-    widget_enabled = load_mcm("pawhud/widget_enable",widget_enabled)
-    active_theme = load_mcm("pawhud/active_theme",active_theme)
-    if not hud_themes[active_theme] then active_theme = "classicauto" end
-    widget_custom_pos = {
-        x = load_mcm("pawhud/pos_x"),
-        y = load_mcm("pawhud/pos_y")
-    }
-    widget_use_custom_pos = load_mcm("pawhud/custompos")
-    widget_hide_delay = (tonumber(load_mcm("pawhud/autohide",widget_hide_delay)) * 1000)
-    use_ui_snd = load_mcm("pawhud/hudsound")
-
-    ui_mcm.set("pawsys/pawgen/mcm_ver",script_version)
-        end
-
+        ui_mcm.set("pawsys/pawgen/mcm_ver",script_version)
     end
+
     if ish_kill_tracker and item_milpda then ish_kill_tracker.on_option_change() end
     active_set(icon_sets[current_active_set].i)
     if db.actor and get_hud() then
@@ -2175,7 +2317,7 @@ end
 
 
 function show_indicator(tf)
-    if not GUI and widget_enabled then return end
+    if not (GUI and widget_enabled) then return end
     if show_indicator == nil then
         widget_active = -widget_active
     else
@@ -2196,13 +2338,12 @@ function unsquish_aspect(element)
     element:SetWndSize(vector2():set((w*unsquish_ratio),h))
 end
 
-
 function scale_by_dist(element,dist,w,h,fade_dist,min,mid,max,unsquish)
     dist = clamp(dist,0,max)
     local nw = w
     local nh = h
     local alpha = 255
-    if (dist < min) then
+    if (dist <= min) then
         if dist < fade_dist then
             alpha = alpha * (dist / fade_dist)
         end
@@ -2244,31 +2385,82 @@ end
 --]]
 
 function get_screen_coords(id)
-    local pos = nil
-    local obj = db.storage[id] and db.storage[id].object or level.object_by_id(id)
+    local pos       = nil
+    local is_npc,is_place
+    local obj       = db.storage[id] and db.storage[id].object or level.object_by_id(id)
+    local se_obj    = alife_object(id)
+
     
-    if (obj and (IsStalker(obj) or IsMonster(obj))) then
-        pos = obj and utils_obj.safe_bone_pos(obj,"bip01_head")
+    if (obj and IsStalker(obj) or IsMonster(obj)) then
+        pos         = obj and utils_obj.safe_bone_pos(obj,"bip01_head")
+        is_npc      = true
+        --printf("<PAW> Pinned object %s is an npc",id)
+    elseif (se_obj:clsid() == clsid.smart_terrain) or (se_obj:clsid() == clsid.script_zone) then
+        pos         = se_obj.position        
+        is_place    = true
+        --printf("<PAW> Pinned object %s is a place",id)        
     elseif (obj and (type(obj.position) == "function")) then
-        local tmp = obj:position()
-        pos = tmp and vector():set(tmp.x,tmp.y + 1,tmp.z)
+        local tmp   = obj:position()
+        pos         = tmp and vector():set(tmp.x,tmp.y,tmp.z)
     end
     
     if (pos == nil) then
-        local se = alife_object(id)
-        if not (se and se.online) then
+        if not (se_obj and se_obj.online) then
             return nil
-        elseif (se:clsid() == clsid.online_offline_group_s) then
-            local i = se:commander_id()
-            local npc = i and db.storage[i] and db.storage[i].object or level.object_by_id(i)
-            pos = npc and utils_obj.safe_bone_pos(npc,"bip01_head")
+        elseif (se_obj:clsid() == clsid.online_offline_group_s) then
+            local i     = se_obj:commander_id()
+            local npc   = i and db.storage[i] and db.storage[i].object or level.object_by_id(i)
+            pos         = npc and utils_obj.safe_bone_pos(npc,"bip01_head")
+            is_npc      = true
+            --printf("<PAW> Pinned object %s is an npc",id)
         else
-            local tmp = se and se.position
-            pos = tmp and vector():set(tmp.x,tmp.y + 1,tmp.z)
+            local tmp   = se_obj and se_obj.position
+            pos         = tmp and vector():set(tmp.x,tmp.y,tmp.z)
         end
     end
-    
-    local vec = pos and game.world2ui(vector():set(pos.x,pos.y + 0.5,pos.z),false)
+
+    local dist          = db.actor:position():distance_to(pos)
+    local true_dist     = dist  -- store this
+    local min_dist      = 0     -- distance floor for proximity adjustment range
+    local near_dist     = 12    -- max dist where proximity adjustment range begins
+    local mid_dist      = 12    -- dist at which far adjustments begin
+    local max_dist      = 100   -- distance ceiling for the far adjustment range
+    local near_adj      = 0     -- max icon vertical position change from proximity
+    local far_adj       = 3.5   -- max icon vertical position change from distance
+    local vert_adj      = 0     -- icon position above object will be adjusted by this
+
+    if is_place then
+        near_adj        = 3     -- location spots are usually on or in the ground
+    elseif is_npc then
+        min_dist        = 2     -- to allow for npc bounding box
+        near_adj        = 0.47   -- max increase in height above npc head from proximity < 12m
+    end
+    local vert_adj      = near_adj
+    local dist_prog     = 0     -- 0 to 1 progress from beginning to end of adjustment range
+    local dist_coef     = 1     -- 0 to 1 multiplier based on distance
+    dist = clamp(dist,min_dist,max_dist)
+
+    if (dist <= near_dist) then
+        dist_prog       = ((near_dist - min_dist) - (dist - min_dist)) * 0.1
+        dist_coef       = math.abs(math.sqrt(math.pow(dist_prog, 2)))
+        vert_adj        = near_adj - (near_adj * dist_coef)
+    elseif (dist > mid_dist) then
+        local far_range = max_dist - mid_dist
+        local far_dist  = dist - mid_dist
+        if dist >= max_dist then
+            dist_prog = 1
+        else
+            dist_prog = (far_dist / far_range)
+        end
+
+        dist_coef       = math.abs(math.sqrt(math.pow(dist_prog, 2)))
+        vert_adj        = near_adj + (dist_coef * far_adj)
+    end
+
+    pos.y               = pos.y + 0.38 + vert_adj
+    --printf("* Actor is %s from %s (near_dist %s | max_dist %s\n* dist_prog %s | dist_coef %s\n| Final vertical adjustment: %s",true_dist,id,near_dist,max_dist,dist_prog,dist_coef,vert_adj)
+
+    local vec = pos and game.world2ui(vector():set(pos.x,pos.y,pos.z),false)
     if (vec and (vec.x ~= -9999) and (vec.y ~= 0)) then
         return vec
     end
@@ -2414,7 +2606,6 @@ end
 
 function show_hud_pin(id)
     vl("show_hud_pin called for pin ID %s",id)
-    --if not id and pins and pins[id] then return end
     if hud_pin_objs[id] then
         hide_hud_pin(id)
     end
@@ -2441,7 +2632,6 @@ class "UIPAWHUDPin" (CUIScriptWnd)
 function UIPAWHUDPin:__init(id) super()
     --printf("UIPAWHUDPin:__init(%s)",id)
     self.pin_id = id
-    self.pin_obj = get_object_by_id(id)
     self.pin_se_obj = alife_object(id)
     self:InitControls(id)
     RegisterScriptCallback("actor_on_net_destroy", self)
@@ -2463,21 +2653,23 @@ function UIPAWHUDPin:InitControls(id)
     --printf("initializing texture for icon %s: %s",pins[id].icon,tex)
     self.marker:InitTexture(tex)
 
-    self.label      = self.xml:InitStatic("marker:label",self.marker)
+    self.label      = self.xml:InitStatic("marker:label",self)
     self.label:TextControl():SetTextColor( GetARGB(255,230,230,230) )
     self.label:TextControl():SetFont(GetFontSmall())
     self.label_sh    = self.xml:InitStatic("marker:label_sh",self.label)
     self.label_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
     self.label_sh:TextControl():SetFont(GetFontSmall())
-    self.lref       =  self.xml:InitStatic("marker:label_sh",self.label)
+    self.label_sh:SetWndPos(vector2():set(1,1))
+    self.lref       =  self.xml:InitStatic("marker:label",self.label)
     self.label:TextControl():SetText(name)
     self.label_sh:TextControl():SetText(name)
-    self.lref:TextControl():SetText(name)
-    self.lref:AdjustWidthToText()
-    local label_width = self.lref:GetWidth()
+    --self.lref:TextControl():SetText(name)
+    self.lref:TextControl():SetFont(GetFontSmall())
+    --self.lref:AdjustWidthToText()
+    --local label_width = self.lref:GetWidth()
     self.lref:Show(false)
     self.name_text = nil
-    vl("Adding label %s to pin %s (w = %s)",name,self.pin_id,label_width)
+    vl("Adding label %s to pin %s",name,self.pin_id)
 
     self.dist       = self.xml:InitStatic("marker:distance",self)
     self.dist:TextControl():SetTextColor( GetARGB(255,230,230,230) )
@@ -2486,10 +2678,13 @@ function UIPAWHUDPin:InitControls(id)
     self.dist_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
     self.dist_sh:TextControl():SetFont(GetFontSmall())
     self.dist_sh:SetWndPos(vector2():set(1,1))
-    self.last_dist = nil
     self.wref       = self.xml:InitStatic("marker:distance",self.dist)
     self.wref:TextControl():SetFont(GetFontSmall())
     self.wref:Show(false)    
+    self.last_dist = nil
+    local np,dp = self.label:GetWndPos(),self.dist:GetWndPos()
+    local nx,ny,dx,dy = np.x,np.y,dp.x,dp.y
+    --printf("Init: name pos %s,%s | dist pos %s,%s",nx,ny,dx,dy)
 end
 
 
@@ -2511,45 +2706,69 @@ function UIPAWHUDPin:ShowMarker(onoff)
 end
 
 function UIPAWHUDPin:Update()
+    --printf("UIPAWHUDPin:Update")
+    if not (pins and pins[self.pin_id]) then
+        hide_hud_pin(self.pin_id)
+        self:Destroy()
+    end
     if not self.pin_se_obj.online then
         self.marker:Show(false)
         return
     end
     CUIScriptWnd.Update(self)
     if (main_hud_shown() or axr_main.binoc_is_zoomed or axr_main.scoped_weapon_is_zoomed) then
-        local vec = self.pin_id and get_screen_coords(self.pin_id)
+        local vec   = self.pin_id and get_screen_coords(self.pin_id)
+        local oname = self.pin_se_obj:name()
 
         if (vec) then
             self.marker:SetWndPos(vec)
-            local dist          = db.actor:position():distance_to(self.pin_obj:position())
-            local h,v           = scale_by_dist(self.marker,dist,24,24,-1,50,100,200,true)
-            self.marker:SetWndSize(vector2():set(h,v))
+            local dist          = db.actor:position():distance_to(self.pin_se_obj.position)
+            local szx,szy       = scale_by_dist(self.marker,dist,24,24,-1,10,20,50,true)
+            self.marker:SetWndSize(vector2():set(szx,szy))
+
             local name          = pins[self.pin_id].text
             local name_changed  = (name ~= self.name_text)
+            local maxd          = 100
+            local disty         = dist
+            if dist >= maxd then 
+                disty           = maxd
+            end
+            local yadj          = (disty / maxd * 6)
+            local pos           = self.marker:GetWndPos()
+            local nx,ny,dx,dy,tw
 
-            if name_changed and marker_hint_shown("pins") then
+            if marker_hint_shown("pins") then
                 vl("Pin name %s has changed to %s, refreshing indicator",self.name_text,name)
                 self.name_text  = name
                 self.label:TextControl():SetText(name)
                 self.label_sh:TextControl():SetText(name)
                 self.lref:TextControl():SetText(name)
                 self.lref:AdjustWidthToText()
-                local tw        = self.lref:GetWidth()
-                self.label:SetWndPos(vector2():set((h * .5) - (tw * .377),-6))-- dirty hack to center the text
-                self.label_sh:SetWndPos(vector2():set(1,1))
+                tw              = self.lref:GetWidth()
+                nx              = pos.x - (tw * .5)
+                ny              = pos.y - 22 + yadj
+                --printf("name pos x,y %s,%s | text width %s | szx %s | szy %s | yadj %s\nSetting pos to %s,%s",pos.x,pos.y,tw,szx,szy,yadj,nx,ny)
+                self.label:SetWndPos(vector2():set(nx, ny))
             end
 
             if marker_dist_shown("pins") then
                 self.last_dist  = dist
-                local pos       = self.marker:GetWndPos()
                 local dist_txt  = string.format("%.1f",dist)..ts("st_paw_meters_abbr")
                 self.dist:TextControl():SetText(dist_txt)
                 self.dist_sh:TextControl():SetText(dist_txt)
                 self.wref:TextControl():SetText(dist_txt)
                 self.wref:AdjustWidthToText()
-                local tw        = self.wref:GetWidth()
-                self.dist:SetWndPos(vector2():set(pos.x - (tw * .5), pos.y + v - 9))
+                tw              = self.wref:GetWidth()
+                nx              = pos.x - (tw * .5)
+                ny              = pos.y + szy - 11 + yadj
+                --printf("dist pos x,y %s,%s | text width %s | szx %s | szy %s | yadj %s\nSetting pos to %s,%s",pos.x,pos.y,tw,szx,szy,yadj,nx,ny)
+                self.dist:SetWndPos(vector2():set(nx, ny))
             end
+
+            local np,dp = self.label:GetWndPos(),self.dist:GetWndPos()
+            nx,ny = np.x,np.y
+            dx,dy = dp.x,dp.y
+            --printf("Update: name pos %s,%s | dist pos %s,%s",nx,ny,dx,dy)
 
             self:ShowMarker(true)
             return
@@ -2955,18 +3174,12 @@ end
 
 
 function on_game_start()
-    if mwheel_avail then
-        RegisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
-    end
     RegisterScriptCallback("actor_on_update",actor_on_update)
     RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
     RegisterScriptCallback("on_option_change",on_option_change)
     RegisterScriptCallback("actor_on_first_update",actor_on_first_update)
     RegisterScriptCallback("load_state",load_state)
     RegisterScriptCallback("save_state",save_state)
-    if right_click_avail then
-        RegisterScriptCallback("on_map_right_click",on_map_right_click)
-    end
     RegisterScriptCallback("map_spot_menu_add_property",map_spot_menu_add_property)
     RegisterScriptCallback("map_spot_menu_property_clicked",map_spot_menu_property_clicked)
     RegisterScriptCallback("on_key_press",on_key_press)
@@ -2974,6 +3187,12 @@ function on_game_start()
     RegisterScriptCallback("GUI_on_show",update_hud_on_show_hide)
     RegisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)    
     on_option_change()
+    if mwheel_avail then
+        RegisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
+    end
+    if right_click_avail then
+        RegisterScriptCallback("on_map_right_click",on_map_right_click)
+    end
 end
 
 
@@ -3002,6 +3221,7 @@ end
 
 
 task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
+    if not (paw_enabled and placed_waypoint) then return end
     -- vl("waypoint_task_text_functor called with task_id %s | field %s",task_id,field)
     if (field == "title") then
         -- vl("custom_name: %s")
