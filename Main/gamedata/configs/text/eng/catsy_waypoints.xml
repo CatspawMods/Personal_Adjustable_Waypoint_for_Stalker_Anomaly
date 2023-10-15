@@ -645,7 +645,8 @@
 	</string>
 
 	<string id="st_paw_change_set">
-		<text>Active Set changed to</text>
+		<text>Active Set changed to %s.\n
+		</text>
 	</string>
 
 	<string id="st_paw_change_icon">
@@ -1115,6 +1116,10 @@ This message won't bother you again. Good hunting, %s.</text>
 
 	<string id="ui_mcm_lst_paw_obj_briefcase">
 		<text>Briefcase Object</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_obj_lock">
+		<text>Locked Object</text>
 	</string>
 
 	<string id="ui_mcm_paw_cartmode_head">

@@ -102,7 +102,7 @@
 
 		<texture id = "ui_icons_paw_pin_impobj_food" x="704" y="160" width="64" height="64" />
 		
-		<texture id = "ui_icons_paw_pin_impobj_medic" x="768" y="160" width="64" height="4" />
+		<texture id = "ui_icons_paw_pin_impobj_medic" x="768" y="160" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_pin_obj_lock" x="832" y="160" width="64" height="64" />
 

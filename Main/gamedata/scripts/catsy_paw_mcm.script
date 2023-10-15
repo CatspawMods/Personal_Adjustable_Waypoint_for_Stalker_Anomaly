@@ -4,7 +4,7 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.12
+    Version: 1.12.1
 	Updated: 20231013
 
     You probably shouldn't mess with this, even if you're familiar with 
@@ -18,7 +18,7 @@ if debuglogs == nil then
     debuglogs 					= false   -- Controls debug logging if you don't have MCM
 end
 verbose                   		= true
-script_version 					= "1.12"
+script_version 					= "1.12.1"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -347,28 +347,6 @@ function on_mcm_load()
 
 			{ id = "pawbinds", sh=true, gr={
 					{id = "header", type= "slide", link= "ui_paw_menuslide_controls", size= {512,50}, spacing= 20},
-					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_mousewheel_head"},
-
-					{id = "mwheel_enabled", type = "check", val = 1, def = true},
-					{id = "mwheel_notify", type = "check", val = 1, def = true},
-	                {id = "bind_set_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z},
-	                {id = "modk_set_scroll", type = ui_mcm.kb_mod_radio, val = 2, def = 2, hint = "mcm_kb_modifier", 
-		                content = { 
-		                    {0,"mcm_kb_mod_none"}, 
-		                    {1,"mcm_kb_mod_shift"}, 
-		                    {2,"mcm_kb_mod_ctrl"}, 
-		                    {3,"mcm_kb_mod_alt"}
-		                }},
-	                {id = "bind_ico_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z },
-	                {id = "modk_ico_scroll", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
-		                content = { 
-		                    {0,"mcm_kb_mod_none"}, 
-		                    {1,"mcm_kb_mod_shift"}, 
-		                    {2,"mcm_kb_mod_ctrl"}, 
-		                    {3,"mcm_kb_mod_alt"}
-		                }},
-
-					{id = "divider", type = "line"},
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_cartmode_head"},
 					{id = "featuredesc", type = "desc", text = "ui_mcm_paw_cartmode_desc"},
 
@@ -462,6 +440,29 @@ function on_mcm_load()
 		                    {2,"mcm_kb_mod_ctrl"}, 
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
+					{id = "divider", type = "line"},
+
+					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_mousewheel_head"},
+
+					{id = "mwheel_enabled", type = "check", val = 1, def = true},
+					{id = "mwheel_notify", type = "check", val = 1, def = true},
+	                {id = "bind_set_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z},
+	                {id = "modk_set_scroll", type = ui_mcm.kb_mod_radio, val = 2, def = 2, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+	                {id = "bind_ico_scroll", type = "key_bind", val = 2, def = DIK_keys.DIK_Z },
+	                {id = "modk_ico_scroll", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
+		                content = { 
+		                    {0,"mcm_kb_mod_none"}, 
+		                    {1,"mcm_kb_mod_shift"}, 
+		                    {2,"mcm_kb_mod_ctrl"}, 
+		                    {3,"mcm_kb_mod_alt"}
+		                }},
+
 					{id = "divider", type = "line"},
 		        },
 			},

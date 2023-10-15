@@ -648,7 +648,8 @@
 	</string>
 
 	<string id="st_paw_change_set">
-		<text>Активный набор изменен на</text>
+		<text>Активный набор изменен на %s.\n
+		</text>
 	</string>
 
 	<string id="st_paw_change_icon">
@@ -1116,6 +1117,71 @@
 		<text>Контейнерный объект</text>
 	</string>
 
+	<string id="ui_mcm_lst_paw_obj_lock">
+		<text>Заблокированный объект</text>
+	</string>
+
+	<string id="ui_mcm_paw_cartmode_head">
+		<text>Режим Картографии</text>
+	</string>
+
+	<string id="ui_mcm_paw_cartmode_desc">
+		<text>Режим Картографии позволяет использовать дополнительные картографические функции, не загромождая HUD или меню во время обычной игры. Настроить отображение функций в этом режиме (или в обычном режиме КПК) можно в подменю Контекстное меню MCM.</text>
+	</string>
+
+	<string id="ui_mcm_paw_mousewheel_head">
+		<text>Поддержка колеса мыши</text>
+	</string>
+
+	<string id="ui_mcm_paw_crosshair_target_head">
+		<text>Путевые точки и булавки - Прицеливание с помощью перекрестия</text>
+	</string>
+
+	<string id="ui_mcm_paw_crosshair_target_desc">
+		<text>Эти две комбинации клавиш позволяют использовать путевые точки и булавки на любом объекте, находящемся в данный момент под перекрестием. Для того чтобы игра зарегистрировала это, объект должен находиться точно под центром перекрестия. Для сталкеров это означает, что объект должен быть достаточно центрирован, чтобы активизировалась идентификация перекрестия.</text>
+	</string>
+
+	<string id="ui_mcm_paw_generalbinds_head">
+		<text>Путевые точки и булавки — основные сочетания клавиш</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_wp_target_obj">
+		<text>Привязка клавиш для установки путевой точки на целевом объекте</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_wp_target_obj_desc">
+		<text>При нажатии этой клавиши путевая точка будет установлена или перемещена на объект под перекрестием игрока. Если он уже был установлен для целевого объекта, он будет отключен.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_pin_target_obj">
+		<text>Привязка клавиш для установки закрепления на целевом объекте</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_pin_target_obj_desc">
+		<text>При нажатии этой клавиши булавка будет помещена на объект под перекрестием игрока, если его еще нет, с использованием текущего активного значка. Если для цели уже существует булавка, она будет удалена.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_pin_auto_visible">
+		<text>Пины, созданные таким образом, по умолчанию отображаются в HUD</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_pin_auto_visible_desc">
+		<text>Если булавка была создана путем нацеливания на объект с помощью указанной выше комбинации клавиш, она автоматически отобразится в HUD. Вы можете в любое время показать или скрыть метки на HUD с помощью КПК.</text>
+	</string>
+
+
+	<string id="st_paw_pin_removed_from_target">
+		<text>Вывод $clr_yel%s$clr_wht удален из $clr_lbl%s$clr_wht.</text>
+	</string>
+
+	<string id="st_paw_pin_added_to_target">
+		<text>Pin added to $clr_lbl%s$clr_wht using the current active icon: $clr_lbl%s$clr_wht.\n
+		You can change the current active icon with $clr_yel%s$clr_wht/$clr_yel%s$clr_wht.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_tip_on_icoset_change">
+		<text>Показывать подсказку о новостях при изменении значков или наборов с помощью сочетаний клавиш</text>
+	</string>
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>Очистка задачи при удалении путевой точки</text>
