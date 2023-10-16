@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.12.1
-	Updated: 20231013
+    Version: 1.13-b1
+	Updated: 20231015
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -18,11 +18,11 @@ if debuglogs == nil then
     debuglogs 					= false   -- Controls debug logging if you don't have MCM
 end
 verbose                   		= true
-script_version 					= "1.12.1"
+script_version 					= "1.13-b1"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
-printf(logprefix.."Forcing %s.script to load first",paw)
+printf(logprefix.."Forcing tasks_placeable_waypoints.script to load first")
 paw.load_me 					= function() end
 -- Force tasks_placeable_waypoints to load first using an empty monkeypatch
 local ts                        = game.translate_string
@@ -282,6 +282,9 @@ function on_mcm_load()
 						}
 					},
 					{id = "wp_clear_dist", type = "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+					{id = "pin_near_fade_dist", type = "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+					{id = "pin_far_fade_dist", type = "track", val = 2, min = 20, max = 500, step = 1, def = 250},
+					{id = "pin_far_hide_dist", type = "track", val = 2, min = 1, max = 250, step = 1, def = 25},
 					{id = "tip_on_icoset_change", type = "check", val = 1, def = true},
 					{id = "pingsound", type = "check", val = 1, def = true},
 					{id = "s_device_pda_1", type = "check", val = 1, def = true},
@@ -359,6 +362,7 @@ function on_mcm_load()
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
 					{id = "cartmode_toggle", type = "check", val = 1, def = false},
+					{id = "cartmode_unfade", type = "check", val = 1, def = true},
 					{id = "cart_shows_smarts", type = "check", val = 1, def = true},
 
 					{id = "divider", type = "line"},

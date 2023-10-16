@@ -1182,6 +1182,41 @@
 	<string id="ui_mcm_pawsys_pawgen_tip_on_icoset_change">
 		<text>ѕоказывать подсказку о новост€х при изменении значков или наборов с помощью сочетаний клавиш</text>
 	</string>
+
+<!-- Added in 1.13 -->
+
+	<string id="ui_mcm_pawsys_pawgen_pin_near_fade_dist">
+		<text>ѕрозрачность на основе близости дл€ штырей (в метрах)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_near_fade_dist_desc">
+		<text> огда игрок приблизитс€ на такое рассто€ние к булавке, она начнет исчезать.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_fade_dist">
+		<text>–ассто€ние начала прозрачности маркера карты (в метрах)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_fade_dist_desc">
+		<text> огда игрок окажетс€ на таком рассто€нии от булавки, она начнет исчезать.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_hide_dist">
+		<text>–ассто€ние скрыти€ маркера карты (в метрах)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_hide_dist_desc">
+		<text>≈сли игрок находитс€ более чем на таком рассто€нии от места начала затухани€, то булавка исчезнет полностью.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade">
+		<text>Ѕулавки на HUD не исчезают в режиме картографии</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade_desc">
+		<text>≈сли на HUD есть какие-либо пины, и они обычно настроены на затухание, то при активном режиме картографии они не будут затухать.</text>
+	</string>
+		
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>ќчистка задачи при удалении путевой точки</text>

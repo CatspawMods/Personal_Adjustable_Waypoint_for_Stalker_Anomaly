@@ -1192,6 +1192,40 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>Show news tip when changing icons or sets using keybinds</text>
 	</string>
 
+<!-- Added in 1.13 -->
+
+	<string id="ui_mcm_pawsys_pawgen_pin_near_fade_dist">
+		<text>Pin near fade-out distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_near_fade_dist_desc">
+		<text>When the player comes within this distance of a pin, it will begin to fade out.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_fade_dist">
+		<text>Pin far fade-out distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_fade_dist_desc">
+		<text>When the player gets this far away from a pin, it will begin to fade out.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_hide_dist">
+		<text>Pin far hide distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_hide_dist_desc">
+		<text>If the player is more than this far beyond where the fade-out begins, a pin will disappear completely.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade">
+		<text>Pins on the HUD never fade out while in Cartography Mode</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade_desc">
+		<text>If there are any pins on the HUD, and they are normally set to fade out, they won't do so while Cartography Mode is active.</text>
+	</string>
+
 
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
