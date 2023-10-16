@@ -1226,6 +1226,14 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>If there are any pins on the HUD, and they are normally set to fade out, they won't do so while Cartography Mode is active.</text>
 	</string>
 
+	<string id="ui_mcm_pawsys_pawmenu_lock_pin">
+		<text>Lock Pin</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_unlock_pin">
+		<text>Unlock Pin</text>
+	</string>
+
 
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">

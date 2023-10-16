@@ -1216,7 +1216,15 @@
 	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade_desc">
 		<text>≈сли на HUD есть какие-либо пины, и они обычно настроены на затухание, то при активном режиме картографии они не будут затухать.</text>
 	</string>
-		
+
+	<string id="ui_mcm_pawsys_pawmenu_lock_pin">
+		<text>«аблокировать маркер</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_unlock_pin">
+		<text>–азблокировать маркер</text>
+	</string>
+
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>ќчистка задачи при удалении путевой точки</text>

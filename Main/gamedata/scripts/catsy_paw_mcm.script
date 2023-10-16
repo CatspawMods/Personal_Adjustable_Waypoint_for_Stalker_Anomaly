@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.13-b1
-	Updated: 20231015
+    Version: 1.13-b3
+	Updated: 20231016
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -18,7 +18,7 @@ if debuglogs == nil then
     debuglogs 					= false   -- Controls debug logging if you don't have MCM
 end
 verbose                   		= true
-script_version 					= "1.13-b1"
+script_version 					= "1.13-b3"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -563,7 +563,44 @@ function on_mcm_load()
 						   {2,"pawsys_cmenu_cart"},
 						   {0,"pawsys_cmenu_off"},
 						}
+
 					},
+					{id = "lock_pin", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "unlock_pin", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "hud_vis_on", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "hud_vis_off", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
 
 					{id = "pn_clr", type = "list", val = 2, def = 0,
 						content = {
@@ -582,16 +619,6 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
-					--[[
-					{id = "pn_spt", type = "list", val = 2, def = 2, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-					--]]
 				},
 			},
 	 	}

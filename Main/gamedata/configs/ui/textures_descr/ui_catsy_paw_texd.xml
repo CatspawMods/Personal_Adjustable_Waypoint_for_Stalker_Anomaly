@@ -106,6 +106,7 @@
 
 		<texture id = "ui_icons_paw_pin_obj_lock" x="832" y="160" width="64" height="64" />
 
+		<texture id = "ui_icons_paw_crosshair_valid" x="128" y="96" width="64" height="64" />
 
 	</file>
 

@@ -17,7 +17,9 @@
 ;      4: enabled in both
 
 ; ==================================================
+
 [my_stash_icon]
+
 ; This is an example of how you can add a 
 ; new menu option that drops a pin with a
 ; specific icon. It is disabled by default.
@@ -137,6 +139,20 @@ mode        = 2
 enable      = true
 text        = ui_mcm_pawsys_pawmenu_hide_all_pins
 act         = hide_pins
+
+[lock_pin]
+; Lock pin to prevent changes
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_lock_pin
+act         = lock_pin
+
+[unlock_pin]
+; Unlock pin
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_unlock_pin
+act         = unlock_pin
 
 [pn_clr]
 ; Clear all map pins - no confirmation!
