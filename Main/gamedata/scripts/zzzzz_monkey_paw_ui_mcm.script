@@ -194,7 +194,6 @@ if ui_mcm and not ui_mcm.ui_functors_enabled then
 			end
 		end
 		idx = idx or 1
-		--printf(path.." ".. idx)
 		local str_2 = content[idx][2] or tostring(content[idx][1])
 		local str = v.no_str and str_2 or game.translate_string("ui_mcm_lst_" .. str_2)
 		ctrl:enable_id( idx )
@@ -223,6 +222,67 @@ if ui_mcm and not ui_mcm.ui_functors_enabled then
 			ui_mcm.exec(unpack(v.ui_hook_functor),wrapbox,handlers,v,flags)
 		end
 		
+		return h
+	end	
+
+	function ui_mcm.UIMCM:Register_Track(xml, handler, path, opt, v, flags)
+		local id = ui_mcm.cc(path , opt)
+		-- Caption
+		local h = self:Register_Cap(xml, handler,  id, v.hint)
+		
+		-- Apply to all button
+		if flags.apply_to_all and flags.group then
+			self:Register_BtnAll(xml, handler, path, opt, v, flags)
+		end
+		
+		-- Create control
+		self._Track[id] = {}
+		self._Track[id].ctrl = xml:InitTrackBar("elements:track",handler)
+		self._Track[id].path = path
+		self._Track[id].opt = opt
+		if (self._Track[id].ctrl:GetHeight() > h) then
+			h = self._Track[id].ctrl:GetHeight()
+		end
+		
+		self._Track[id].txt = xml:InitTextWnd("elements:track_value",handler)
+		
+		-- Get values
+		local value = self:GetValue(path, opt, v, flags)
+		value = clamp(value, v.min, v.max)
+		value = round_idp(value, v.prec or precision)
+		
+		local int = false --is_int(value) and is_int(v.step) and is_int(v.min) and is_int(v.max)
+		self._Track[id].value = value -- temp
+		self._Track[id].ctrl:SetInvert(v.invert and true or false)
+		self._Track[id].ctrl:SetStep(v.step)
+		if int then
+			self._Track[id].ctrl:SetOptIBounds(v.min, v.max)
+			self._Track[id].ctrl:SetIValue(value)
+		else
+			self._Track[id].ctrl:SetOptFBounds(v.min, v.max)
+			self._Track[id].ctrl:SetFValue(value)
+		end
+		if (not v.no_str) then
+			self._Track[id].txt:SetText(value)
+		end
+
+		if v.ui_hook_functor then
+			local id_cap 	= string.gsub(id, "/", "_")
+			local cap 		= self._Cap[id_cap]
+			local wrapbox 	= init_wrapper_box(xml,handler,10,10,-10)
+			local ctrl		= self._Track[id].ctrl
+			local txt 		= self._Track[id].txt
+			local handlers = {
+				ctrl		= ctrl, 	-- handler for input control
+				txt 		= txt, 		-- handler for current value display text
+				cap 		= cap, 		-- handler for text caption element
+			}
+			flags.etype		= "track"
+			flags.path 		= path  	-- MCM menu path
+			flags.opt		= opt 		-- MCM option ID
+			ui_mcm.exec(unpack(v.ui_hook_functor),wrapbox,handlers,v,flags)
+		end
+
 		return h
 	end	
 

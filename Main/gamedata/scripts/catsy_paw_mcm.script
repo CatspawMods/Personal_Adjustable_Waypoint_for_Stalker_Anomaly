@@ -388,6 +388,18 @@ function on_mcm_load()
 		                }},
 
 					{id = "pin_auto_visible", type = "check", val = 1, def = true},
+					{id = "reticle_mode", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}},
+					{id = "reticle_alpha", type = "track", 
+						ui_hook_functor = {catsy_paw_mcm.mcm_init_reticle_alpha}, 
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+						val = 2, min = 1, max = 255, step = 1, def = 120},
+					{id = "ret_fade_attack_time", type = "input", val = 2, min = 1, max = 5000, def = 150},
+					{id = "ret_fade_decay_time", type = "input", val = 2, min = 1, max = 5000, def = 250},
 
 					{id = "divider", type = "line"},
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_generalbinds_head"},
@@ -734,6 +746,7 @@ function init_mcm_header_ind(anchor, handlers, opts, flags)
 end
 
 
+local reticle_alpha_ind
 function mcm_on_value_select(path,opt,value,v)
 	vl("Callback received: MCM value select for %s/%s: %s",path,opt,value)
 	if path == "pawsys/pawpins" then
@@ -766,7 +779,32 @@ function mcm_on_value_select(path,opt,value,v)
 	    box_pname:SetText(ts("ui_mcm_lst_"..icoset.ico_curr))
 
 		vl("New current set: %s | icon %s | texture %s",icoset.set_curr,icoset.ico_curr,icoset.tex_curr)
+	elseif path == "pawsys/pawbinds" then
+		local ret = reticle_alpha_ind
+		if ret then
+			ret:SetTextureColor(GetARGB(value,255,255,255))
+		else
+			printf("WARNING: alpha indicator element not found")
+		end
 	end
 end
 
+function mcm_init_reticle_alpha(anchor, handlers, opts, flags)
+	local cap = handlers and handlers.cap
+    xml:ParseFile("paw_hud_pin_icon.xml")
+    reticle_alpha_ind = xml:InitStatic("marker",cap)
+    if not reticle_alpha_ind then
+    	printf("WARNING: Unable to init alpha indicator")
+    	return
+    end
+    local ret = reticle_alpha_ind
+    local tex = "ui_icons_paw_crosshair_valid"
+    local val = ui_mcm.get("pawsys/pawbinds/reticle_alpha") or 120
+    ret:InitTexture(tex)
+    ret:SetTextureColor(GetARGB(val,255,255,255))
+    ret:SetWndSize(vector2():set(24,32))
+    ret:SetWndPos(vector2():set(265,10))
 
+    local unsquish_ratio  = (device().height / device().width) / (768 / 1024)
+    printf("unsquish ratio %s | %sx%s",device().width,device().height)
+end

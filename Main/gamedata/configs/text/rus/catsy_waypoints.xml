@@ -1225,6 +1225,38 @@
 		<text>–азблокировать маркер</text>
 	</string>
 
+	<string id="ui_mcm_pawsys_pawbinds_reticle_mode">
+		<text>ѕоказывать прицел при наведении на действительную цель</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_mode_desc">
+		<text>≈сли в данный момент перекрестие центрировано на допустимом объекте, то будет показан ненав€зчивый прицел, указывающий на возможность размещени€ в нем путевых точек и булавок. ѕрозрачностью можно управл€ть ниже.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha">
+		<text>ѕрозрачность перекрести€</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha_desc">
+		<text>«начение прозрачности (альфа) перекрести€, при этом 0 означает полную прозрачность, а 255 - отсутствие прозрачности.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time">
+		<text>¬рем€, необходимое дл€ по€влени€ перекрести€</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time_desc">
+		<text>¬рем€ в миллисекундах, необходимое дл€ завершени€ по€влени€ перекрести€ при наведении на действительный объект. </text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time">
+		<text>¬рем€, необходимое дл€ исчезновени€ перекрести€</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time_desc">
+		<text>¬рем€ в миллисекундах, необходимое дл€ того, чтобы перекрестие закончило исчезать при отсутствии действительной цели.</text>
+	</string>
+
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>ќчистка задачи при удалении путевой точки</text>

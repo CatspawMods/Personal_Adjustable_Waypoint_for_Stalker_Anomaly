@@ -159,14 +159,23 @@ widget_custom_pos           = {x=491,y=670}
 widget_last_used            = time_global()
 wp_hud_icon_enabled         = true
 pin_hud_icon_default        = true
-valid_target_ind_mode       = 4
+reticle_mode                = 2
+ret_fade_attack_time        = 400
+ret_fade_decay_time         = 600
+
+reticle_color = {
+    ["a"]       = 150,
+    ["r"]       = 255,
+    ["g"]       = 255,
+    ["b"]       = 255,
+}
 show_marker_dist = {
-    ["pins"]  = 4,
-    ["wp"]    = 4,
+    ["pins"]    = 4,
+    ["wp"]      = 4,
 }
 show_marker_hint = {
-    ["pins"]  = 2,
-    ["wp"]    = 0, -- not implemented yet
+    ["pins"]    = 2,
+    ["wp"]      = 0, -- not implemented yet
 }
 -- ======================================================================
 --  STRINGS AND LTX DATA
@@ -523,6 +532,14 @@ function roll(val,min,max)
         return max
     else
         return val
+    end
+end
+
+function lerp(a, b, f)
+    if a and b and f then
+        return a + f * (b - a)
+    else
+        return a or b or 0
     end
 end
 
@@ -1144,12 +1161,11 @@ function add_context_option(property_ui,act,maptbl)
     local ac = action_codes[act]
     vl("add_context_option \"%s\" | cart_mode is %s",act,cart_mode)
     if ac and ac.enable then
-        printf("action %s is enabled",act)
+        --printf("action %s is enabled",act)
         if type(ac.mode) ~= "number" then
             dl("WARNING: mode (%s) for action %s was not a number, resetting to 0",ac.mode,act)
             ac.mode = 0
         end
-        printf("<PAW> mode for %s is %s",act,ac.mode)
         --     -1: debug mode only
         --      0: disabled
         --      1: enabled in normal view only
@@ -1689,15 +1705,19 @@ function show_all_pins(onoff)
     if onoff then
         vl("Showing all recorded pins")
         for id,pin in pairs(pins) do
-            local icon = pin.icon
-            local mapspot_text = pin.text
-            vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
-            add_mapspot(mapspot_text,id,icon)
+            if not pin.locked then
+                local icon = pin.icon
+                local mapspot_text = pin.text
+                vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
+                add_mapspot(mapspot_text,id,icon)
+            end
         end
     else
         vl("Hiding stored pins from map")
         for id,pin in pairs(pins) do
-            remove_mapspot(id,pin.icon)
+            if not pin.locked then
+                remove_mapspot(id,pin.icon)
+            end
         end        
     end
 end
@@ -1786,7 +1806,10 @@ function mcm_reload_keybind_settings()
     cart_shows_smarts       = load_mcm("pawbinds/cart_shows_smarts",cart_shows_smarts)
     mwheel_notify           = load_mcm("pawbinds/mwheel_notify")
     cartmode_unfade         = load_mcm("pawbinds/cartmode_unfade",cartmode_unfade)
-
+    reticle_mode            = load_mcm("pawbinds/reticle_mode",reticle_mode)
+    reticle_color.a         = load_mcm("pawbinds/reticle_alpha",reticle_color.a)
+    ret_fade_attack_time    = load_mcm("pawbinds/ret_fade_attack_time",ret_fade_attack_time)
+    ret_fade_decay_time     = load_mcm("pawbinds/ret_fade_decay_time",ret_fade_decay_time)
     local tmp               = ui_mcm.get("pawsys/pawbinds/mwheel_enabled")
     if tmp and type(tmp) == "number" then
         tmp                 = (tmp ~= 0)
@@ -2365,6 +2388,137 @@ function unsquish_aspect(element)
     element:SetWndSize(vector2():set((w*unsquish_ratio),h))
 end
 
+--[[
+animate_texture(
+  container,
+  500,
+  {512.5,384.5},
+  {512.5,384.5},
+  {0,0},
+  {200, 200},
+  1,
+  0,
+  function() printf("anim_finished") end,
+  function(x) return x^2 end
+)
+--]]
+
+function easing_outquint(x)
+    if not x then return end
+    return 1 - math.pow(1 - x, 5)
+end
+
+function easing_inquint(x)
+    if not x then return end
+    return x * x * x * x * x
+end
+
+function abort_fade_in()
+    return HUD_RET.fading_out or not HUD_RET.fading_in
+end
+
+function abort_fade_out()
+    return HUD_RET.fading_in or not HUD_RET.fading_out
+end
+
+
+function animate_texture(element, duration, start_pos, end_pos, start_size, end_size, alpha_start, alpha_end , on_finish_func, anim_curve_modifier_func, r, g, b)
+    r = r or 255
+    g = g or 255
+    b = b or 255
+
+    local anim_state = 0
+    local start_time = time_global()
+    local end_time = time_global() + duration
+    local anim_curve_modifier_func = anim_curve_modifier_func or function(x) return x end
+    CreateTimeEvent("animate_texture", time_global(), 0, function()
+        local x = anim_curve_modifier_func(anim_state)
+        local pos_x = lerp(start_pos.x, end_pos.x, x)
+        local pos_y = lerp(start_pos.y, end_pos.y, x)
+
+        local size_x = lerp(start_size.x, end_size.x, x)
+        local size_y = lerp(start_size.y, end_size.y, x)
+
+        local alpha = lerp(alpha_start, alpha_end, x)
+
+
+        if anim_state == 1 then
+            if on_finish_func then on_finish_func() end
+            return true
+        end
+        anim_state = math.min(1, normalize(time_global(), start_time, end_time))
+    end)
+end
+
+local active_anims = {}
+
+function anim_fade(box,alpha_start,alpha_end,duration,event_id,instanced, r, g, b, anim_curve_modifier_func, on_finish_func,abort_func)
+    if not box then return end
+    local fade_dir = (alpha_start > alpha_end) and "out" or "in"
+    dl("anim_fade: start %s end %s dur %s | event_id %s | instanced %s ",alpha_start,alpha_end, duration,event_id,instanced)
+    if (event_id == nil) then event_id = "anim_fade" end
+    local anim_id = event_id.."_"..tostring(time_global())
+    r = r or 255
+    g = g or 255
+    b = b or 255
+
+    if active_anims[event_id] then
+        alpha_start = active_anims[event_id].a
+        dl("Repeat invocation of non-instanced fade event, aborting fade-%s and starting new at current alpha (%s)",fade_dir,alpha_start)
+        active_anims[event_id] = nil
+        if on_finish_func then on_finish_func(box,event_id,alpha_end,r,g,b) end
+        --anim_fade(box,alpha_start,alpha_end,duration,event_id,instanced, r, g, b, anim_curve_modifier_func, on_finish_func,abort_func)
+        --return true        
+    end
+
+    local anim_state = 0
+    local start_time= time_global()
+    local end_time  = time_global() + duration
+    local anim_curve_modifier_func = anim_curve_modifier_func or function(x) return x end
+    active_anims[event_id] = {
+
+        box         = box,
+        instanced   = instanced and true or false,
+        anim_id     = anim_id,
+        start_time  = start_time,
+        end_time    = end_time,
+        active      = true,
+        a_start     = alpha_start,
+        a_end       = alpha_end,
+        a           = alpha_start,
+        r           = r,
+        g           = g,
+        b           = b,
+    }
+    
+    --vl("Creating fade-%s time event %s | %s",fade_dir,event_id,anim_id)
+    CreateTimeEvent("animate_fade"..event_id..anim_id, time_global(), 0, function()
+        local abort = abort_func and abort_func()
+        if abort then
+            vl("Received abort for %s",event_id)
+            anim_state = 1
+        else
+            local anim = active_anims[event_id]
+            if anim then
+                local x = anim_curve_modifier_func(anim_state)
+                local alpha = lerp(alpha_start, alpha_end, x)
+                anim.a,anim.r,anim.g,anim.b = alpha,r,g,b
+                box:SetTextureColor(GetARGB(alpha,r,g,b))
+                --vl("Fade-%s time event: setting transparency for %s to %s at time %s",fade_dir,event_id,alpha,time_global())
+            else
+                vl("Event data for %s has cleared, aborting",event_id)
+                anim_state = 1
+            end
+        end
+
+        if (anim_state == 1) then
+            vl("Fade-%s animation %s completed at %s",fade_dir,event_id,time_global())
+            if on_finish_func then on_finish_func(box,event_id,alpha_end,r,g,b) end
+            return true
+        end
+        anim_state = math.min(1, normalize(time_global(), start_time, end_time))
+    end)
+end
 
 function fade_by_dist(element,dist,min,mid,max,alpha,r,g,b,mode)
     -- 0    :   fade Static element
@@ -2445,7 +2599,7 @@ function get_current_zoom_coef()
     local fov       = device().fov
     local zoom_coef = fov / 85
     last_zoom_coef  = zoom_coef
-    printf("Current weapon: %s | is_zoomed %s | zoom_coef %s | FOV %s",obj and obj:name(),is_zoomed,zoom_coef,fov)
+    --printf("Current weapon: %s | is_zoomed %s | zoom_coef %s | FOV %s",obj and obj:name(),is_zoomed,zoom_coef,fov)
 
     return zoom_coef
 end
@@ -2585,7 +2739,6 @@ function UIPAWHUDWaypoint:InitControls()
     self:SetAutoDelete(true)
     self.xml = CScriptXmlInit()
     self.xml:ParseFile("paw_hud_wp_icon.xml")
-    
     self.marker     = self.xml:InitStatic("marker",self)
     self.dist       = self.xml:InitStatic("marker:distance_sh:distance",self)
     self.dist:TextControl():SetTextColor( GetARGB(255,230,230,230) )
@@ -2855,79 +3008,81 @@ end
 
 -- ======================================================================
 
-HUD_VTX = nil
+HUD_RET = nil
 
 function enable_vo_crosshair()
     if not db.actor then return end
-    if (HUD_VTX == nil) then
-        HUD_VTX = UIPAWCrosshair()
-        get_hud():AddDialogToRender(HUD_VTX)
+    if (HUD_RET == nil) then
+        HUD_RET = UIPAWReticle()
+        get_hud():AddDialogToRender(HUD_RET)
     end
 end
 
 function disable_vo_crosshair()
     if not db.actor then return end
-    if (HUD_VTX ~= nil) then
-        HUD_VTX:ShowDialog(false)
-        get_hud():RemoveDialogToRender(HUD_VTX)
-        HUD_VTX = nil
+    if (HUD_RET ~= nil) then
+        HUD_RET:ShowDialog(false)
+        get_hud():RemoveDialogToRender(HUD_RET)
+        HUD_RET = nil
     end
 end
 
 function update_vo_crosshair()
     if not db.actor then return end
-    if (HUD_VTX ~= nil) then
-        HUD_VTX:Update(true)
+    if (HUD_RET ~= nil) then
+        HUD_RET:Update(true)
     end
 end
 
 -- ======================================================================
 
-class "UIPAWCrosshair" (CUIScriptWnd)
+class "UIPAWReticle" (CUIScriptWnd)
 
-function UIPAWCrosshair:__init() super()
-    --printf("UIPAWCrosshair:__init(%s)",id)
+function UIPAWReticle:__init() super()
+    --printf("UIPAWReticle:__init(%s)",id)
     self:InitControls()
     RegisterScriptCallback("actor_on_net_destroy", self)
 end
 
 
-function UIPAWCrosshair:__finalize()
+function UIPAWReticle:__finalize()
 end
 
 
-function UIPAWCrosshair:InitControls(id)
-    --printf("UIPAWCrosshair:InitControls(%s)",id)
+function UIPAWReticle:InitControls(id)
+    --printf("UIPAWReticle:InitControls(%s)",id)
     self:SetAutoDelete(true)
     self.xml = CScriptXmlInit()
     self.xml:ParseFile("paw_hud_pin_icon.xml")
-    self.marker = self.xml:InitStatic("marker",self)
+    self.reticle = self.xml:InitStatic("marker",self)
     local tex = "ui_icons_paw_crosshair_valid"
-    self.marker:InitTexture(tex)
-    self.marker:SetWndSize(vector2():set(20,20))
-    unsquish_aspect(self.marker)
-    local w = self.marker:GetWidth()
-    local h = self.marker:GetHeight()
-    self.marker:SetWndPos(vector2():set(512 - (w * 0.5), 384 - (h * 0.5)))
+    self.reticle:InitTexture(tex)
+    local clr = reticle_color
+    self.reticle:SetTextureColor(GetARGB(clr.a,clr.r,clr.g,clr.b))
+    self.reticle:SetWndSize(vector2():set(32,32))
+    unsquish_aspect(self.reticle)
+    local w = self.reticle:GetWidth()
+    local h = self.reticle:GetHeight()
+    self.reticle:SetWndPos(vector2():set(512.5,384.5))
+    self:ShowMarker(false)
 end
 
 
-function UIPAWCrosshair:Destroy()
+function UIPAWReticle:Destroy()
     get_hud():RemoveDialogToRender(self)
 end
 
-
-function UIPAWCrosshair:actor_on_net_destroy()
+function UIPAWReticle:actor_on_net_destroy()
     get_hud():RemoveDialogToRender(self)
 end
 
-function UIPAWCrosshair:ShowMarker(onoff)
-    self.marker:Show(onoff)
+function UIPAWReticle:ShowMarker(onoff)
+    self.reticle:Show(onoff)
 end
 
-function UIPAWCrosshair:Update()
-    printf("UIPAWCrosshair:Update")
-    local mode      = valid_target_ind_mode
+function UIPAWReticle:Update()
+    --printf("UIPAWReticle:Update")
+    local mode      = reticle_mode
     local enabled   = false
     if mode and type(mode) == "number" then
         if mode == 0 then
@@ -2935,11 +3090,10 @@ function UIPAWCrosshair:Update()
             get_hud():RemoveDialogToRender(self)
             return
         end
-        enabled     = (mode == 1 and not cart_mode) or 
+        enabled     = ((mode == 1) and not cart_mode) or 
                         ((mode >= 2) and cart_mode) or 
                         (mode >= 4)
     end
-    
     CUIScriptWnd.Update(self)
     if enabled and (main_hud_shown() or
             axr_main.binoc_is_zoomed or
@@ -2948,13 +3102,33 @@ function UIPAWCrosshair:Update()
         local obj = level.get_target_obj()
         local id = obj and obj:id()
         if id and (id > 0) then
+            --printf("Reticle has valid id %s",id)
             local se_obj = alife_object(id)
             if (se_obj and (allow_non_wp_targets or valid_waypoint_target(se_obj))) then
                 self:ShowMarker(true)
+                vl("ID %s is a valid waypoint/pin target",id)
+                if not (self.hovered or self.fading_in) then
+                    --printf("Initiating fade-in at %s and clearing fading_out flag",time_global())
+                    anim_fade(self.reticle,0,reticle_color.a,400,"reticle_fade",false,nil,nil,nil,easing_outquint,nil,abort_fade_in)
+                    --anim_fade(self.reticle,0,reticle_color.a,3000,"reticle_fade",false,nil,nil,nil,nil,nil,abort_fade_in)
+                    self.fading_in  = true
+                    self.fading_out = false
+                    self.hovered    = true
+                end
                 return
             end
+        elseif self.hovered then
+            self.hovered = false
+            self.fading_out = true
+            self.fading_in = false
+            --printf("Initiating fade-out at %s and clearing fading_in flag",time_global())
+            anim_fade(self.reticle,reticle_color.a,0,600,"reticle_fade",false,nil,nil,nil,easing_outquint,nil,abort_fade_out)
+            --anim_fade(self.reticle,reticle_color.a,0,3000,"reticle_fade",false,nil,nil,nil,nil,nil,abort_fade_out)
+            return
         end
-        self:ShowMarker(false)
+        if not self.fading_out then
+            self:ShowMarker(false)
+        end
     else
         self:ShowMarker(false)
     end
@@ -3364,7 +3538,7 @@ function actor_on_first_update()
     else
         hide_hud_waypoint()
     end
-    if valid_target_ind_mode > 0 then
+    if reticle_mode > 0 then
         enable_vo_crosshair()
     else
         disable_vo_crosshair()
