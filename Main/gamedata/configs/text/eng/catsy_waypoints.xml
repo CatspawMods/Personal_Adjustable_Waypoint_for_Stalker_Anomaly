@@ -1268,31 +1268,6 @@ This message won't bother you again. Good hunting, %s.</text>
 
 	<string id="ui_mcm_lst_paw_aspect_21_9">
 		<text>21:9 (Ultrawide)</text>
-		</string>
-
-<!-- not implemented yet
-	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
-		<text>Clear task on waypoint removal</text>
 	</string>
-
-	<string id="ui_mcm_pawsys_pawgen_wp_clear_task_desc">
-		<text>When the waypoint is cleared by either proximity or toggle, the marker is removed from the map. If this option is enabled, the task is also removed from the journal. The system will say that a task was completed, but it does not actually count. If this causes issues with another addon, you can disable this so that only the marker will be hidden.</text>
-	</string>
-
-	<string id="ui_mcm_pawsys_pawpins_fave_recent">
-		<text>Include recently-used pins in Favorites</text>
-	</string>
-
-	<string id="ui_mcm_lst_paw_last_1"><text>Last pin</text></string>
-	<string id="ui_mcm_lst_paw_last_2"><text>Last 2</text></string>
-	<string id="ui_mcm_lst_paw_last_3"><text>Last 3</text></string>
-	<string id="ui_mcm_lst_paw_last_4"><text>Last 4</text></string>
-	<string id="ui_mcm_lst_paw_last_5"><text>Last 5</text></string>
-	<string id="ui_mcm_lst_paw_last_6"><text>Last 6</text></string>
-	<string id="ui_mcm_lst_paw_last_7"><text>Last 7</text></string>
-	<string id="ui_mcm_lst_paw_last_8"><text>Last 8</text></string>
-	<string id="ui_mcm_lst_paw_last_9"><text>Last 9</text></string>
-	<string id="ui_mcm_lst_paw_last_10"><text>Last 10</text></string>
--->
 
 </string_table>

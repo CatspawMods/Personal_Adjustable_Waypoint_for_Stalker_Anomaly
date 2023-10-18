@@ -1257,15 +1257,25 @@
 		<text>Время в миллисекундах, необходимое для того, чтобы перекрестие закончило исчезать при отсутствии действительной цели.</text>
 	</string>
 
-<!-- not implemented yet
-	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
-		<text>Очистка задачи при удалении путевой точки</text>
+	<string id="ui_mcm_pawsys_pawhud_preview_aspect">
+		<text>Соотношение сторон для экрана, показанного ниже</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawgen_wp_clear_task_desc">
-		<text>При снятии путевой точки либо по близости, либо по переключению маркер удаляется с карты. Если эта опция включена, то задание также удаляется из журнала. Система будет сообщать, что задание выполнено, но на самом деле оно не засчитывается. Если это вызывает проблемы с другим аддоном, можно отключить эту опцию, чтобы скрывался только маркер на карте.</text>
+	<string id="ui_mcm_lst_paw_aspect_4_3">
+		<text>4:3 (Стандартная четкость)</text>
 	</string>
--->
+
+	<string id="ui_mcm_lst_paw_aspect_16_10">
+		<text>16:10 (1920x1200, 2560x1600)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_aspect_16_9">
+		<text>16:9 (1080p, 1440p, 2160p)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_aspect_21_9">
+		<text>21:9 (Ультраширокий)</text>
+	</string>
 	
 </string_table>
 
