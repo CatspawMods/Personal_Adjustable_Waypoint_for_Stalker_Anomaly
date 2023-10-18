@@ -1,5 +1,5 @@
 <w>
-	<pawhudind x="0" y="0" width="136" height="75"> 
+	<pawhudind x="0" y="0" width="136" height="75" stretch="1"> 
 		<head x="3" y="1" width="126" height="12" stretch="1">
 			<text color="ui_gray_2" align="c" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -11,7 +11,7 @@
 		<next x="102" y="36" width="24" height="28" stretch="1"/>
 	</pawhudind>
 
-	<pawhudind_vertleft x="0" y="0" width="100" height="154"> 
+	<pawhudind_vertleft x="0" y="0" width="100" height="154" stretch="1"> 
 		<head x="5" y="3" width="100" height="12" stretch="1">
 			<text color="ui_gray_2" align="l" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -21,7 +21,7 @@
 		<next x="11" y="25" width="24" height="28" stretch="1"/>
 	</pawhudind_vertleft>
 
-	<pawhudind_vertright x="0" y="0" width="100" height="154"> 
+	<pawhudind_vertright x="0" y="0" width="100" height="154" stretch="1"> 
 		<head x="-3" y="3" width="98" height="12" stretch="1">
 			<text color="ui_gray_2" align="r" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -31,7 +31,7 @@
 		<next x="65" y="26" width="24" height="28" stretch="1"/>
 	</pawhudind_vertright>
 
-	<pawhudind_gamma_left x="0" y="0" width="130" height="150"> 
+	<pawhudind_gamma_left x="0" y="0" width="130" height="150" stretch="1"> 
 		<head x="5" y="3" width="124" height="12" stretch="1">
 			<text r="255" g="255" b="255" align="l" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -43,7 +43,7 @@
 		<next x="12" y="41" width="24" height="28" stretch="1"/>
 	</pawhudind_gamma_left>
 
-	<pawhudind_gamma_right x="0" y="0" width="130" height="150"> 
+	<pawhudind_gamma_right x="0" y="0" width="130" height="150" stretch="1"> 
 		<head x="1" y="3" width="124" height="12" stretch="1">
 			<text r="255" g="255" b="255" align="r" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -55,7 +55,7 @@
 		<next x="100" y="41" width="24" height="28" stretch="1"/>
 	</pawhudind_gamma_right>
 
-	<pawhudind_minimal_h x="0" y="0" width="94" height="52"> 
+	<pawhudind_minimal_h x="0" y="0" width="94" height="52" stretch="1"> 
 		<head x="1" y="2" width="90" height="12" stretch="1">
 			<text color="ui_gray_1" align="c" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -65,7 +65,7 @@
 		<next x="67" y="17" width="24" height="28" stretch="1"/>
 	</pawhudind_minimal_h>
 
-	<pawhudind_minimal_v x="0" y="0" width="92" height="112"> 
+	<pawhudind_minimal_v x="0" y="0" width="92" height="112" stretch="1"> 
 		<head x="1" y="3" width="90" height="12" stretch="1">
 			<text color="ui_gray_1" align="c" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -75,7 +75,7 @@
 		<next x="65" y="83" width="24" height="28" stretch="1"/>
 	</pawhudind_minimal_v>	
 
-	<pawhudind_minicom x="0" y="0" width="38" height="37"> 
+	<pawhudind_minicom x="0" y="0" width="38" height="37" stretch="1"> 
 		<head x="2000" y="2000" width="1" height="1" stretch="1">
 			<text color="ui_gray_1" align="c" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
@@ -85,15 +85,15 @@
 		<next x="2000" y="2000" width="1" height="1" stretch="1"/>
 	</pawhudind_minicom>
 
-	<pawhudind_compact_noui x="0" y="0" width="32" height="37"> 
+	<pawhudind_compact_noui x="0" y="0" width="32" height="37" stretch="1"> 
 		<head x="2000" y="2000" width="1" height="1" stretch="1"/>
 		<head2 x="2000" y="2000" width="1" height="1" stretch="1"/>
 		<curr x="0" y="0" width="32" height="37" stretch="1"/>
 		<prev x="2000" y="2000" width="1" height="1" stretch="1"/>
 		<next x="2000" y="2000" width="1" height="1" stretch="1"/>
 	</pawhudind_compact_noui>
-
-	<paw_mcm_indicator x="0" y="0" width="563" height="50">
+	
+	<paw_mcm_indicator x="0" y="0" width="563" height="50" stretch="1">
 		<desc complex_mode="1" x="10" y="16" width="270" height="24" stretch="1">
 			<text r="200" g="200" b="200" align="l" vert_align="c" stretch="1" font="letterica16"/>
 		</desc>
@@ -111,6 +111,14 @@
 		</mini_left>
 	</paw_mcm_indicator>
 
+	<paw_mcm_pos_preview  x="0" y="0" width="640" height="270" stretch="1">
+		<preview_21_9 x="0" y="0" width="320" height="135" stretch="1" >
+			<widget  x="0" y="0"  width="1" height="1" stretch="1" />
+		</preview_21_9>
 
+		<preview_16_9 x="0" y="0" width="640" height="270" stretch="1" >
+			<widget  x="0" y="0"  width="1" height="1" stretch="1" />
+		</preview_16_9>
+	</paw_mcm_pos_preview>
 </w>
 

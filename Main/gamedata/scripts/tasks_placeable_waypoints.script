@@ -106,7 +106,7 @@ mwheel_avail            = mousewheel_override or (MODDED_EXES_VERSION and (MODDE
 right_click_avail       = right_click_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
 last_clicked_id         = nil
 -- ======================================================================
-local unsquish_ratio        = 1
+unsquish_ratio              = 1
 local DIK_name              = ui_mcm and ui_mcm.dispaly_key or (function() return "" end)-- typo is in the mcm script
 local default_id            = 15797 -- WP defaults to Rookie Village if missing for any reason to avoid crash
 local mcm_update_throttle   = 3019 -- minimum time between MCM updates of icon/set data
@@ -309,6 +309,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_classic",
         file    = "paw_hud_indicator.xml",
         pos     = {x=890,y=620},
+        w       = 136,
+        h       = 75,
         pda_thm = "vertright",
     },
     ["classic"] = {
@@ -318,6 +320,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_classic",
         file    = "paw_hud_indicator.xml",
         pos     = {x=890,y=620},
+        w       = 136,
+        h       = 75,
     },
     ["vertright"] = {
         name    = "vertright",
@@ -326,6 +330,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_vertright",
         file    = "paw_hud_indicator.xml",
         pos     = {x=922,y=440},
+        w       = 100,
+        h       = 154,
     }, 
     ["vertleft"] = {
         name    = "vertleft",
@@ -334,6 +340,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_vertleft",
         file    = "paw_hud_indicator.xml",
         pos     = {x=4,y=570},
+        w       = 100,
+        h       = 154,
     }, 
     ["gamma_right"] = {
         name    = "gamma_right",
@@ -342,6 +350,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_gamma_right",
         file    = "paw_hud_indicator.xml",
         pos     = {x=888,y=440},
+        w       = 130,
+        h       = 150,
     }, 
     ["gamma_left"] = {
         name    = "gamma_left",
@@ -350,6 +360,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_gamma_left",
         file    = "paw_hud_indicator.xml",
         pos     = {x=4,y=440},
+        w       = 130,
+        h       = 150,
     }, 
     ["minimal_h"] = {
         name    = "minimal_h",
@@ -358,6 +370,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_minimal_h",
         file    = "paw_hud_indicator.xml",
         pos     = {x=924,y=645},
+        w       = 94,
+        h       = 52,
     }, 
     ["minimal_v"] = {
         name    = "minimal_v",
@@ -366,6 +380,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_minimal_v",
         file    = "paw_hud_indicator.xml",
         pos     = {x=924,y=440},
+        w       = 92,
+        h       = 112,
     }, 
     ["minicom"] = {
         name    = "minicom",
@@ -374,6 +390,8 @@ hud_themes = {
         tex     = "ui_paw_hud_indicator_minicom",
         file    = "paw_hud_indicator.xml",
         pos     = {x=820,y=725},
+        w       = 38,
+        h       = 37,
     }, 
     ["compact_noui"] = {
         name    = "compact_noui",
@@ -381,8 +399,12 @@ hud_themes = {
         style   = "compact",
         file    = "paw_hud_indicator.xml",
         pos     = {x=820,y=725},
+        w       = 32,
+        h       = 37,
+        pre_tex = "ui_paw_hud_indicator_minicom",
     }, 
 }
+
 
 local colors = {
     dimmed = GetARGB(100, 255, 255, 255),
