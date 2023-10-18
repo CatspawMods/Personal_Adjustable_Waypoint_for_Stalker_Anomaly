@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.13-b3
-	Updated: 20231016
+    Version: 1.13-b4
+	Updated: 20231017
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -311,8 +311,9 @@ function on_mcm_load()
 					{id = "hudsound", type = "check", val = 1, def = true},
 					{id = "autohide", type = "track", val = 2, min = 0, max = 120, step = 1, def = 5},
 					{id = "divider", type = "line"},
-					{id = "active_theme", type = "list", val = 0, def = "classicauto", 
-						content = {
+					{id = "active_theme", type = "list", val = 0, def = "classicauto",
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select}, 
+					content = {
 						   {"classicauto","theme_classicauto"},
 						   {"classic","theme_classic"},
 						   {"vertright","theme_vertright"},
@@ -325,10 +326,29 @@ function on_mcm_load()
 						   {"compact_noui","theme_compact_noui"},
 						}
 					},
-					{id = "custompos", type = "check", val = 1, def = false},
-					{id = "pos_x", type = "input", val = 2, min = 0, max = 1024, def = 491},
-					{id = "pos_y", type = "input", val = 2, min = 0, max = 768, def = 670},
+					{id = "custompos", type = "check", val = 1, def = false,
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select}
+					},
+					{id = "pos_x", type = "input", val = 2, min = 0, max = 1024, def = 491,
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+					},
+					{id = "pos_y", type = "input", val = 2, min = 0, max = 768, def = 670,
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+					},
+					{id = "preview_aspect", type = "list", val = 0, def = "16_9",
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select}, 
+						content = {
+						   {"16_9","paw_aspect_16_9"},
+						   {"21_9","paw_aspect_21_9"},
+						}
+					},
 
+					{id = "divider", type = "line"},
+
+					-- EXPERIMENTAL
+					{id = "pos_preview", type= "image", link = "ui_paw_emptytex", size= {512,270},
+						ui_hook_functor = {catsy_paw_mcm.init_mcm_pos_preview},
+					},
 					{id = "divider", type = "line"},
 
 					{id = "themedesc", type = "desc", text = "ui_mcm_themes_list"},
@@ -728,27 +748,194 @@ function init_mcm_header_ind(anchor, handlers, opts, flags)
 	icoset.txt_curr = icon_text_head2
 	vl("Current set: %s (%s) | icon %s | texture %s",icoset.txt_curr,icoset.set_curr,icoset.ico_curr,icoset.tex_curr)
 	
-	local pawind = "paw_mcm_indicator"
+	local xmlroot = "paw_mcm_indicator"
 
     xml:ParseFile("paw_hud_indicator.xml")
-	box_wnd 	= xml:InitStatic(pawind,anchor)
+	box_wnd 	= xml:InitStatic(xmlroot,anchor)
 	box_wnd:SetWndSize(vector2():set(563,40))
-	box_img		= xml:InitStatic(pawind..":curr",box_wnd)
-	ui_img 		= xml:InitStatic(pawind..":curr:icon",box_img)
+	box_img		= xml:InitStatic(xmlroot..":curr",box_wnd)
+	ui_img 		= xml:InitStatic(xmlroot..":curr:icon",box_img)
 	box_img:InitTexture("ui_paw_mapsquarebg")
 	ui_img:InitTexture(icoset.tex_curr or "ui_icons_paw_pin_redpush32")
-	box_head 	= xml:InitTextWnd(pawind..":head",box_wnd)
-	box_pname 	= xml:InitTextWnd(pawind..":pname",box_wnd)
-	box_desc 	= xml:InitTextWnd(pawind..":desc",box_wnd)
+	box_head 	= xml:InitTextWnd(xmlroot..":head",box_wnd)
+	box_pname 	= xml:InitTextWnd(xmlroot..":pname",box_wnd)
+	box_desc 	= xml:InitTextWnd(xmlroot..":desc",box_wnd)
     box_head:SetText(icon_text_head1)
     box_pname:SetText(icon_text_head2)
     box_desc:SetText(icon_text_head3)
 end
 
 
-local reticle_alpha_ind
+
+local preview_started = false
+local unsquish_ratio  = 1
+local aspects = {
+	["21_9"] = {x = 640, y = 270, node = "preview_21_9", scale_x = 0.3125, scale_y = 0.17578125},
+	["16_9"] = {x = 480, y = 270, node = "preview_16_9", scale_x = 0.234375, scale_y = 0.17578125,},
+}
+
+local function get_theme_data(mcm_theme_opt)
+	--local thm = string.sub(mcm_theme_opt,7)
+	local theme = paw and paw.hud_themes and paw.hud_themes[mcm_theme_opt]
+	printf("get_theme_data(%s) : %s",mcm_theme_opt,theme and theme.name)
+	return theme
+end
+
+local default_widget_state = {
+	curr_x 		= 890,
+	curr_y 		= 620,
+	cust_x 		= 491,
+	cust_y 		= 670,
+	themename 	= "classicauto",
+	curr_aspect = "16_9",
+	use_custom 	= false,
+}
+local pws 		= default_widget_state
+pws.curr_theme	= get_theme_data(pws.themename)
+
+local function asp_scale(x,y,aspect)
+	if not x and y then return 0,0 end
+	local ox,oy=x,y
+	local asp 	= aspect or pws.curr_aspect
+	local rat_x = aspects[asp].scale_x * 2
+	local rat_y = aspects[asp].scale_y * 2
+	x 			= x * rat_x * unsquish_ratio
+	y 			= y * rat_y
+	vl("%s, %s scaled to %s, %s for aspect %s",ox,oy,x,y,pws.curr_aspect)
+	return x,y
+end
+
+pws.eff_x	= 	function()
+					x = (pws.use_custom and pws.cust_x) or pws.curr_theme.pos.x
+					vl("eff_x: %s | custom %s",x,pws.use_custom)
+					return x
+				end
+pws.eff_y	= 	function()
+					y = (pws.use_custom and pws.cust_y) or pws.curr_theme.pos.y
+					vl("eff_y: %s | custom %s",y,pws.use_custom)
+					return y
+				end
+pws.adj_x	= 	function()
+					effx = pws.eff_x()
+					x, _ = asp_scale(effx, 1) 
+					vl("adj_x: %s -> %s",effx,x)
+					return x
+				end
+pws.adj_y	= 	function()
+					effy = pws.eff_y()
+					_, y = asp_scale(1, effy) 
+					vl("adj_y: %s -> %s",effx,y)
+					return y
+				end
+local box = {}
+local wid = {}
+
+
+local function reset_widget_pos(aspect)
+	if not preview_started then return end
+	local asp 	= aspect or pws.curr_aspect
+	local x 	= pws.adj_x()
+	local y 	= pws.adj_y()
+	vl("PosPreviewer: resetting %s widget pos to %s, %s",asp,x,y)
+	pws.curr_x	= x
+	pws.curr_y	= y
+	wid[asp]:SetWndPos(vector2():set(x,y))
+end
+
+local function reset_widget_size(aspect)
+	if not preview_started then return end
+	local asp 	= aspect or pws.curr_aspect
+	local w 	= pws.curr_theme and pws.curr_theme.w or wid[asp]:GetWidth()
+	local h 	= pws.curr_theme and pws.curr_theme.h or wid[asp]:GetHeight()
+	local rs 	= 16/9/5
+	local ww 	= w * rs * unsquish_ratio
+	local wh	= h * rs
+	vl("Resetting widget size for %s to %sx%s",pws.themename,ww,wh)
+	wid[asp]:SetWndSize(vector2():set(ww,wh))
+end
+
+function reset_theme(theme,aspect)
+	local theme = theme or pws.curr_theme
+	local asp 	= aspect or pws.curr_aspect
+	printf("reset_theme(%s, %s)",theme and theme.name,aspect)
+	local a 	= aspects[asp]
+	box[asp]:InitTexture("ui_paw_mcmpre_"..asp)
+	box[asp]:SetWndSize(vector2():set(a.x * unsquish_ratio,a.y))
+	local tex 	= theme.pre_tex or theme.tex
+	wid[asp]:InitTexture(tex)
+	printf("Initializing texture %s (%sx%s) in preview_%s",tex,a.x,a.y,asp)
+	reset_widget_size()
+	reset_widget_pos()
+	box[asp]:Show(true)
+	wid[asp]:Show(true)
+end
+
+function reset_aspect(aspect)
+	vl("PosPreviewer: switching aspect ratio to %s",aspect)
+	for k,v in pairs(aspects) do
+		box[k]:Show(false)
+		wid[k]:Show(false)
+	end
+	pws.curr_aspect = aspect
+	box[pws.curr_aspect]:Show(false)
+	wid[pws.curr_aspect]:Show(false)
+	reset_theme(pws.curr_theme,pws.curr_aspect)
+end
+
+function get_theme_or_override_pos(theme)
+	local pos 		= theme and theme.pos and theme.pos
+
+	if custom then
+		pos.x		= ui_mcm.get("pawsys/pawhud/pos_x")
+		pos.y		= ui_mcm.get("pawsys/pawhud/pos_y")
+	end
+	return pos
+end
+
+function init_mcm_pos_preview(anchor, handlers, opts, flags)
+	unsquish_ratio 	= (device().height / device().width) / (768 / 1024)
+	vl("init_mcm_pos_preview | unsquish %s",unsquish_ratio)
+	pws.themename 	= ui_mcm.get("pawsys/pawhud/active_theme") or "classicauto"
+	pws.curr_theme	= get_theme_data(pws.themename)
+	pws.curr_aspect = ui_mcm.get("pawsys/pawhud/preview_aspect") or "16_9"
+	pws.use_custom 	= ui_mcm.get("pawsys/pawhud/custompos") or false
+	pws.cust_x 		= ui_mcm.get("pawsys/pawhud/pos_x") or 491
+	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y") or 690
+
+	xml:ParseFile("paw_hud_indicator.xml")
+	local xmlroot 	= "paw_mcm_pos_preview"
+	local theme 	= pws.curr_theme
+	local pic 		= handlers and handlers.pic
+
+	box.wnd 		= xml:InitStatic(xmlroot,anchor)
+	box.wnd:SetWndSize(vector2():set(640 * unsquish_ratio,270))
+
+	for k,v in pairs (aspects) do
+		printf("xml path: %s",xmlroot..":"..v.node)
+		local asp 	= k
+		box[asp] 	= xml:InitStatic(xmlroot..":preview_"..asp,box.wnd)
+		wid[asp]	= xml:InitStatic(theme.node,box[asp])
+		box[asp]:Show(false)
+		wid[asp]:Show(false)
+
+		vl("Finished generating box and wid for aspect ratio %s",asp)
+	end
+
+	box[pws.curr_aspect]:Show(true)
+	wid[pws.curr_aspect]:Show(true)
+
+	pws.use_custom 	= ui_mcm.get("pawsys/pawhud/custompos")
+	pws.cust_x		= ui_mcm.get("pawsys/pawhud/pos_x")
+	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y")
+
+	dl("Finished init for pos preview module | theme %s | aspect %s",pws.themename,pws.curr_aspect)
+	preview_started = true
+	reset_theme()
+end
+
+
 function mcm_on_value_select(path,opt,value,v)
-	vl("Callback received: MCM value select for %s/%s: %s",path,opt,value)
+	printf("Callback received: MCM value select for %s/%s: %s",path,opt,value)
 	if path == "pawsys/pawpins" then
 		local icon_change = false
 		icoset._changed[opt] = value
@@ -786,6 +973,30 @@ function mcm_on_value_select(path,opt,value,v)
 		else
 			printf("WARNING: alpha indicator element not found")
 		end
+	elseif path == "pawsys/pawhud" then
+		dl("MCM value change for %s/%s = %s | curr_x %s curr_y %s | pws.themename %s | pws.curr_aspect %s",path,opt,value,pws.curr_x,pws.curr_y,pws.themename,pws.curr_aspect)
+		if opt == "active_theme" then
+			local theme = get_theme_data(value)
+			if theme then
+				pws.themename = value
+				pws.curr_theme = get_theme_data(value)
+				reset_theme(pws.curr_theme,pws.curr_aspect)
+			end
+		elseif opt == "preview_aspect" then
+			if aspects[value] then
+				reset_aspect(value)
+			end
+		elseif opt == "custompos" then
+			pws.use_custom = value
+			reset_widget_pos()
+		elseif pws.use_custom then
+			if (opt == "pos_x") then
+				pws.cust_x = value
+			elseif (opt == "pos_y") then
+				pws.cust_y = value
+			end
+			reset_widget_pos()
+	end
 	end
 end
 
