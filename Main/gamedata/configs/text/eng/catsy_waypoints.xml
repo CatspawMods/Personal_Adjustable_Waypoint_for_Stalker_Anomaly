@@ -1234,37 +1234,25 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>Unlock Pin</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_mode">
-		<text>Show subtle reticle when a valid object is targeted</text>
+	<string id="ui_mcm_pawsys_pawhud_preview_aspect">
+		<text>Aspect ratio for the screen preview below</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_mode_desc">
-		<text>If the crosshairs are currently centered on a valid object, an unobtrusive reticle will be shown to indicate that waypoints and pins can be placed there. You can control the transparency below.</text>
+	<string id="ui_mcm_lst_paw_aspect_4_3">
+		<text>4:3 (Standard Definition)</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha">
-		<text>Reticle transparency</text>
+	<string id="ui_mcm_lst_paw_aspect_16_10">
+		<text>16:10 (1920×1200, 2560x1600)</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha_desc">
-		<text>The reticle's alpha (transparency) value, with 0 being fully transparent and 255 being no transparency.</text>
+	<string id="ui_mcm_lst_paw_aspect_16_9">
+		<text>16:9 (1080p, 1440p, 2160p)</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time">
-		<text>Fade-in duration for the reticle</text>
-	</string>
-
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time_desc">
-		<text>The time, in milliseconds, that it takes for the reticle to finish fading in when targeting a valid object.</text>
-	</string>
-
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time">
-		<text>Fade-out duration for the reticle</text>
-	</string>
-
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time_desc">
-		<text>The time, in milliseconds, that it takes for the reticle to finish fading out after the crosshair no longer has a target.</text>
-	</string>
+	<string id="ui_mcm_lst_paw_aspect_21_9">
+		<text>21:9 (Ultrawide)</text>
+		</string>
 
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
