@@ -2,8 +2,8 @@
 --[[    Monkeypatch to enable dynamic UI elements in MCM
 -- ======================================================================
     Author: Catspaw
-    Version: 2.0
-    Updated: 20231007
+    Version: 2.1
+    Updated: 20231017
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
 
     Included with Personal Adjustable Waypoint, but parameterized so that
@@ -17,16 +17,14 @@
     with ui_mcm.script or otherwise as an integrated alteration to your
     own (or your modpack's) version of MCM.
 
-	v2.0 breaks some backwards compatibility for the sake of future MCM
-	compatibility. Sorry if anyone got crazy with the old format in the
-	less than 24 hours it existed--the change was necessary.
+    2.1 adds support for the Track element.
 -- ======================================================================
 	USAGE
 -- ======================================================================
 	Adds a new functor attribute to the Slide and Image element types:
 	- [ui_hook_functor]
 	- Define: ( table {function, parameters} )
-	- Used by: image, slide, list (only in this monkeypatch)
+	- Used by: image, slide, list, track (only in this monkeypatch)
 	- Parameters passed: anchor, handlers, attrs, flags
 		Execute a function on initial registration of a UI element
 		anchor	- empty static image container

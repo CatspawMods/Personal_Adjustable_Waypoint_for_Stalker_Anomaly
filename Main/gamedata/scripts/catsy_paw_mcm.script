@@ -4,7 +4,7 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.13-b4
+    Version: 1.13
 	Updated: 20231017
 
     You probably shouldn't mess with this, even if you're familiar with 
@@ -18,7 +18,7 @@ if debuglogs == nil then
     debuglogs 					= false   -- Controls debug logging if you don't have MCM
 end
 verbose                   		= true
-script_version 					= "1.13-b3"
+script_version 					= "1.13"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
