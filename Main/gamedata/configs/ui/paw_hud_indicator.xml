@@ -44,15 +44,15 @@
 	</pawhudind_gamma_left>
 
 	<pawhudind_gamma_right x="0" y="0" width="130" height="150" stretch="1"> 
-		<head x="1" y="3" width="124" height="12" stretch="1">
+		<head x="-4" y="3" width="124" height="12" stretch="1">
 			<text r="255" g="255" b="255" align="r" vert_align="c" stretch="1" font="arial_14"/>
 		</head>
-		<head2 x="1" y="10" width="126" height="12" stretch="1">
+		<head2 x="-4" y="10" width="126" height="12" stretch="1">
 			<text r="255" g="255" b="255" align="r" vert_align="c" stretch="1" font="letterica16"/>
 		</head2>
-		<curr x="95" y="76" width="32" height="37" stretch="1"/>
-		<prev x="100" y="116" width="24" height="28" stretch="1"/>
-		<next x="100" y="41" width="24" height="28" stretch="1"/>
+		<curr x="92" y="76" width="32" height="37" stretch="1"/>
+		<prev x="97" y="116" width="24" height="28" stretch="1"/>
+		<next x="97" y="41" width="24" height="28" stretch="1"/>
 	</pawhudind_gamma_right>
 
 	<pawhudind_minimal_h x="0" y="0" width="94" height="52" stretch="1"> 
@@ -111,14 +111,15 @@
 		</mini_left>
 	</paw_mcm_indicator>
 
-	<paw_mcm_pos_preview  x="0" y="0" width="640" height="270" stretch="1">
-		<preview_21_9 x="0" y="0" width="320" height="135" stretch="1" >
-			<widget  x="0" y="0"  width="1" height="1" stretch="1" />
-		</preview_21_9>
-
-		<preview_16_9 x="0" y="0" width="640" height="270" stretch="1" >
-			<widget  x="0" y="0"  width="1" height="1" stretch="1" />
-		</preview_16_9>
+	<paw_mcm_pos_preview  complex_mode="1" x="20" y="0" width="640" height="270" stretch="1" align="l">
+		<preview_4_3 x="0" y="0" width="360" height="270" stretch="1" />
+		<preview_16_9 x="0" y="0" width="480" height="270" stretch="1" />
+		<preview_16_10 x="0" y="0" width="420" height="262" stretch="1" />
+		<preview_21_9 x="0" y="0" width="640" height="270" stretch="1" />
+		<widget  x="0" y="0"  width="1" height="1" stretch="1" />
 	</paw_mcm_pos_preview>
+
+
+	
 </w>
 

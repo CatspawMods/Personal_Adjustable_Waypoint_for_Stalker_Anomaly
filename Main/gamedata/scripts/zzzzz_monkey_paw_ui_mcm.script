@@ -2,8 +2,8 @@
 --[[    Monkeypatch to enable dynamic UI elements in MCM
 -- ======================================================================
     Author: Catspaw
-    Version: 2.1
-    Updated: 20231017
+    Version: 2.2
+    Updated: 20231018
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
 
     Included with Personal Adjustable Waypoint, but parameterized so that
@@ -16,7 +16,9 @@
     unless your name is RavenAscendant, please do not release it merged 
     with ui_mcm.script or otherwise as an integrated alteration to your
     own (or your modpack's) version of MCM.
-
+	
+	2.2 adds "borderless" attribute to the slide element and "desc"
+		to supported elements
     2.1 adds support for the Track element.
 -- ======================================================================
 	USAGE
@@ -24,7 +26,7 @@
 	Adds a new functor attribute to the Slide and Image element types:
 	- [ui_hook_functor]
 	- Define: ( table {function, parameters} )
-	- Used by: image, slide, list, track (only in this monkeypatch)
+	- Used by: image, slide, list, track, desc (only in this monkeypatch)
 	- Parameters passed: anchor, handlers, attrs, flags
 		Execute a function on initial registration of a UI element
 		anchor	- empty static image container
@@ -141,9 +143,11 @@ if ui_mcm and not ui_mcm.ui_functors_enabled then
 			txt:SetText( game.translate_string(v.text) )
 		end
 		
-		xml:InitStatic("elements:slide:line_1", frame)
-		xml:InitStatic("elements:slide:line_2", frame)
-
+		if not v.borderless then
+			xml:InitStatic("elements:slide:line_1", frame)
+			xml:InitStatic("elements:slide:line_2", frame)
+		end
+		
 		if v.ui_hook_functor then
 			local wrapbox 	= init_wrapper_box(xml,handler,pic:GetWidth(),pic:GetHeight() + 20,-10)
 			local handlers = {
@@ -157,6 +161,29 @@ if ui_mcm and not ui_mcm.ui_functors_enabled then
 		end
 
 		return (pic:GetHeight() + 20)
+	end
+
+	function ui_mcm.UIMCM:Register_Desc(xml, handler, v)
+		local desc = xml:InitTextWnd("elements:desc", handler)
+		desc:SetText( game.translate_string(v.text) )
+		desc:AdjustHeightToText()
+		desc:SetWndSize(vector2():set(desc:GetWidth(), desc:GetHeight() + 20))
+		if v.clr and v.clr[4] then
+			desc:SetTextColor( GetARGB(v.clr[1], v.clr[2], v.clr[3], v.clr[4]) )
+		end
+
+		if v.ui_hook_functor then
+			local wrapbox 	= init_wrapper_box(xml,handler,desc:GetWidth(),desc:GetHeight(),-10)
+			local handlers = {
+				desc 		= desc, -- Handler for the text description element
+			}
+			local flags = {
+				etype 		= "desc",
+			}
+			ui_mcm.exec(unpack(v.ui_hook_functor),wrapbox,handlers,v,flags)
+		end
+
+		return desc:GetHeight()
 	end
 
 	function ui_mcm.UIMCM:Register_List(xml, handler, path, opt, v, flags)

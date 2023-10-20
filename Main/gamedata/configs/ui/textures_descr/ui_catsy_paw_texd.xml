@@ -197,6 +197,10 @@
 	<file name ="ui\paw\mcm_screenpos_preview">
 		<texture id = "ui_paw_mcmpre_21_9" x="0" y="0" width="640" height="270" />
 		<texture id = "ui_paw_mcmpre_16_9" x="0" y="270" width="480" height="270" />
+		<texture id = "ui_paw_mcmpre_16_10" x="480" y="270" width="420" height="262" />
+		<texture id = "ui_paw_mcmpre_4_3" x="640" y="0" width="360" height="270" />
+		<texture id = "ui_paw_mcm_loadframe" x="0" y="540" width="400" height="400" />
+		<texture id = "ui_paw_mcm_loadframe_bg" x="400" y="540" width="400" height="400" />
 		<texture id = "ui_paw_emptytex" x="270" y="0" width="1" height="1" />
 	</file>
 </w>

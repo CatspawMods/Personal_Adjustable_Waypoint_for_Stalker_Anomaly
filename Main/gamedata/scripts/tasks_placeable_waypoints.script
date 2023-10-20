@@ -42,10 +42,7 @@ script_version          = "1.13"
 release_date            = 20231017
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
-debuglogs               = axr_main.config:r_value("mcm", "pawsys/pawgen/debuglogs", {val=0})
-if debuglogs == nil then
-    debuglogs = false   -- Controls debug logging if you don't have MCM
-end
+debuglogs               = false   -- Controls debug logging if you don't have MCM
 verbose                 = true
 -- Verbose being on won't do anything if debuglogs isn't also enabled,
 -- but it will ensure that if anyone has to turn on debug logging, 
@@ -236,7 +233,7 @@ local pawdata = {
     --dynamic_faves   = {},
     curr_set_ind    = 1,
     curr_ico_ind    = 1,
-    curr_set_name   = "faves",
+    curr_set_name   = "pins",
     curr_ico_name   = default_mapspot,
 }
 pins                = pawdata.pins
@@ -406,7 +403,7 @@ hud_themes = {
 }
 
 
-local colors = {
+colors = {
     dimmed = GetARGB(100, 255, 255, 255),
     active = GetARGB(255, 255, 255, 255),
 }
@@ -1632,7 +1629,7 @@ function get_prev_icon()
     return setdata.ii[prev_ico_i()]
 end
 
-function active_icon(newico)
+function get_active_icon(newico)
     if newico and type(newico) == "number" then
         vl("Setting new icon to index %s",newico)
         local setdata = pawdata.curr_set_data
@@ -1666,7 +1663,7 @@ function cycle_icons(cycle_dir,dotip)
     if cycle_dir and type(cycle_dir) ~= "number" then return end
     local setdata = pawdata.curr_set_data
     local next_ind = roll(pawdata.curr_ico_ind + cycle_dir,1,setdata.inum)
-    active_icon(next_ind)
+    get_active_icon(next_ind)
     if use_ui_snd then play_sound_for_actor(snd_cycle_blip) end
     if dotip then notify_icon_change() end
 end
@@ -1911,17 +1908,17 @@ function mcm_reload_pin_settings()
         body_icon_mode      = bi
         current_body_icon   = icons[cbi] or default_mapspot
         ish_kill_tracker.use_paw_icon = (bi == "set") or (bi == "fac")
-        widget_enabled      = load_mcm("pawhud/widget_enable",widget_enabled)
-        active_theme        = load_mcm("pawhud/active_theme",active_theme)
-        if not hud_themes[active_theme] then active_theme = "classicauto" end
-        widget_custom_pos = {
-            x = load_mcm("pawhud/pos_x"),
-            y = load_mcm("pawhud/pos_y")
-        }
-        widget_use_custom_pos   = load_mcm("pawhud/custompos")
-        widget_hide_delay       = (tonumber(load_mcm("pawhud/autohide",widget_hide_delay)) * 1000)
-        use_ui_snd              = load_mcm("pawhud/hudsound")
     end
+    widget_enabled      = load_mcm("pawhud/widget_enable",widget_enabled)
+    active_theme        = load_mcm("pawhud/active_theme",active_theme)
+    if not hud_themes[active_theme] then active_theme = "classicauto" end
+    widget_custom_pos = {
+        x = load_mcm("pawhud/pos_x"),
+        y = load_mcm("pawhud/pos_y")
+    }
+    widget_use_custom_pos   = load_mcm("pawhud/custompos")
+    widget_hide_delay       = (tonumber(load_mcm("pawhud/autohide",widget_hide_delay)) * 1000)
+    use_ui_snd              = load_mcm("pawhud/hudsound")
 
     --[[
     local mdf           = clamp(tonumber(ui_mcm.get("pawsys/pawpins/fave_recent")),0,10)
@@ -1949,6 +1946,7 @@ function on_option_change()
     if ui_mcm and not mcm_killswitch then
         debuglogs               = load_mcm("pawgen/debuglogs",debuglogs)
         catsy_paw_mcm.debuglogs = debuglogs
+        dl("Setting for debuglogs loaded from MCM: %s",debuglogs)
 
         if load_mcm("pawgen/wipe_all") then
             ui_mcm.set("pawsys/pawgen/wipe_all",false)
@@ -2292,7 +2290,9 @@ function UIPAWIndicator:DrawIndicator(theme)
 
     self.dialog = xml:InitStatic(theme.node, self)
     self.dialog:SetWndPos(vector2():set(pos.x,pos.y))
-    if theme.tex then self.dialog:InitTexture(theme.tex) end
+    if theme.tex then
+        self.dialog:InitTexture(theme.tex)
+    end
     self.box_curr = xml:InitStatic(theme.node..":curr", self.dialog)
     self.box_curr:InitTexture(texture_for_icon(self.icon_curr))
 
@@ -2322,7 +2322,7 @@ end
 
 function UIPAWIndicator:InitControls()
     self.pda_active = item_device.is_pda_active()
-    self.icon_curr = active_icon()
+    self.icon_curr = get_active_icon()
     self.set_curr = pawdata.curr_set_name
     vl("UIPAWIndicator:InitControls: active icon is %s",self.icon_curr)
 end
@@ -3482,10 +3482,20 @@ function load_file_data()
             end
         end
     end
-
+    table.sort(icons)
+    table.sort(icon_sets)
+    catsy_paw_mcm.icon_sets = icon_sets
+    printf("checking icon sets in MCM script:")
+    for k,v in pairs(catsy_paw_mcm.icon_sets) do
+        printf("%s = %s",k,ts(v.name))
+    end
+    table.sort(action_codes)
     dl(logprefix.."All file data loaded")
     --utils_data.print_table(icon_sets)
     started = true
+    local load_set_curr = axr_main.config:r_value("mcm", "pawsys/pawpins/pin_icon_group", {val=0}) or "pins"
+    local load_pin_curr = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..load_set_curr, {val=0})
+
     printf(logprefix.."Personal Adjustable Waypoint started")
 end
 
@@ -3517,6 +3527,7 @@ function load_state(data)
         pawdata.curr_set_name = "pins"
         pawdata.curr_set_data = icon_sets[pawdata.curr_set_name]
         local setdata = pawdata.curr_set_data
+        pawdata.curr_set_data = setdata
         pawdata.curr_set_ind = setdata.i
         pawdata.curr_ico_name = setdata.active_icon
         pawdata.curr_ico_ind = setdata.ri[root_patch_name(setdata.active_icon)]
@@ -3529,7 +3540,7 @@ function save_state(data)
     update_mcm_icoset_data()
     dl("save_state: Cleaning up script zones")
     script_zone_cleanup()
-    dl("save_state: Saving waypoint data")
+    dl("save_state: Saving waypoint and config data")
     data.paw_waypoint_info = nil
     data.pawsys = {}
     data.pawsys.current_waypoint    = placed_waypoint
