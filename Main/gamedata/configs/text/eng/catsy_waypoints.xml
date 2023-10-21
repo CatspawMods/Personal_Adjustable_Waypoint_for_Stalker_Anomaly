@@ -110,7 +110,7 @@
 	</string>
 
 	<string id = "ui_mcm_pawsys_pawbinds_bind_quickpin_desc">
-		<text>When pressed, this key will place a Quick Pin at the nearest valid smart terrain point to the player's current location.</text>
+		<text>When pressed, this key will place a Quick Pin at the nearest valid smart terrain point to the player's current location. If you have the Fair Fast Travel addon, Quick Pins can optionally be used as fast travel points.</text>
 	</string>
 
 	<string id = "ui_mcm_pawsys_pawbinds_bind_cartmode">
@@ -632,7 +632,7 @@
 
 	<string id="ui_mcm_pawsys_pawbinds_mwheel_enabled_desc">
 		<text>When enabled, the mouse wheel can be scrolled up and down to cycle through the active icons or sets.\n
-		This feature requires modded binaries version 20230701 or newer.</text>
+		This feature requires modded binaries version 20230701 or newer. GAMMA also supports this from 0.9.1 onward.</text>
 	</string>
 
 	<string id="ui_mcm_pawsys_pawbinds_mwheel_notify">
@@ -645,7 +645,8 @@
 	</string>
 
 	<string id="st_paw_change_set">
-		<text>Active Set changed to</text>
+		<text>Active Set changed to %s.\n
+		</text>
 	</string>
 
 	<string id="st_paw_change_icon">
@@ -1042,7 +1043,156 @@ This message won't bother you again. Good hunting, %s.</text>
 	<string id="ui_mcm_pawsys_pawgen_show_hint_pins_desc">
 		<text>Choose when markers for pins on the HUD should display their text label above the icon: never, always, only when Cartography Mode is active, or only when it is not (Normal PDA view). Has no effect without pins set visible on the HUD.</text>
 	</string>
-	
+
+<!-- Added in 1.12 -->
+
+	<string id="ui_mcm_lst_pawsys_pg_npcs">
+		<text>NPCs and Services</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawpins_poi_icon_npcs">
+		<text>Default icon for NPCs and Services</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_diamond_friendly">
+		<text>Friendly (diamond style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_diamond_neutral">
+		<text>Neutral (diamond style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_diamond_enemy">
+		<text>Enemy (diamond style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_chevron_friendly">
+		<text>Friendly (chevron style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_chevron_neutral">
+		<text>Neutral (chevron style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_chevron_enemy">
+		<text>Enemy (chevron style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_flag_friendly">
+		<text>Friendly (flag style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_flag_neutral">
+		<text>Neutral (flag style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_flag_enemy">
+		<text>Enemy (flag style)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_mechanic">
+		<text>NPC Mechanic</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_trader">
+		<text>NPC Trader</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_guide">
+		<text>NPC Guide</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_food_trader">
+		<text>NPC Food Trader</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_npc_medic">
+		<text>NPC Medic</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_sleep_zone">
+		<text>Sleeping Area</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_obj_briefcase">
+		<text>Briefcase Object</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_obj_lock">
+		<text>Locked Object</text>
+	</string>
+
+	<string id="ui_mcm_paw_cartmode_head">
+		<text>Cartography Mode</text>
+	</string>
+
+	<string id="ui_mcm_paw_cartmode_desc">
+		<text>Cartography Mode enables additional mapping functionality without cluttering the HUD or menu during normal play. You can configure what functions appear in this mode (or in normal PDA mode) in the Context Menus MCM submenu.</text>
+	</string>
+
+	<string id="ui_mcm_paw_mousewheel_head">
+		<text>Mouse Wheel Support</text>
+	</string>
+
+	<string id="ui_mcm_paw_crosshair_target_head">
+		<text>Waypointing and Pins - Crosshair Targeting</text>
+	</string>
+
+	<string id="ui_mcm_paw_crosshair_target_head">
+		<text>Waypointing and Pins - Crosshair Targeting</text>
+	</string>
+
+	<string id="ui_mcm_paw_crosshair_target_desc">
+		<text>The first two keybinds allow you to use waypoints and pins on whatever object is currently under your crosshair. In order for the game to register this, the object must be exactly under the center of the crosshair. For a stalker, this means centered enough for the crosshair identification to activate.</text>
+	</string>
+
+	<string id="ui_mcm_paw_generalbinds_head">
+		<text>Waypointing and Pins - General Keybinds</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_wp_target_obj">
+		<text>Keypress to set waypoint on the target object</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_wp_target_obj_desc">
+		<text>When this key is pressed, the waypoint will be set--or moved--to the object under the player's crosshair. If it was already set to the target object, it will be disabled.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_pin_target_obj">
+		<text>Keypress to set a pin on the target object</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_bind_pin_target_obj_desc">
+		<text>When this key is pressed, a pin will be placed on the object under the player's crosshair if there isn't one already, using the current active icon. If a pin already exists for the target, it will be removed.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_pin_auto_visible">
+		<text>Pins created this way default to visible on the HUD</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_pin_auto_visible_desc">
+		<text>If a pin was created by targeting an object using the above keybind, it will automatically be shown on the HUD. You can show or hide pins on the HUD at any time using your PDA.</text>
+	</string>
+
+
+	<string id="st_paw_pin_removed_from_target">
+		<text>Pin $clr_yel%s$clr_wht removed from $clr_lbl%s$clr_wht.</text>
+	</string>
+
+	<string id="st_paw_pin_added_to_target">
+		<text>Pin added to $clr_lbl%s$clr_wht using the current active icon: $clr_lbl%s$clr_wht.\n
+		You can change the current active icon with $clr_yel%s$clr_wht/$clr_yel%s$clr_wht.</text>
+	</string>
+
+	<string id="ui_mcm_paw_pin_target_desc">
+		<text>Pin $clr_yel%s$clr_wht removed from $clr_lbl%s$clr_wht.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_tip_on_icoset_change">
+		<text>Show news tip when changing icons or sets using keybinds</text>
+	</string>
+
+
 <!-- not implemented yet
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
 		<text>Clear task on waypoint removal</text>

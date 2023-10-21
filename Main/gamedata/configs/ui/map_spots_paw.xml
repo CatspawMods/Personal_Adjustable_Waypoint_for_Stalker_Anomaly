@@ -8,6 +8,7 @@
 #include "ui\map_spots_paw_pins.xml"
 #include "ui\map_spots_paw_patches.xml"
 #include "ui\map_spots_paw_bwhr.xml"
+#include "ui\map_spots_paw_npcs.xml"
 #include "ui\map_spots_milpda.xml"
 
 	<!-- Cartography Mode icon for smart terrain -->
