@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.13
-    Updated: 20231017
+    Version: 1.15
+    Updated: 20231020
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -38,8 +38,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.13"
-release_date            = 20231017
+script_version          = "1.15"
+release_date            = 20231020
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 debuglogs               = false   -- Controls debug logging if you don't have MCM
@@ -1042,6 +1042,7 @@ end
 
 function do_waypoint(act,se_obj,acode,args)
     args = args or {}
+    local syscall = args.syscall and true or false
     if valid_pda() and not (paw_enabled and act) then return end
     acode = acode or act
     local id,name
@@ -1123,12 +1124,14 @@ function do_waypoint(act,se_obj,acode,args)
         end
     elseif act == "pn_del" then
         if not id and pins[id] then return end
-        if not pins[id].locked then
+        if syscall or not pins[id].locked then
             local icon = pins[id] and pins[id].icon
             if hud_pin_objs[id] then
+                vl("Removing pin %s from HUD",id)
                 get_hud():RemoveDialogToRender(hud_pin_objs[id])
                 hud_pin_objs[id] = nil
             end
+            vl("Pin %s (%s) deleted",pins[id].text,id)
             pins[id] = nil
             if icon then remove_mapspot(id,icon) end
         end
@@ -1159,13 +1162,13 @@ function do_waypoint(act,se_obj,acode,args)
         ping_area_around(se_obj)    
     elseif act == "hud_vis_on" then
         if not id and pins[id] then return end
-        if not pins[id].locked then
+        if syscall or not pins[id].locked then
             pins[id].hud = true
             show_hud_pin(id)
         end
     elseif act == "hud_vis_off" then
         if not id and pins[id] then return end
-        if not pins[id].locked then
+        if syscall or not pins[id].locked then
             pins[id].hud = false
             hide_hud_pin(id)
         end
@@ -1730,19 +1733,15 @@ function show_all_pins(onoff)
     if onoff then
         vl("Showing all recorded pins")
         for id,pin in pairs(pins) do
-            if not pin.locked then
-                local icon = pin.icon
-                local mapspot_text = pin.text
-                vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
-                add_mapspot(mapspot_text,id,icon)
-            end
+            local icon = pin.icon
+            local mapspot_text = pin.text
+            vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
+            add_mapspot(mapspot_text,id,icon)
         end
     else
         vl("Hiding stored pins from map")
         for id,pin in pairs(pins) do
-            if not pin.locked then
-                remove_mapspot(id,pin.icon)
-            end
+            remove_mapspot(id,pin.icon)
         end        
     end
 end
@@ -2963,7 +2962,7 @@ function UIPAWHUDPin:Update()
         hide_hud_pin(self.pin_id)
         self:Destroy()
     end
-    if not (self.pin_se_obj and self.pin_se_obj.online) then
+    if item_device.is_pda_active() or not (self.pin_se_obj and self.pin_se_obj.online) then
         self.marker:Show(false)
         return
     end
@@ -3182,14 +3181,23 @@ end
 --]]
 
 function npc_on_death_callback(victim,killer)
+    printf("npc_on_death_callback: %s (%s) | clear_pin_on_death: %s",victim:name(),victim:id(),clear_pin_on_death)
     if not clear_pin_on_death then return end
-    --printf("npc_on_death_callback: %s (%s)",victim:name(),victim:id())
-    local id = victim and victim:id()
+    local id = safeid(victim)
     if not (id and (id > 0)) then return end
     if not (id and pins[id]) then return end
     dl("Clearing existing pin for dead body id %s",id)
     local se_obj = alife_object(id)
-    do_waypoint("pn_del",se_obj)
+    --[[
+    local icon = pins[id] and pins[id].icon
+    if hud_pin_objs[id] then
+        get_hud():RemoveDialogToRender(hud_pin_objs[id])
+        hud_pin_objs[id] = nil
+    end
+    pins[id] = nil
+    if icon then remove_mapspot(id,icon) end
+    --]]
+    do_waypoint("pn_del",se_obj,nil,{syscall=true})
 end
 
 

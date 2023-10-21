@@ -2,8 +2,8 @@
 --[[    Monkeypatch to enable dynamic UI elements in MCM
 -- ======================================================================
     Author: Catspaw
-    Version: 2.2
-    Updated: 20231018
+    Version: 2.3
+    Updated: 20231020
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
 
     Included with Personal Adjustable Waypoint, but parameterized so that
@@ -17,6 +17,7 @@
     with ui_mcm.script or otherwise as an integrated alteration to your
     own (or your modpack's) version of MCM.
 	
+	2.3 roll back support for the Track element due to reported issues
 	2.2 adds "borderless" attribute to the slide element and "desc"
 		to supported elements
     2.1 adds support for the Track element.
@@ -26,7 +27,7 @@
 	Adds a new functor attribute to the Slide and Image element types:
 	- [ui_hook_functor]
 	- Define: ( table {function, parameters} )
-	- Used by: image, slide, list, track, desc (only in this monkeypatch)
+	- Used by: image, slide, list, desc (only in this monkeypatch)
 	- Parameters passed: anchor, handlers, attrs, flags
 		Execute a function on initial registration of a UI element
 		anchor	- empty static image container
@@ -250,66 +251,6 @@ if ui_mcm and not ui_mcm.ui_functors_enabled then
 		return h
 	end	
 
-	function ui_mcm.UIMCM:Register_Track(xml, handler, path, opt, v, flags)
-		local id = ui_mcm.cc(path , opt)
-		-- Caption
-		local h = self:Register_Cap(xml, handler,  id, v.hint)
-		
-		-- Apply to all button
-		if flags.apply_to_all and flags.group then
-			self:Register_BtnAll(xml, handler, path, opt, v, flags)
-		end
-		
-		-- Create control
-		self._Track[id] = {}
-		self._Track[id].ctrl = xml:InitTrackBar("elements:track",handler)
-		self._Track[id].path = path
-		self._Track[id].opt = opt
-		if (self._Track[id].ctrl:GetHeight() > h) then
-			h = self._Track[id].ctrl:GetHeight()
-		end
-		
-		self._Track[id].txt = xml:InitTextWnd("elements:track_value",handler)
-		
-		-- Get values
-		local value = self:GetValue(path, opt, v, flags)
-		value = clamp(value, v.min, v.max)
-		value = round_idp(value, v.prec or precision)
-		
-		local int = false --is_int(value) and is_int(v.step) and is_int(v.min) and is_int(v.max)
-		self._Track[id].value = value -- temp
-		self._Track[id].ctrl:SetInvert(v.invert and true or false)
-		self._Track[id].ctrl:SetStep(v.step)
-		if int then
-			self._Track[id].ctrl:SetOptIBounds(v.min, v.max)
-			self._Track[id].ctrl:SetIValue(value)
-		else
-			self._Track[id].ctrl:SetOptFBounds(v.min, v.max)
-			self._Track[id].ctrl:SetFValue(value)
-		end
-		if (not v.no_str) then
-			self._Track[id].txt:SetText(value)
-		end
-
-		if v.ui_hook_functor then
-			local id_cap 	= string.gsub(id, "/", "_")
-			local cap 		= self._Cap[id_cap]
-			local wrapbox 	= init_wrapper_box(xml,handler,10,10,-10)
-			local ctrl		= self._Track[id].ctrl
-			local txt 		= self._Track[id].txt
-			local handlers = {
-				ctrl		= ctrl, 	-- handler for input control
-				txt 		= txt, 		-- handler for current value display text
-				cap 		= cap, 		-- handler for text caption element
-			}
-			flags.etype		= "track"
-			flags.path 		= path  	-- MCM menu path
-			flags.opt		= opt 		-- MCM option ID
-			ui_mcm.exec(unpack(v.ui_hook_functor),wrapbox,handlers,v,flags)
-		end
-
-		return h
-	end	
 
 	printf("ui_mcm.script monkeypatched by zzzzz_monkey_paw_ui_mcm.script")
 elseif ui_mcm then
