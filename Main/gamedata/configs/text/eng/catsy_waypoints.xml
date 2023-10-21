@@ -1192,30 +1192,120 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>Show news tip when changing icons or sets using keybinds</text>
 	</string>
 
+<!-- Added in 1.13 -->
 
-<!-- not implemented yet
-	<string id="ui_mcm_pawsys_pawgen_wp_clear_task">
-		<text>Clear task on waypoint removal</text>
+	<string id="ui_mcm_pawsys_pawgen_pin_near_fade_dist">
+		<text>Pin near fade-out distance (in meters)</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawgen_wp_clear_task_desc">
-		<text>When the waypoint is cleared by either proximity or toggle, the marker is removed from the map. If this option is enabled, the task is also removed from the journal. The system will say that a task was completed, but it does not actually count. If this causes issues with another addon, you can disable this so that only the marker will be hidden.</text>
+	<string id="ui_mcm_pawsys_pawgen_pin_near_fade_dist_desc">
+		<text>When the player comes within this distance of a pin, it will begin to fade out.</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawpins_fave_recent">
-		<text>Include recently-used pins in Favorites</text>
+	<string id="ui_mcm_pawsys_pawgen_pin_far_fade_dist">
+		<text>Pin far fade-out distance (in meters)</text>
 	</string>
 
-	<string id="ui_mcm_lst_paw_last_1"><text>Last pin</text></string>
-	<string id="ui_mcm_lst_paw_last_2"><text>Last 2</text></string>
-	<string id="ui_mcm_lst_paw_last_3"><text>Last 3</text></string>
-	<string id="ui_mcm_lst_paw_last_4"><text>Last 4</text></string>
-	<string id="ui_mcm_lst_paw_last_5"><text>Last 5</text></string>
-	<string id="ui_mcm_lst_paw_last_6"><text>Last 6</text></string>
-	<string id="ui_mcm_lst_paw_last_7"><text>Last 7</text></string>
-	<string id="ui_mcm_lst_paw_last_8"><text>Last 8</text></string>
-	<string id="ui_mcm_lst_paw_last_9"><text>Last 9</text></string>
-	<string id="ui_mcm_lst_paw_last_10"><text>Last 10</text></string>
--->
+	<string id="ui_mcm_pawsys_pawgen_pin_far_fade_dist_desc">
+		<text>When the player gets this far away from a pin, it will begin to fade out.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_hide_dist">
+		<text>Pin far hide distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_pin_far_hide_dist_desc">
+		<text>If the player is more than this far beyond where the fade-out begins, a pin will disappear completely.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade">
+		<text>Pins on the HUD never fade out while in Cartography Mode</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_cartmode_unfade_desc">
+		<text>If there are any pins on the HUD, and they are normally set to fade out, they won't do so while Cartography Mode is active.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_lock_pin">
+		<text>Lock Pin</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_unlock_pin">
+		<text>Unlock Pin</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_mode">
+		<text>Show subtle reticle when a valid object is targeted</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_mode_desc">
+		<text>If the crosshairs are currently centered on a valid object, an unobtrusive reticle will be shown to indicate that waypoints and pins can be placed there. You can control the transparency below.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha">
+		<text>Reticle transparency</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha_desc">
+		<text>The reticle's alpha (transparency) value, with 0 being fully transparent and 255 being no transparency.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time">
+		<text>Fade-in duration for the reticle</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time_desc">
+		<text>The time, in milliseconds, that it takes for the reticle to finish fading in when targeting a valid object.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time">
+		<text>Fade-out duration for the reticle</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time_desc">
+		<text>The time, in milliseconds, that it takes for the reticle to finish fading out after the crosshair no longer has a target.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawhud_preview_aspect">
+		<text>Aspect ratio for the screen preview below</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_aspect_4_3">
+		<text>4:3 (Standard Definition)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_aspect_16_10">
+		<text>16:10 (1920×1200, 2560x1600)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_aspect_16_9">
+		<text>16:9 (1080p, 1440p, 2160p)</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_aspect_21_9">
+		<text>21:9 (Ultrawide)</text>
+	</string>
+
+<!-- Added in 1.14 -->
+
+	<string id="ui_mcm_paw_resolutions">
+		<text>Example resolutions in this aspect ratio:\n</text>
+	</string>
+
+	<string id="ui_mcm_paw_resolutions_4_3">
+		<text>\n1024x768\n1600x1200</text>
+	</string>
+
+	<string id="ui_mcm_paw_resolutions_16_9">
+		<text>\n1920x1080\n1280x720\n1600x900\n2560x1440\n3840x2160</text>
+	</string>
+
+	<string id="ui_mcm_paw_resolutions_16_10">
+		<text>\n1280x800\n1920x1200\n2560x1600\n3840x2400</text>
+	</string>
+
+	<string id="ui_mcm_paw_resolutions_21_9">
+		<text>\n2560x1080\n3440x1440\n3840x1600</text>
+	</string>
 
 </string_table>

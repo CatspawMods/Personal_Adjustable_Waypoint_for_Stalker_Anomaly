@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.12.2
-	Updated: 20231015
+    Version: 1.15
+	Updated: 20231020
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -13,16 +13,13 @@
     files in configs\scripts\paw, and other sundry things.
 -- ===================================================================--]]
 
-debuglogs         				= axr_main.config:r_value("mcm", "pawsys/pawgen/debuglogs", {val=0})
-if debuglogs == nil then
-    debuglogs 					= false   -- Controls debug logging if you don't have MCM
-end
+debuglogs 	 					= false   -- Controls debug logging if you don't have MCM
 verbose                   		= true
-script_version 					= "1.12.2"
+script_version 					= "1.14"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
-printf(logprefix.."Forcing %s.script to load first",paw)
+printf(logprefix.."Forcing tasks_placeable_waypoints.script to load first")
 paw.load_me 					= function() end
 -- Force tasks_placeable_waypoints to load first using an empty monkeypatch
 local ts                        = game.translate_string
@@ -40,7 +37,70 @@ local actions_ltx               = actions_ini:get_sections(true)
 local action_codes              = {}
 local action                    = {}
 local dynamic_faves 			= {}
+-- =======================================================================
 
+local preview_started = false
+unsquish_ratio  = 1
+aspect_ratio 	= "16_9"
+aspects = {
+	["21_9"] = {
+		x 		= 640,
+		y 		= 270,
+		node 	= "preview_21_9",
+		scale_x = 640/1024,
+		scale_y = 270/768,
+		--scale_x = 0.3125,
+		--scale_y = 0.17578125,
+		unratio	= round_idp((1080/2560)/0.75,4),
+		enabled = true,
+	},
+	["16_9"] = {
+		x 		= 480,
+		y 		= 270,
+		node 	= "preview_16_9",
+		scale_x = 480/1024,
+		scale_y = 270/768,
+		--scale_x = 0.234375,
+		--scale_y = 0.17578125,
+		unratio = round_idp((1080/1920)/0.75,4),
+		enabled = true,
+	},
+	["16_10"] = {
+		x 		= 420,
+		y 		= 262,
+		node 	= "preview_16_10",
+		scale_x = 420/1024,
+		scale_y = 262/768,
+		--scale_x = 0.234375,
+		--scale_y = 0.17578125,
+		unratio	= round_idp((1200/1920)/0.75,4),
+		enabled = true,
+	},
+	["4_3"] = {
+		x 		= 360,
+		y 		= 270,
+		node 	= "preview_4_3",
+		scale_x = 360/1024,
+		scale_y = 270/768,
+		--scale_x = 0.234375,
+		--scale_y = 0.17578125,
+		unratio	= 1,
+		enabled = true,
+	},
+}
+
+local default_widget_state = {
+	curr_x 		= 890,
+	curr_y 		= 620,
+	cust_x 		= 491,
+	cust_y 		= 670,
+	themename 	= "classicauto",
+	curr_aspect = "16_9",
+	use_custom 	= false,
+}
+local pws 		= default_widget_state
+
+-- =======================================================================
 
 function dl(logtext,...)
     -- Debug logging
@@ -252,7 +312,11 @@ end
 -- ======================================================================
 
 function on_mcm_load()
+	aspect_ratio = get_current_aspect_ratio()
+	load_icoset_state()
+
 	op = { id = "pawsys", gr={
+			-- GENERAL SETTINGS
 			{ id = "pawgen", sh=true, gr={
 					{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
 					{id = "enabled", type = "check", val = 1, def = true},
@@ -281,35 +345,43 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
-					{id = "wp_clear_dist", type = "track", val = 2, min = 0, max = 50, step = 1, def = 5},
-					{id = "tip_on_icoset_change", type = "check", val = 1, def = true},
-					{id = "pingsound", type = "check", val = 1, def = true},
-					{id = "s_device_pda_1", type = "check", val = 1, def = true},
-					{id = "s_device_pda_2", type = "check", val = 1, def = true},
-					{id = "s_device_pda_3", type = "check", val = 1, def = true},
-					{id = "s_device_pda_milspec", type = "check", val = 1, def = true},
-					{id = "disable_mcmups", type = "check", val = 1, def = false},
-					{id = "welcome_msg_shown", type = "check", val = 1, def = false},
-					{id = "wipe_all", type = "check", val = 1, def = false},
-					{id = "debuglogs", type = "check", val = 1, def = false},
-					{id = "pawlink", type = "desc", text = "ui_mcm_paw_moddb_link"},
-					{id = "milpda", type = "desc", text = "ui_mcm_paw_milpda_link"},
-					{id = "modbin", type = "desc", text = "ui_mcm_paw_modded_binaries"},
+					{id = "wp_clear_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+					{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+					{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 250},
+					{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 25},
+					{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
+					{id = "pingsound", type= "check", val = 1, def = true},
+					{id = "s_device_pda_1", type= "check", val = 1, def = true},
+					{id = "s_device_pda_2", type= "check", val = 1, def = true},
+					{id = "s_device_pda_3", type= "check", val = 1, def = true},
+					{id = "s_device_pda_milspec", type= "check", val = 1, def = true},
+					{id = "disable_mcmups", type= "check", val = 1, def = false},
+					{id = "welcome_msg_shown", type= "check", val = 1, def = false},
+					{id = "wipe_all", type= "check", val = 1, def = false},
+					{id = "debuglogs", type= "check", val = 1, def = false},
+					{id = "pawlink", type= "desc", text = "ui_mcm_paw_moddb_link"},
+					{id = "milpda", type= "desc", text = "ui_mcm_paw_milpda_link"},
+					{id = "modbin", type= "desc", text = "ui_mcm_paw_modded_binaries"},
 				},
 			},
 
+			-- PIN SETTINGS (procedurally generated)
 			{ id = "pawpins", sh=true, gr=populate_set_menus()},
 
+			-- HUD WIDGET SETTINGS
 			{ id = "pawhud", sh=true, gr={
-					{id = "header", type= "slide", link= "ui_paw_menuslide_widget", size= {512,50}, spacing= 20},
-					{id = "header", type = "desc", text = "ui_mcm_pawsys_pawhud_widgetinfo"},
-					{id = "divider", type = "line"},
-					{id = "widget_enable", type = "check", val = 1, def = true},
-					{id = "hudsound", type = "check", val = 1, def = true},
-					{id = "autohide", type = "track", val = 2, min = 0, max = 120, step = 1, def = 5},
-					{id = "divider", type = "line"},
-					{id = "active_theme", type = "list", val = 0, def = "classicauto", 
-						content = {
+					{id = "widget_header", type= "slide", link = "ui_paw_menuslide_widget", size= {512,50}, borderless= true, spacing= 0,
+						ui_hook_functor = {catsy_paw_mcm.mcm_init_widget_preview},
+					},
+					{id = "header", type= "desc", text = "ui_mcm_pawsys_pawhud_widgetinfo",
+						ui_hook_functor = {catsy_paw_mcm.mcm_init_widget_preview},
+					},
+					{id = "widget_enable", type= "check", val = 1, def = true},
+					{id = "hudsound", type= "check", val = 1, def = true},
+					{id = "autohide", type= "track", val = 2, min = 0, max = 120, step = 1, def = 5},
+					{id = "active_theme", type= "list", val = 0, def = "classicauto",
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select}, 
+					content = {
 						   {"classicauto","theme_classicauto"},
 						   {"classic","theme_classic"},
 						   {"vertright","theme_vertright"},
@@ -322,14 +394,39 @@ function on_mcm_load()
 						   {"compact_noui","theme_compact_noui"},
 						}
 					},
-					{id = "custompos", type = "check", val = 1, def = false},
-					{id = "pos_x", type = "input", val = 2, min = 0, max = 1024, def = 491},
-					{id = "pos_y", type = "input", val = 2, min = 0, max = 768, def = 670},
+
+					{id = "preview_aspect", type = "list", val = 0, def = aspect_ratio,
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select}, 
+						content = {
+						   {"16_9","paw_aspect_16_9"},
+						   {"16_10","paw_aspect_16_10"},
+						   {"21_9","paw_aspect_21_9"},
+						   {"4_3","paw_aspect_4_3"},
+						}
+					},
+
+					-- SCREEN POSITION PREVIEWER
+					{id = "pos_preview", type= "image", link = "ui_paw_emptytex", size= {512,270},
+						ui_hook_functor = {catsy_paw_mcm.init_mcm_pos_preview},
+					},
+
+					{id = "custompos", type = "check", val = 1, def = false,
+						--ui_hook_functor = {catsy_paw_mcm.mcm_move_custom_pos_elements},
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+					},
+					{id = "pos_x", type = "input", val = 2, min = 0, max = 1024, def = 491,
+						--ui_hook_functor = {catsy_paw_mcm.mcm_move_custom_pos_elements},
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+					},
+					{id = "pos_y", type = "input", val = 2, min = 0, max = 768, def = 670,
+						--ui_hook_functor = {catsy_paw_mcm.mcm_move_custom_pos_elements},
+						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+					},
 
 					{id = "divider", type = "line"},
 
 					{id = "themedesc", type = "desc", text = "ui_mcm_themes_list"},
-					{id = "themes1", type= "image", link= "ui_paw_menuslide_themes", size= {274,274}, spacing= 20},
+--					{id = "themes1", type= "image", link= "ui_paw_menuslide_themes", size= {274,274}, spacing= 0},
 
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_classicauto"},
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_classic"},
@@ -344,9 +441,10 @@ function on_mcm_load()
 					{id = "divider", type = "line"},
 	            },
 			},
-
+			
+			-- KEYBIND SETTINGS
 			{ id = "pawbinds", sh=true, gr={
-					{id = "header", type= "slide", link= "ui_paw_menuslide_controls", size= {512,50}, spacing= 20},
+					{id = "header", type= "slide", link= "ui_paw_menuslide_controls", size= {512,50}, borderless= true, spacing= 20},
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_cartmode_head"},
 					{id = "featuredesc", type = "desc", text = "ui_mcm_paw_cartmode_desc"},
 
@@ -359,6 +457,7 @@ function on_mcm_load()
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
 					{id = "cartmode_toggle", type = "check", val = 1, def = false},
+					{id = "cartmode_unfade", type = "check", val = 1, def = true},
 					{id = "cart_shows_smarts", type = "check", val = 1, def = true},
 
 					{id = "divider", type = "line"},
@@ -384,6 +483,15 @@ function on_mcm_load()
 		                }},
 
 					{id = "pin_auto_visible", type = "check", val = 1, def = true},
+					{id = "reticle_mode", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}},
+					{id = "reticle_alpha", type = "track", val = 2, min = 1, max = 255, step = 1, def = 120},
+					{id = "ret_fade_attack_time", type = "input", val = 2, min = 1, max = 5000, def = 150},
+					{id = "ret_fade_decay_time", type = "input", val = 2, min = 1, max = 5000, def = 250},
 
 					{id = "divider", type = "line"},
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_generalbinds_head"},
@@ -466,10 +574,10 @@ function on_mcm_load()
 					{id = "divider", type = "line"},
 		        },
 			},
-
+-- CONTEXT MENU SETTINGS
 			{ id = "pawmenu", sh=true, gr={
 				-- Virtualize in ltx like the others at some point
-					{id = "header", type= "slide", link= "ui_paw_menuslide_menus", size= {512,50}, spacing= 20},
+					{id = "header", type= "slide", link= "ui_paw_menuslide_menus", size= {512,50}, borderless= true, spacing= 20},
 					{id = "headertxt", type = "desc", text = "ui_mcm_pawsys_pawmenu_headertxt"},
 
 					{id = "wp_set", type = "list", val = 2, def = 4, 
@@ -559,7 +667,44 @@ function on_mcm_load()
 						   {2,"pawsys_cmenu_cart"},
 						   {0,"pawsys_cmenu_off"},
 						}
+
 					},
+					{id = "lock_pin", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "unlock_pin", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "hud_vis_on", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "hud_vis_off", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
 
 					{id = "pn_clr", type = "list", val = 2, def = 0,
 						content = {
@@ -578,16 +723,6 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
-					--[[
-					{id = "pn_spt", type = "list", val = 2, def = 2, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-					--]]
 				},
 			},
 	 	}
@@ -603,10 +738,13 @@ end
 	zzzzz_monkey_paw_ui_mcm.script
 -- ====================================================================]]	
 
-local icoset 		= {}
-icoset._changed 	= {}
+icoset 				= {}
+icoset._changed 	= {}	
+
 local xml 			= CScriptXmlInit()
-local box_pname, ui_img
+local xmlroot 		= "paw_mcm_pos_preview"
+local box_pname, ui_img, theme_box, theme_preview, theme_curr_i, theme_next_i, theme_prev_i
+
 
 function get_cached_pin_for_set(setname)
 	if not setname then return end
@@ -622,19 +760,60 @@ function get_cached_pin_for_set(setname)
 	return pcur
 end
 
-
-function mcm_targetdesc_text(anchor, handlers, opts, flags)
-	printf("mcm_targetdesc_text called")
-	--[[
-	local desc = handlers and handlers.desc
-	if not desc then return end
-	local tx = desc:TextControl():GetText()
-	local text = ts("ui_mcm_pawsys_crosshair_target_text_color")
-	text = psk(text,text_colors)
-	desc:TextControl():SetText(text)
-	printf("<PAW-MCM> Existing text: %s\n\nNew text: %s",tx,text)
-	--]]
+function load_icoset_state()
+	local path = "pawsys/pawpins/"
+	icoset.set_curr = axr_main.config:r_value("mcm", path.."/pin_icon_group", {val=0}) or "pins"
+	icoset.pin_curr = axr_main.config:r_value("mcm", path.."/poi_icon_"..icoset.set_curr, {val=0})
+	if not icoset.pin_curr then	
+		icoset.setdata 	= icon_sets[icoset.set_curr]
+		local setdata 	= icoset.setdata
+		local icoset_id = "poi_icon_"..icoset.set_curr
+		icoset.pin_curr = ui_mcm.UIMCM:GetDefaultValue(path,icoset_id,{def=(setdata and setdata.default or "redpush32"),val=0})
+	end
+	icoset.ico_curr = icons[icoset.pin_curr]
+	icoset.tex_curr = "ui_icons_paw_pin_redpush32"
+	local tdata = paw and paw.texture_data
+	if tdata then
+		icoset.tex_curr = tdata and tdata[icoset.ico_curr] and tdata[icoset.ico_curr].t
+	end
 end
+
+
+local function asp_scale(x,y,aspect)
+	if not x and y then return 0,0 end
+	local ox,oy=x,y
+	local asp 	= aspect or pws.curr_aspect
+	local rat_x = aspects[asp].scale_x
+	local rat_y = aspects[asp].scale_y
+	x 			= x * rat_x * unsquish_ratio
+	y 			= y * rat_y
+	vl("%s, %s scaled to %s, %s for aspect %s",ox,oy,x,y,pws.curr_aspect)
+	return x,y
+end
+
+pws.eff_x	= 	function()
+					x = (pws.use_custom and pws.cust_x) or pws.curr_theme.pos.x
+					vl("eff_x: %s | custom %s",x,pws.use_custom)
+					return x
+				end
+pws.eff_y	= 	function()
+					y = (pws.use_custom and pws.cust_y) or pws.curr_theme.pos.y
+					vl("eff_y: %s | custom %s",y,pws.use_custom)
+					return y
+				end
+pws.adj_x	= 	function()
+					effx = pws.eff_x()
+					x, _ = asp_scale(effx, 1) 
+					vl("adj_x: %s -> %s",effx,x)
+					return x
+				end
+pws.adj_y	= 	function()
+					effy = pws.eff_y()
+					_, y = asp_scale(1, effy) 
+					vl("adj_y: %s -> %s",effy,y)
+					return y
+				end
+
 
 function populate_mcm_set_ind(opt)
 	local wnd = icoset and icoset[opt]
@@ -663,48 +842,335 @@ end
 
 function init_mcm_header_ind(anchor, handlers, opts, flags)
 	vl("init_mcm_header_ind called")
-	icoset 			= {}
-	icoset._changed = {}	
 	local path = "pawsys/pawpins"
-	icoset.set_curr = axr_main.config:r_value("mcm", path.."/pin_icon_group", {val=0}) or "pins"
-	icoset.pin_curr = axr_main.config:r_value("mcm", path.."/poi_icon_"..icoset.set_curr, {val=0})
-	if not icoset.pin_curr then	
-		local setdata 	= icon_sets[icoset.set_curr]
-		local icoset_id = "poi_icon_"..icoset.set_curr
-		icoset.pin_curr = ui_mcm.UIMCM:GetDefaultValue(path,icoset_id,{def=(setdata and setdata.default or "redpush32"),val=0})
-	end
-	icoset.ico_curr = icons[icoset.pin_curr]
-	icoset.tex_curr = "ui_icons_paw_pin_redpush32"
-	local tdata = paw and paw.texture_data
-	if tdata then
-		icoset.tex_curr = tdata and tdata[icoset.ico_curr] and tdata[icoset.ico_curr].t
-	end
 	local icon_text_head1 = ts("ui_mcm_paw_current_active_pin")
 	local icon_text_head2 = ts("ui_mcm_lst_"..icoset.ico_curr)
 	local icon_text_head3 = ts("ui_mcm_paw_pinmenu_header")
 	icoset.txt_curr = icon_text_head2
 	vl("Current set: %s (%s) | icon %s | texture %s",icoset.txt_curr,icoset.set_curr,icoset.ico_curr,icoset.tex_curr)
 	
-	local pawind = "paw_mcm_indicator"
+	local xmlroot = "paw_mcm_indicator"
 
     xml:ParseFile("paw_hud_indicator.xml")
-	box_wnd 	= xml:InitStatic(pawind,anchor)
+	box_wnd 	= xml:InitStatic(xmlroot,anchor)
 	box_wnd:SetWndSize(vector2():set(563,40))
-	box_img		= xml:InitStatic(pawind..":curr",box_wnd)
-	ui_img 		= xml:InitStatic(pawind..":curr:icon",box_img)
+	box_img		= xml:InitStatic(xmlroot..":curr",box_wnd)
+	ui_img 		= xml:InitStatic(xmlroot..":curr:icon",box_img)
 	box_img:InitTexture("ui_paw_mapsquarebg")
 	ui_img:InitTexture(icoset.tex_curr or "ui_icons_paw_pin_redpush32")
-	box_head 	= xml:InitTextWnd(pawind..":head",box_wnd)
-	box_pname 	= xml:InitTextWnd(pawind..":pname",box_wnd)
-	box_desc 	= xml:InitTextWnd(pawind..":desc",box_wnd)
+	box_head 	= xml:InitTextWnd(xmlroot..":head",box_wnd)
+	box_pname 	= xml:InitTextWnd(xmlroot..":pname",box_wnd)
+	box_desc 	= xml:InitTextWnd(xmlroot..":desc",box_wnd)
     box_head:SetText(icon_text_head1)
     box_pname:SetText(icon_text_head2)
     box_desc:SetText(icon_text_head3)
 end
 
 
+
+
+
+local function get_theme_data(mcm_theme_opt)
+	--local thm = string.sub(mcm_theme_opt,7)
+	local theme = paw and paw.hud_themes and paw.hud_themes[mcm_theme_opt]
+	printf("get_theme_data(%s) : %s",mcm_theme_opt,theme and theme.name)
+	return theme
+end
+
+
+
+local res = {}
+local box = {}
+local wid = {}
+
+
+local function reset_widget_pos()
+	if not preview_started then return end
+	local asp 	= aspect or pws.curr_aspect
+	local x 	= pws.adj_x()
+	local y 	= pws.adj_y()
+	vl("PosPreviewer: resetting %s widget pos to %s, %s",asp,x,y)
+	pws.curr_x	= x
+	pws.curr_y	= y
+	wid[asp]:SetWndPos(vector2():set(x,y))
+	--wid[asp]:SetWndPos(vector2():set(x * unsquish_ratio,y))
+end
+
+
+local function reset_widget_size(element, theme, aspect, ok_flag, scale, unsquish)
+	if not ok_flag then return end
+	local asp 	= aspect or "16_9"
+	local w 	= theme and theme.w or element:GetWidth()
+	local h 	= theme and theme.h or element:GetHeight()
+	local rs 	= 16/9/5
+	local ww 	= w * (scale or 1) * (unsquish or unsquish_ratio)
+	local wh	= h * (scale or 1)
+	vl("Resetting widget size for %s to %sx%s",theme and theme.name,ww,wh)
+	element:SetWndSize(vector2():set(ww,wh))
+end
+
+
+function reset_theme(theme, aspect)
+	local theme = theme or pws.curr_theme
+	local asp 	= aspect or pws.curr_aspect
+	printf("reset_theme(%s, %s)",theme and theme.name,aspect)
+	local a 	= aspects[asp]
+	box[asp]:InitTexture("ui_paw_mcmpre_"..asp)
+	box[asp]:SetWndSize(vector2():set(a.x * unsquish_ratio,a.y))
+	local tex 	= theme.pre_tex or theme.tex
+	wid[asp]:InitTexture(tex)
+	printf("Initializing texture %s (%sx%s) in preview_%s",tex,a.x,a.y,asp)
+	reset_widget_size(wid[asp], pws.curr_theme, pws.curr_aspect, preview_started, 16/9/5)
+	reset_widget_pos()
+	res[asp]:SetText(ts("ui_mcm_paw_resolutions_"..(pws.curr_aspect or "")))
+	res[asp]:Show(true)
+	box[asp]:Show(true)
+	wid[asp]:Show(true)
+end
+
+
+function reset_aspect(aspect)
+	vl("PosPreviewer: switching aspect ratio to %s",aspect)
+	for k,v in pairs(aspects) do
+		res[k]:Show(false)
+		box[k]:Show(false)
+		wid[k]:Show(false)
+	end
+	pws.curr_aspect = aspect
+	res[pws.curr_aspect]:Show(false)
+	box[pws.curr_aspect]:Show(false)
+	wid[pws.curr_aspect]:Show(false)
+	reset_theme(pws.curr_theme,pws.curr_aspect)
+end
+
+
+function get_theme_or_override_pos(theme)
+	local pos 		= theme and theme.pos and theme.pos
+
+	if custom then
+		pos.x		= ui_mcm.get("pawsys/pawhud/pos_x")
+		pos.y		= ui_mcm.get("pawsys/pawhud/pos_y")
+	end
+	return pos
+end
+
+
+function init_mcm_pos_preview(anchor, handlers, opts, flags)
+	vl("init_mcm_pos_preview | unsquish %s",unsquish_ratio)
+	pws.themename 	= ui_mcm.get("pawsys/pawhud/active_theme") or "classicauto"
+	pws.curr_theme	= get_theme_data(pws.themename)
+	pws.curr_aspect = ui_mcm.get("pawsys/pawhud/preview_aspect") or "16_9"
+	pws.use_custom 	= ui_mcm.get("pawsys/pawhud/custompos") or false
+	pws.cust_x 		= ui_mcm.get("pawsys/pawhud/pos_x") or 491
+	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y") or 690
+
+	xml:ParseFile("paw_hud_indicator.xml")
+	printf("anchor size: %sx%s",anchor:GetWidth(),anchor:GetHeight())
+	local theme 	= pws.curr_theme
+	box.wnd 		= xml:InitStatic(xmlroot,anchor)
+	box.wnd:SetWndSize(vector2():set(640 * unsquish_ratio,270))
+	box.wnd:SetWndPos(vector2():set(180,0))
+	box.txt 		= xml:InitTextWnd(xmlroot,anchor)
+	box.txt:SetWndSize(vector2():set(170,50))
+	box.txt:SetWndPos(vector2():set(15,20))
+	box.txt:SetText(ts("ui_mcm_paw_resolutions").."\n")
+
+
+	for k,v in pairs (aspects) do
+		printf("xml path: %s",xmlroot..":"..v.node)
+		local asp 	= k
+		box[asp] 	= xml:InitStatic(xmlroot..":preview_"..asp,box.wnd)
+		wid[asp]	= xml:InitStatic(theme.node,box[asp])
+		res[asp]	= xml:InitTextWnd(xmlroot,anchor)
+		res[asp]:SetWndSize(vector2():set(170,200))
+		res[asp]:SetWndPos(vector2():set(15,70))
+		box[asp]:Show(false)
+		wid[asp]:Show(false)
+
+		vl("Finished generating box and wid for aspect ratio %s",asp)
+	end
+
+	box[pws.curr_aspect]:Show(true)
+	wid[pws.curr_aspect]:Show(true)
+
+	pws.use_custom 	= ui_mcm.get("pawsys/pawhud/custompos")
+	pws.cust_x		= ui_mcm.get("pawsys/pawhud/pos_x")
+	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y")
+
+	dl("Finished init for pos preview module | theme %s | aspect %s",pws.themename,pws.curr_aspect)
+	preview_started = true
+	reset_theme()
+end
+
+
+
+function get_current_aspect_ratio()
+	unsquish_ratio  = (device().height / device().width) / (768 / 1024)	
+	local unratio 	= round_idp(unsquish_ratio,4)
+
+	if unratio == 1 then
+		asprat 	= "4_3" 	-- please upgrade
+	elseif unratio > 0.8 then
+		asprat 	= "16_10" 	-- some monitors and smartphones
+	elseif unratio < 0.7 then
+		asprat 	= "21_9" 	-- some kind of ultrawide
+	else
+		asprat 	= "16_9"	-- assume HDTV standard, 1080p
+	end
+	return asprat
+end
+
+
+function init_theme_sim(theme)
+	dl("init_theme_sim: attempting to initialize %s theme",theme and theme.name)
+	xml:ParseFile("paw_hud_indicator.xml")
+	if theme_preview then
+		if theme_preview.wnd then theme_preview.wnd:Show(false) end
+		if theme_preview.empty then theme_preview.empty:Show(false) end
+	end
+	theme_preview 		= {}
+	local set_curr		= icoset.set_curr or paw.active_set() or "faves"
+    setdata 			= paw.icon_sets[set_curr]
+    
+    --[[
+    function dump(tbl,pre)
+    	for k,v in pairs(tbl) do
+	    	if type(v) == "table" then
+	    		dump(v,pre..pre)
+	    	end
+	    	printf("<PAW-MCM> ** %s = %s",k,v)
+    	end
+    end
+    dump(setdata,"|")
+    --]]
+
+    local ico_curr 		= icoset.ico_curr or icoset.setdata and icoset.setdata.active_icon
+	local curr_ico_i 	= setdata.ri[ico_curr]
+	local next_i 		= paw.roll(curr_ico_i + 1, 1, #setdata.ii)
+	local prev_i 		= paw.roll(curr_ico_i - 1, 1, #setdata.ii)
+	printf("Icon index curr %s | next %s | prev %s",curr_ico_i,next_i,prev_i)
+	local ico_next 		= setdata.ii[next_i]
+	local ico_prev 		= setdata.ii[prev_i]
+	local tex_c 		= paw.texture_data[ico_curr].t
+	local tex_p 		= paw.texture_data[ico_prev].t
+	local tex_n			= paw.texture_data[ico_next].t
+	printf("Icon textures:\nCurr: %s\nNext: %s\nPrev: %s",tex_c,tex_n,tex_p)
+	--local tex_c 		= paw.texture_data["paw_pin_redround32"].t
+	--local tex_p 		= paw.texture_data["paw_pin_redmodern32"].t
+	--local tex_n		= paw.texture_data["paw_pin_redpush32"].t
+ 	local tex 			= theme.tex
+	local offset_x 		= 25 -- 10 + ((1 - (theme.w / 150)) * 60)
+	local offset_y 		= 10 + ((1 - (theme.h / 160)) * 80)
+	local wnd
+ 	if tex then
+		theme_preview.wnd	= xml:InitStatic(theme.node,theme_box)
+		theme_preview.wnd:InitTexture(theme.tex)
+		paw.unsquish_aspect(theme_preview.wnd)
+		wnd 				= theme_preview.wnd
+	else
+		theme_preview.empty = xml:InitStatic(theme.node,theme_box)
+		wnd 				= theme_preview.empty
+	end
+	reset_widget_size(wnd, theme, aspect, true, 1, 1)
+	wnd:SetWndPos(vector2():set(offset_x,offset_y))
+	wnd:Show(true)
+
+	printf("Showing theme %s | w %s h %s | offsets x %s y %s | tex: %s",theme.name,theme.w,theme.h,offset_x,offset_y)
+	theme_preview.curr_i		= xml:InitStatic(theme.node..":curr",wnd)
+    if tex_c then theme_preview.curr_i:InitTexture(tex_c) end
+
+    if theme.style ~= "compact" then
+        theme_preview.prev_i	= xml:InitStatic(theme.node..":prev",wnd)
+    	tex 			= tex_p
+    	if tex then theme_preview.prev_i:InitTexture(tex) end
+
+        theme_preview.next_i	= xml:InitStatic(theme.node..":next",wnd)
+    	tex 			= tex_n
+    	if tex then theme_preview.next_i:InitTexture(tex) end
+
+        theme_preview.prev_i:SetTextureColor(paw.colors.dimmed)
+        theme_preview.next_i:SetTextureColor(paw.colors.dimmed)
+        theme_preview.box_head = xml:InitStatic(theme.node..":head",wnd)
+        theme_preview.box_text = xml:InitTextWnd(theme.node..":head",theme_preview.box_head)
+    end
+    if theme.style == "full" then
+        theme_preview.box_text:SetText(ts("ui_mcm_lst_pawsys_pg_"..icoset.set_curr))
+        theme_preview.box_head2 = xml:InitStatic(theme.node..":head2",wnd)
+        theme_preview.box_text2 = xml:InitTextWnd(theme.node..":head2",theme_preview.box_head2)
+        theme_preview.box_text2:SetText(ts("ui_mcm_lst_"..icoset.ico_curr))
+    elseif theme.style == "minimal" then
+        theme_preview.box_text:SetText(ts("ui_mcm_lst_"..icoset.ico_curr))
+    end
+end
+
+
+function move_widget_slide(anchor, handlers, opts, flags)
+	printf("<PAW-MCM> Moving widget slide header")
+	_ = handlers and handlers.pic and handlers.pic:SetWndPos(vector2():set(16,16))
+end
+
+function mcm_init_widget_preview(anchor, handlers, opts, flags)
+	printf("mcm_init_widget_preview called with id %s",opts and opts.id)
+	if opts and (opts.id == "widget_header") then
+		printf("<PAW-MCM> mcm_init_widget_preview handing off to move_widget_slide")
+		move_widget_slide(anchor, handlers, opts, flags)
+		return
+	end
+
+	printf("mcm_init_widget_preview called")
+	local desc = handlers and handlers.desc
+	if desc then
+		desc:SetWndSize(vector2():set(300, desc:GetHeight()))
+	end
+	xml:ParseFile("paw_hud_indicator.xml")
+	theme_box 	= xml:InitStatic(xmlroot,anchor)
+	theme_box:SetWndPos(vector2():set(330,-70))
+	theme_box:SetWndSize(vector2():set(200,200))
+	theme_box:InitTexture("ui_paw_mcm_loadframe_bg")
+
+	theme_frame 	= xml:InitStatic(xmlroot,theme_box)
+	theme_frame:SetWndPos(vector2():set(0,0))
+	theme_frame:SetWndSize(vector2():set(200,200))
+	theme_frame:InitTexture("ui_paw_mcm_loadframe")
+
+	local curr_theme 	= ui_mcm.get("pawsys/pawhud/active_theme") or "classicauto"
+	local theme 		= get_theme_data(curr_theme)
+	init_theme_sim(theme)
+end
+
+--[[
+-- not working yet
+function mcm_move_custom_pos_elements(anchor, handlers, opts, flags)
+	--if not (opt and opt.id == "custompos") then return end
+	printf("mcm_move_custom_pos_elements called for id %s | %s/%s",opts.id,flags.path,flags.opt)
+	local input 	= handlers and handlers.ctrl
+	local cap 		= handlers and handlers.cap
+	local id 		= opts and opts.id
+	if input then
+		--printf("Attempting to resize input window %s",id)
+		--input:SetWndSize(vector2():set(50,input:GetHeight()))
+		--printf("Size is now %sx%s",input:GetWidth(),input:GetHeight())
+		input:SetWndPos(vector2():set(0,-150))
+	end
+	printf("mcm_move_custom_pos_elements called for id %s | %s/%s",opts.id,flags.path,flags.opt)
+	local input 	= handlers and handlers.ctrl
+	local cap 		= handlers and handlers.cap
+	local id 		= opts and opts.id
+	local axes ={
+		["pos_x"] 		= true,
+		["pos_y"] 		= true,
+	}
+	if id and axes[id] and input then
+		printf("Attempting to resize input window %s",id)
+		input:SetWndSize(vector2():set(50,input:GetHeight()))
+		printf("Size is now %sx%s",input:GetWidth(),input:GetHeight())
+		input:SetWndPos(vector2():set(0,-150))
+	end
+end
+--]]
+
 function mcm_on_value_select(path,opt,value,v)
-	vl("Callback received: MCM value select for %s/%s: %s",path,opt,value)
+	printf("Callback received: MCM value select for %s/%s: %s",path,opt,value)
 	if path == "pawsys/pawpins" then
 		local icon_change = false
 		icoset._changed[opt] = value
@@ -735,7 +1201,34 @@ function mcm_on_value_select(path,opt,value,v)
 	    box_pname:SetText(ts("ui_mcm_lst_"..icoset.ico_curr))
 
 		vl("New current set: %s | icon %s | texture %s",icoset.set_curr,icoset.ico_curr,icoset.tex_curr)
+	elseif path == "pawsys/pawhud" then
+		dl("MCM value change for %s/%s = %s | curr_x %s curr_y %s | pws.themename %s | pws.curr_aspect %s",path,opt,value,pws.curr_x,pws.curr_y,pws.themename,pws.curr_aspect)
+		if opt == "active_theme" then
+			local theme = get_theme_data(value)
+			if theme then
+				pws.themename = value
+				pws.curr_theme = get_theme_data(value)
+				reset_theme(pws.curr_theme,pws.curr_aspect)
+				if theme_preview and theme then
+					vl("Updating theme preview to %s",theme and theme.name)
+					init_theme_sim(theme)
+				end
+			end
+		elseif opt == "preview_aspect" then
+			if aspects[value] then
+				reset_aspect(value)
+			end
+		elseif opt == "custompos" then
+			pws.use_custom = value
+			reset_widget_pos()
+		elseif pws.use_custom then
+			if (opt == "pos_x") then
+				pws.cust_x = value
+			elseif (opt == "pos_y") then
+				pws.cust_y = value
+			end
+			reset_widget_pos()
+		end
 	end
 end
-
 
