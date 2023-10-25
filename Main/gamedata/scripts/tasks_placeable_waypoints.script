@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.15
-    Updated: 20231020
+    Version: 1.15.1
+    Updated: 20231024
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -38,8 +38,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.15"
-release_date            = 20231020
+script_version          = "1.15.1"
+release_date            = 20231024
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 debuglogs               = false   -- Controls debug logging if you don't have MCM
@@ -862,6 +862,7 @@ end
 function end_waypoint_task(id)
     cancel_task()
     set_pingspot_persistence(id,false)
+    return true
 end
 
 
@@ -1049,6 +1050,9 @@ function do_waypoint(act,se_obj,acode,args)
     if se_obj then
         id = se_obj.id
         name = safename(id)
+    elseif args and args.id then
+        id = args.id
+        se_obj = alife_object(id) or se_obj
     end
     local ac = action_codes[acode]
 
@@ -1182,6 +1186,7 @@ function do_waypoint(act,se_obj,acode,args)
     else
         dl("invalid action %s passed to do_waypoint",act)
     end
+    return true
 end
 
 
@@ -2582,6 +2587,7 @@ end
 
 
 function scale_by_dist(element,dist,w,h,min,mid,max,unsquish)
+    --printf("scale_by_dist for %sx%s element at dist %s | unsquish %s | %s - %s -  %s ",w,h,dist,unsquish,min,mid,max)
     dist        = clamp(dist,0,max)
     local nw    = w
     local nh    = h
@@ -2596,7 +2602,7 @@ function scale_by_dist(element,dist,w,h,min,mid,max,unsquish)
     if unsquish then
         nw = nw * unsquish_ratio
     end
-    --printf("scale_by_dist for %sx%s element:\nw %s -> nw %s | h %s -> nh %s",element:GetWidth(),element:GetHeight(),w,nw,h,nh)
+    --printf("scale_by_dist for %sx%s element:\nw %s -> nw %s | h %s -> nh %s | ratio: %s",element:GetWidth(),element:GetHeight(),w,nw,h,nh,unsquish_ratio)
 
     return nw,nh
 end
@@ -2637,7 +2643,14 @@ function get_screen_coords(id)
     local is_npc,is_place
     local obj       = db.storage[id] and db.storage[id].object or level.object_by_id(id)
     local se_obj    = alife_object(id)
-    if not se_obj then return end    
+    --printf("<PAW> get_screen_coords: id %s -> obj %s (%s) | se_obj %s",id,obj and obj:name(),obj and obj:id(),se_obj and se_obj:name())
+    if not (obj or se_obj) then
+        local is_wp = (id == (placed_waypoint and placed_waypoint.id)) and end_waypoint_task(id)
+        local pin   = pins[id] and do_waypoint("pn_del",se_obj,nil,{syscall=true,id=id})
+        local exit = (is_wp and " canceling waypoint and") or (pin and " clearing pin and") or ""
+        dl("get_screen_coords: no valid game or server object could be found for %s,%s exiting",exit,id)
+        return
+    end 
     
     if (obj and IsStalker(obj) or IsMonster(obj)) then
         pos         = obj and utils_obj.safe_bone_pos(obj,"bip01_head")
@@ -2660,12 +2673,18 @@ function get_screen_coords(id)
             local npc   = i and db.storage[i] and db.storage[i].object or level.object_by_id(i)
             pos         = npc and utils_obj.safe_bone_pos(npc,"bip01_head")
             is_npc      = true
-            --printf("<PAW> Pinned object %s is an npc",id)
+            --printf("<PAW> Pinned object %s is an npc squad",id)
         else
             local tmp   = se_obj and se_obj.position
             pos         = tmp and vector():set(tmp.x,tmp.y,tmp.z)
         end
     end
+    if not ((pos and pos.x) and (pos and pos.x) and (pos and pos.z)) then
+        dl("WARNING: unable to get valid pos for %s",id)
+        return nil
+    end
+
+    --printf("<PAW> pos found for id %s: %s,%s,%s",id,pos and pos.x,pos and pos.y,pos and pos.z)
 
     local dist          = db.actor:position():distance_to(pos)
     local true_dist     = dist  -- store this
@@ -2713,6 +2732,7 @@ function get_screen_coords(id)
     --printf("* Actor is %s from %s (near_dist %s | max_dist %s\n* dist_prog %s | dist_coef %s\n| Final vertical adjustment: %s",true_dist,id,near_dist,max_dist,dist_prog,dist_coef,vert_adj)
 
     local vec = pos and game.world2ui(vector():set(pos.x,pos.y,pos.z),false)
+    --printf("final vec for %s: %s,%s",id,vec and vec.x,vec and vec.y)
     if (vec and (vec.x ~= -9999) and (vec.y ~= 0)) then
         return vec
     end
@@ -2803,16 +2823,10 @@ function UIPAWHUDWaypoint:Update()
         local vec = placed_waypoint and placed_waypoint.id and get_screen_coords(placed_waypoint.id)
         if (vec) then
             self.marker:SetWndPos(vec)
-            --[[
-            if actor_has_los(get_object_by_id(placed_waypoint.id)) then
-                self.marker:SetTextureColor(colors.active)
-            else
-                self.marker:SetTextureColor(colors.dimmed)
-            end
-            --]]
-            local obj = get_object_by_id(placed_waypoint.id)
-            if obj then
-                local dist = db.actor:position():distance_to(obj:position())
+            local id = placed_waypoint and placed_waypoint.id
+            local se_obj = id and alife_object(id)
+            if se_obj then
+                local dist = db.actor:position():distance_to(se_obj.position)
                 local h,v = scale_by_dist(self.marker,dist,20,20,50,100,200,true)
                 self.marker:SetWndSize(vector2():set(h,v))
                 if marker_dist_shown("wp") then
@@ -2827,8 +2841,8 @@ function UIPAWHUDWaypoint:Update()
                     local tw = self.wref:GetWidth()
                     self.dist:SetWndPos(vector2():set(pos.x - (tw / 2) - 1, pos.y + v - 8))
                 end
+                self:ShowMarker(se_obj.online and true)
             end
-            self:ShowMarker(true)
             return
         end
         self:ShowMarker(false)
@@ -3180,23 +3194,15 @@ function npc_clear_pin_on_interact(npc,who)
 end
 --]]
 
+
 function npc_on_death_callback(victim,killer)
-    printf("npc_on_death_callback: %s (%s) | clear_pin_on_death: %s",victim:name(),victim:id(),clear_pin_on_death)
+    vl("npc_on_death_callback: %s (%s) | clear_pin_on_death: %s",victim:name(),victim:id(),clear_pin_on_death)
     if not clear_pin_on_death then return end
     local id = safeid(victim)
     if not (id and (id > 0)) then return end
     if not (id and pins[id]) then return end
     dl("Clearing existing pin for dead body id %s",id)
     local se_obj = alife_object(id)
-    --[[
-    local icon = pins[id] and pins[id].icon
-    if hud_pin_objs[id] then
-        get_hud():RemoveDialogToRender(hud_pin_objs[id])
-        hud_pin_objs[id] = nil
-    end
-    pins[id] = nil
-    if icon then remove_mapspot(id,icon) end
-    --]]
     do_waypoint("pn_del",se_obj,nil,{syscall=true})
 end
 
@@ -3493,10 +3499,6 @@ function load_file_data()
     table.sort(icons)
     table.sort(icon_sets)
     catsy_paw_mcm.icon_sets = icon_sets
-    printf("checking icon sets in MCM script:")
-    for k,v in pairs(catsy_paw_mcm.icon_sets) do
-        printf("%s = %s",k,ts(v.name))
-    end
     table.sort(action_codes)
     dl(logprefix.."All file data loaded")
     --utils_data.print_table(icon_sets)
@@ -3637,7 +3639,7 @@ function on_game_start()
     RegisterScriptCallback("on_key_press",on_key_press)
     RegisterScriptCallback("on_key_release",on_key_release)
     RegisterScriptCallback("GUI_on_show",update_hud_on_show_hide)
-    RegisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)    
+    RegisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)
     RegisterScriptCallback("monster_on_death_callback",npc_on_death_callback)
     RegisterScriptCallback("npc_on_death_callback",npc_on_death_callback)
     on_option_change()
