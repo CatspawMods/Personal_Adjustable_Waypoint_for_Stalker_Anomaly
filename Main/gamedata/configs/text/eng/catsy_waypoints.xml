@@ -1308,4 +1308,83 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>\n2560x1080\n3440x1440\n3840x1600</text>
 	</string>
 
+<!-- Added in 1.16 -->
+
+	<string id="ui_mcm_menu_pawauto">
+		<text>Auto-Tagging</text>
+	</string>
+
+	<string id="ui_mcm_lst_pawsys_pg_smartpins">
+		<text>Smart Pins</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawpins_poi_icon_smartpins">
+		<text>Default icon for Smart Pins</text>
+	</string>
+
+	<string id="pawsys_pawauto_human_f_enable">
+		<text>Enable Autotagging for friendly stalkers</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_human_f">
+		<text>Human (friendly) icon</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_human_f_desc">
+		<text>Autotag will assign this icon to friendly stalkers.</text>
+	</string>
+
+
+	<string id="pawsys_pawauto_human_n_enable">
+		<text>Enable Autotagging for neutral stalkers</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_human_n">
+		<text>Human (neutral) icon</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_human_n_desc">
+		<text>Autotag will assign this icon to neutral stalkers.</text>
+	</string>
+
+
+	<string id="pawsys_pawauto_human_e_enable">
+		<text>Enable Autotagging for enemy stalkers</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_human_e">
+		<text>Human (enemy) icon</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_human_e_desc">
+		<text>Autotag will assign this icon to enemy stalkers.</text>
+	</string>
+
+
+	<string id="pawsys_pawauto_monster_enable">
+		<text>Enable Autotagging for monsters</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_monster">
+		<text>Monsters</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_monster_desc">
+		<text>Autotag will assign this icon to mutants, monsters, and other nonhuman creatures.</text>
+	</string>
+
+
+	<string id="pawsys_pawauto_stash_enable">
+		<text>Enable Autotagging for stash containers</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_stash">
+		<text>Stash container icon</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawauto_stash_desc">
+		<text>Autotag will assign this icon to stashes and other inventory boxes.</text>
+	</string>
+
+
 </string_table>

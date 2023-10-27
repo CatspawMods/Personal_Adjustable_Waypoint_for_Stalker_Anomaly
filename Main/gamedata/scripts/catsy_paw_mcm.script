@@ -4,8 +4,8 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.15.1
-	Updated: 20231024
+    Version: 1.16-b1
+	Updated: 20231026
 
     You probably shouldn't mess with this, even if you're familiar with 
     MCM's menus. It involves a fair bit of black magic, and updates the 
@@ -13,9 +13,9 @@
     files in configs\scripts\paw, and other sundry things.
 -- ===================================================================--]]
 
-debuglogs 	 					= false   -- Controls debug logging if you don't have MCM
+debuglogs 	 					= true   -- Controls debug logging if you don't have MCM
 verbose                   		= true
-script_version 					= "1.15.1"
+script_version 					= "1.16-b1"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -224,6 +224,59 @@ local function populate_icon_list(group)
 	return content
 end
 
+function populate_autotag_menus()
+	dl("populate_autotag_menus called")
+
+	local gr = {
+		{id = "autotag_header", type= "slide", link = "ui_paw_menuslide_autotag", size= {512,50}, borderless= true, spacing= 0},
+		{id = "header", type= "desc", text = "ui_mcm_pawsys_pawhud_autotag_info"},
+		{id = "divider", type= "line"},
+	}
+
+	for tag,defs in spairs(paw.smart_pins) do
+		dl("populate_autotag_menus adding entry for %s (default %s)",tag,defs.pin)
+		local enopt = tag.."_enable"
+		local enval = axr_main.config:r_value("mcm", "pawsys/pawauto/"..enopt, {val=0})
+		if enval == nil then enval = defs.enabled end
+		enable_opt = {
+			id = enopt,
+			type = "check",
+			val = 1,
+			def = enval,
+			--on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+		}
+		local current = axr_main.config:r_value("mcm", "pawsys/pawauto/"..tag, {val=0})
+		local def = current or defs.pin or icon_sets["npcs"].default
+		menu_opt = {
+			id = tag,
+			type = "list",
+			val = 0,
+			def = def,
+			--ui_hook_functor = {catsy_paw_mcm.init_mcm_set_ind},
+			--on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+			content = populate_icon_list("smartpins")
+		}
+		table.insert(gr,menu_opt)
+		table.insert(gr,enable_opt)
+	end
+	table.insert(gr,{id = "divider", type = "line"})
+
+	vl("results for populate_autotag_menus:")
+	if verbose then
+		for k,v in pairs(gr) do
+			local st = k..string.format("=%s",v)..":\n{"
+		    for m,o in pairs(v) do
+		    	st = st..m.."="..tostring(o)..","
+		    end
+		    st = st.."}"
+		    vl(st)
+		end 
+	end
+
+	return gr
+end
+
+
 function populate_set_menus()
 	dl("populate_set_menus called")
 	local poi ="poi_icon_"
@@ -347,8 +400,8 @@ function on_mcm_load()
 					},
 					{id = "wp_clear_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
 					{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
-					{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 250},
-					{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 25},
+					{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
+					{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
 					{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
 					{id = "pingsound", type= "check", val = 1, def = true},
 					{id = "s_device_pda_1", type= "check", val = 1, def = true},
@@ -367,6 +420,9 @@ function on_mcm_load()
 
 			-- PIN SETTINGS (procedurally generated)
 			{ id = "pawpins", sh=true, gr=populate_set_menus()},
+
+			-- AUTOTAG/SMART PIN SETTINGS
+			{ id = "pawauto", sh=true, gr=populate_autotag_menus()},
 
 			-- HUD WIDGET SETTINGS
 			{ id = "pawhud", sh=true, gr={
@@ -751,7 +807,7 @@ function get_cached_pin_for_set(setname)
 	local sid = "poi_icon_" .. setname
 	local pcur = icoset._changed[sid]
 	if pcur == nil then
-		pcur = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..setname, {val=0})				
+		pcur = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..setname, {val=0})
 		if pcur == nil then
 			local setdata = icon_sets[setname]
 			pcur = ui_mcm.UIMCM:GetDefaultValue(path,icoset_id,{def=(setdata and setdata.default or "redpush32"),val=0})

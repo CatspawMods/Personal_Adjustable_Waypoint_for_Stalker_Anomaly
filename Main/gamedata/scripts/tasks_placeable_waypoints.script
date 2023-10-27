@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.15.1
-    Updated: 20231024
+    Version: 1.16-b1
+    Updated: 20231026
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -38,8 +38,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.15.1"
-release_date            = 20231024
+script_version          = "1.16-b1"
+release_date            = 20231026
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 debuglogs               = false   -- Controls debug logging if you don't have MCM
@@ -156,6 +156,7 @@ widget_custom_pos           = {x=491,y=670}
 widget_last_used            = time_global()
 wp_hud_icon_enabled         = true
 pin_hud_icon_default        = true
+mark_on_positive_id         = true
 reticle_mode                = 2
 ret_fade_attack_time        = 400
 ret_fade_decay_time         = 600
@@ -166,14 +167,17 @@ reticle_color = {
     ["g"]       = 255,
     ["b"]       = 255,
 }
+
 show_marker_dist = {
     ["pins"]    = 4,
     ["wp"]      = 4,
 }
+
 show_marker_hint = {
     ["pins"]    = 2,
     ["wp"]      = 0, -- not implemented yet
 }
+
 -- ======================================================================
 --  STRINGS AND LTX DATA
 -- ======================================================================
@@ -182,6 +186,7 @@ local sep                   = "_"
 local snd_path              = "catspaw\\"
 local snd_ping              = snd_path.."paw_ping"
 local snd_cycle_blip        = snd_path.."paw_blip"
+local snd_tag_target        = snd_path.."paw_blip"
 local use_ping_snd          = true
 local use_ui_snd            = true
 local add_mapspot_functor   = scriptname..".func_add_mapspot"
@@ -236,6 +241,37 @@ local pawdata = {
     curr_set_name   = "pins",
     curr_ico_name   = default_mapspot,
 }
+pawdata.smart_pins = {
+    ["human_f"] = {
+        pin         = "chevron_friendly",
+        enabled     = false,
+    },
+    ["human_n"] = {
+        pin         = "chevron_neutral",
+        enabled     = false,
+    },
+    ["human_e"] = {
+        pin         = "chevron_enemy",
+        enabled     = true,
+    },
+    ["monster"] = {
+        pin         = "chevron_enemy",
+        enabled     = true,
+    },
+    ["stash"]   = {
+        pin         = "bwhr_loot",
+        enabled     = false,
+    },
+}
+pawdata.npc_ident = {
+    timeID      = true,
+    speedID     = 0.3,
+    lenience    = 0.99,
+    tick_speed  = 200,
+    progress    = {},
+}
+npc_ident           = pawdata.npc_ident
+smart_pins          = pawdata.smart_pins
 pins                = pawdata.pins
 dynamic_faves       = pawdata.dynamic_faves
 
@@ -1301,7 +1337,8 @@ function wp_target_obj()
 end
 
 
-function pin_target_obj()
+function pin_target_obj(mapspot,notip,silent)
+    vl("pin_target_obj: mapspot %s | silent %s",mapspot,silent)
     local obj = level.get_target_obj()
     local id = obj and obj:id()
     if id and (id > 0) then
@@ -1319,24 +1356,62 @@ function pin_target_obj()
             end
         else
             local hint  = name or ts("st_paw_pin_default_name")
-            drop_quick_pin(id,hint,true,true)
+            drop_quick_pin(id,hint,mapspot,true,true)
             if pin_hud_icon_default and pins[id] then
                 pins[id].hud = true
                 show_hud_pin(id)
             end
-            local icon  = ts("ui_mcm_lst_"..pawdata.curr_ico_name)
-            local nxtb  = keybinds["ico_next"].text
-            local prvb  = keybinds["ico_prev"].text
-            local text  = string.format(ts("st_paw_pin_added_to_target"),name,icon,nxtb,prvb)
-            text = psk(text,text_colors)
-            dotip(text,5,nil,false)
-
+            if not silent then
+                play_sound_for_actor(snd_tag_target)
+            end
+            if not notip then
+                local icon  = ts("ui_mcm_lst_"..pawdata.curr_ico_name)
+                local nxtb  = keybinds["ico_next"].text
+                local prvb  = keybinds["ico_prev"].text
+                local text  = string.format(ts("st_paw_pin_added_to_target"),name,icon,nxtb,prvb)
+                text = psk(text,text_colors)
+                dotip(text,5,nil,false)
+            end
         end
     end
 end
 
 
-function drop_quick_pin(id,force_text,no_tip,no_fast_travel)
+function get_smart_icon_for_obj(obj,mapspot)
+    local mapspot       = mapspot or map_pin_icon
+    local target_type
+
+    if obj then
+        if IsStalker(obj) then
+            local acomm     = get_actor_true_community()
+            local comm      = obj:character_community() or "stalker"
+            local is_enemy  = game_relations.is_factions_enemies(acomm,comm)
+            if comm == acomm then
+                target_type = "human_f"
+            elseif is_enemy then
+                target_type = "human_e"
+            else
+                target_type = "human_n"
+            end
+        elseif IsMonster(obj) then
+            target_type     = "monster"
+        elseif IsInvbox(obj) then
+            target_type     = "stash"
+        end
+        local target = target_type and smart_pins[target_type]
+        mapspot = (target and target.enabled and icons[target.pin]) or mapspot
+    end
+    vl("get_smart_icon_for_obj: best icon for %s was %s",obj and obj:character_name(),mapspot)
+    return mapspot
+end
+
+
+function create_smart_pin(obj,notip,silent)
+    local mapspot = get_smart_icon_for_obj(obj)
+    pin_target_obj(mapspot,notip,silent)
+end
+
+function drop_quick_pin(id,force_text,force_pin,no_tip,no_fast_travel)
     if not paw_enabled_check() then return end
     if next_pin > time_global() then return end
     next_pin = time_global() + pin_delay
@@ -1349,7 +1424,7 @@ function drop_quick_pin(id,force_text,no_tip,no_fast_travel)
     if not se_obj then return end
     
     local name          = se_obj:name() or "none"
-    local icon          = map_pin_icon
+    local icon          = force_pin or map_pin_icon
     local mapspot_text  = force_text or ts("st_paw_pin_quick_name")
     local tip_text      = ts("st_paw_pin_dropped")
     init_new_pin(id,name,mapspot_text,icon)
@@ -1680,7 +1755,7 @@ function cycle_sets(cycle_dir,dotip)
     if cycle_dir and type(cycle_dir) ~= "number" then return end
     local next_ind = roll(pawdata.curr_set_ind + cycle_dir,1,#set_index)
     active_set(next_ind)
-    play_sound_for_actor(snd_cycle_blip)
+    if use_ui_snd then play_sound_for_actor(snd_cycle_blip) end
     if dotip then notify_icon_change(true) end
 end
 
@@ -1945,6 +2020,20 @@ function mcm_reload_pin_settings()
     --]]
 end
 
+function mcm_reload_autotag_settings()
+    if ui_mcm then
+        for k,v in pairs(smart_pins) do
+            smart_pins[k].pin = ui_mcm.get("pawsys/pawauto/"..k) or v.pin
+            smart_pins[k].enabled = ui_mcm.get("pawsys/pawauto/"..k.."_enable") or v.enabled
+        end
+        -- Load Crook's facid settings, if present
+        npc_ident.timeID    = ui_mcm.get("targetID/timeID")     or true
+        npc_ident.speedID   = ui_mcm.get("targetID/speedID")    or 0.2
+        npc_ident.lenience  = ui_mcm.get("targetID/targL")      or 0.984
+    end
+end
+
+
 function on_option_change()
     -- Sync all MCM values and propagate changes
     if ui_mcm and not mcm_killswitch then
@@ -1963,6 +2052,7 @@ function on_option_change()
         mcm_reload_keybind_table()
         mcm_reload_keybind_settings()
         mcm_reload_pin_settings()
+        mcm_reload_autotag_settings()
 
         for k,v in pairs(action_codes) do
             local m = load_mcm("pawmenu/"..k)
@@ -2420,6 +2510,11 @@ function unsquish_aspect(element)
     element:SetWndSize(vector2():set((w*unsquish_ratio),h))
 end
 
+function dist_from_crosshair(position)
+    local toPoint = vector():set(position):sub(device().cam_pos):normalize()
+    return toPoint:dotproduct(device().cam_dir)
+end
+
 --[[
 animate_texture(
   container,
@@ -2595,8 +2690,8 @@ function scale_by_dist(element,dist,w,h,min,mid,max,unsquish)
         nw      = w + ((1 - (dist / min)) * (w * 0.5))
         nh      = h + ((1 - (dist / min)) * (h * 0.5))
     elseif dist > mid then
-        nw      = w - (((dist - mid) / (max - mid)) * (w * 0.3))
-        nh      = h - (((dist - mid) / (max - mid)) * (h * 0.3))
+        nw      = w - (((dist - mid) / (max - mid)) * (w * 0.4)) -- trying 0.4 rather than 0.3 to bring down min size
+        nh      = h - (((dist - mid) / (max - mid)) * (h * 0.4))
     end
 
     if unsquish then
@@ -3092,18 +3187,24 @@ end
 
 function UIPAWReticle:InitControls(id)
     --printf("UIPAWReticle:InitControls(%s)",id)
+    self.newtags            = {}
+    self.last_tick          = 0
+    self.last_check_time    = 0
     self:SetAutoDelete(true)
-    self.xml = CScriptXmlInit()
+    self.xml                = CScriptXmlInit()
     self.xml:ParseFile("paw_hud_pin_icon.xml")
-    self.reticle = self.xml:InitStatic("marker",self)
-    local tex = "ui_icons_paw_crosshair_valid"
-    self.reticle:InitTexture(tex)
-    local clr = reticle_color
+    self.reticle            = self.xml:InitStatic("marker",self)
+    self.objtex             = "ui_icons_paw_crosshair_valid"
+    self.idtex              = "ui_icons_paw_crosshair_targetid"
+    self.locktex            = "ui_icons_paw_crosshair_targetlock"
+    self.tex                = self.objtex
+    self.reticle:InitTexture(self.tex)
+    local clr               = reticle_color
     self.reticle:SetTextureColor(GetARGB(clr.a,clr.r,clr.g,clr.b))
     self.reticle:SetWndSize(vector2():set(32,32))
     unsquish_aspect(self.reticle)
-    local w = self.reticle:GetWidth()
-    local h = self.reticle:GetHeight()
+    local w                 = self.reticle:GetWidth()
+    local h                 = self.reticle:GetHeight()
     self.reticle:SetWndPos(vector2():set(512.5,384.5))
     self:ShowMarker(false)
 end
@@ -3120,6 +3221,251 @@ end
 function UIPAWReticle:ShowMarker(onoff)
     self.reticle:Show(onoff)
 end
+
+
+function UIPAWReticle:npc_on_death_callback(npc, who)
+    if not self.last_target then return end
+    if npc:id() == self.last_target:id() then
+        self:TargetOut(self.last_target)
+        self.last_target = nil
+    end
+end
+
+function UIPAWReticle:npc_on_net_destroy(npc)
+    if not self.last_target then return end
+    if npc:id() == self.last_target:id() then
+        self:TargetOut(self.last_target)
+        self.last_target = nil
+    end
+    --clear()
+end
+
+function UIPAWReticle:IsValidIDTarget(obj)
+    return obj and IsStalker(obj) and obj:id() ~= 0 and (obj.health > 0) and obj:character_community()
+end
+
+
+function UIPAWReticle:GetIDProgress(obj)
+    printf("UIPAWReticle:GetIDProgress: %s (%s)",obj:character_name(),obj:id())
+    local name      = obj:character_name()
+    local progress  = npc_ident.progress
+    
+    if not progress[name] then
+        progress[name] = 0
+    end
+    
+    if progress[name] >= 1 then
+        printf("GetIDProgress: %s is already identified",name)
+        return 1
+    end
+
+    if not npc_ident.timeID then 
+        if progress[name] == 0 then
+            self.newtags[name] = true
+        end
+        progress[name] = 1
+        return 1
+    end
+
+    local distance = db.actor:position():distance_to_sqr(obj:position())
+    
+    if distance < 2500 then
+        if progress[name] == 0 then
+            self.newtags[name] = true
+        end
+        progress[name] = 1
+        printf("GetIDProgress: %s is now identified due to distance %s",obj:character_name(),distance)
+        return 1
+    end
+    
+    local power = (100 / ((distance - 2500) * 0.1) / device().fov) * (npc_ident.tick_speed * 0.1)
+    
+    progress[name] = progress[name] + (power * npc_ident.speedID)
+
+    if progress[name] >= 1 then
+        printf("GetIDProgress: %s is now identified",name)
+        progress[name] = 1
+        self.newtags[name] = true
+        return 1
+    else
+        printf("GetIDProgress: %s has %s progress towards identification at %s",name,progress[name],time_global())
+    end
+    
+    return progress[name]
+end
+
+function UIPAWReticle:OnTarget(obj)
+    if not obj then return end
+    
+    local progress = self:GetIDProgress(obj)
+    return progress
+end
+
+function UIPAWReticle:TargetOut(obj)
+    self:ShowMarker(false)
+    --if not obj then return end
+end
+
+function UIPAWReticle:UpdateIDProgress(obj,name)
+    if not obj then return end
+    name = name or obj:character_name()
+    if (time_global() - self.last_tick) < npc_ident.tick_speed then return end
+    self.last_tick = time_global()
+    
+    if not npc_ident.progress[name] then 
+        printf("ERROR: faction ID nil in tick")
+        return 
+    end
+
+    local progress = self:GetIDProgress(obj)
+    return progress
+end
+
+function UIPAWReticle:TargetIDTick(obj,name,id)
+    name      = name or (obj and obj:character_name())
+    id        = id or (obj and obj:id())
+    progress  = 0
+
+    if self:IsValidIDTarget(obj) then
+        if self.last_target then
+            if obj:id() ~= self.last_target:id() then
+                self:TargetOut(self.last_target)
+                progress = self:OnTarget(obj)
+            else
+                progress = self:UpdateIDProgress(obj)
+            end
+        else
+            progress = self:OnTarget(obj)
+        end
+
+        self.last_target = obj
+        return progress
+    else
+        if self.last_target then
+            if npc_ident.lenience >= 1.0 then
+                self:TargetOut(self.last_target)
+                self.last_target = nil
+                return 0
+            end
+    
+            if (time_global() - self.last_check_time) > 100 then
+            self.last_check_time = time_global()
+    
+                local pos = utils_obj.safe_bone_pos(self.last_target, "bip01_spine")
+                if pos then
+                    local dot = dist_from_crosshair(pos)
+                    --0.984
+                    --getDotPower(device().cam_pos:distance_to_sqr(pos))
+                    if dot < npc_ident.lenience then
+                
+                        self:TargetOut(self.last_target)
+                
+                        self.last_target = nil
+                        return 0
+                    end
+                end
+        
+            end
+        
+        end
+    end
+
+    if self.last_target then
+        progress = self:UpdateIDProgress(self.last_target)
+    end
+    return progress
+end
+
+
+function UIPAWReticle:UpdateTargetIDReticle(obj,name,id)
+    self:TargetIDTick(obj,name,id)
+    local progress = (name and npc_ident.progress[name]) or 0
+    if self.playing_anim then
+        --printf("<PAW> Reticle animation still playing, skipping update cycle")
+        self:ShowMarker(true)
+        return
+    end
+    if id and name and progress then
+        local tex = self.idtex
+        --printf("<PAW> TargetID progress for %s (%s): %s",name,id,progress)
+
+        if progress <= 0 then
+            self:ShowMarker(false)
+            return
+        elseif progress >= 1 then
+            progress = 1
+            if pins[id] then tex = self.locktex end
+        end
+        local alpha = reticle_color.a
+        self.reticle:InitTexture(tex)
+
+        if self.newtags[name] then
+            function play_tag_crosshair_anim()
+                self.playing_anim = false
+                self.reticle:SetTextureColor(GetARGB(alpha,255,255,255))
+                self.reticle:SetWndSize(vector2():set(32,32))
+                unsquish_aspect(self.reticle)
+                self:ShowMarker(true)
+                --printf("<PAW> End anim timeevent at %s, reticle to 32x32",time_global())
+                return true
+            end
+            --printf("<PAW> New positive ID on %s, calling smart pin",name)
+            self.reticle:InitTexture(self.locktex)
+            self.reticle:SetTextureColor(GetARGB(alpha,255,255,255))
+            self.reticle:SetWndSize(vector2():set(24,24))
+            unsquish_aspect(self.reticle)
+            self.newtags[name] = nil
+            self.playing_anim = true
+            --printf("<PAW> Starting anim timeevent at %s, reticle to 24x24",time_global())
+            CreateTimeEvent("paw_crosshair_tag_anim",time_global(),0.125,play_tag_crosshair_anim)
+            create_smart_pin(obj,true)
+            return
+        end
+        
+        local w = 80 - (48 * progress)
+        local h = 80 - (48 * progress)
+        --printf("<PAW> Setting reticle to %sx%s at %s",w,h,time_global())
+        self.reticle:SetTextureColor(GetARGB(alpha * progress,255,255,255))
+        self.reticle:SetWndSize(vector2():set(w,h))
+        unsquish_aspect(self.reticle)
+        self:ShowMarker(true)
+    end
+
+end
+
+
+function UIPAWReticle:UpdateValidTargetReticle(obj,name,id)
+    if id and (id > 0) then
+        --printf("Reticle has valid id %s",id)
+        local se_obj    = alife_object(id)
+        if not se_obj then return end
+        if allow_non_wp_targets or valid_waypoint_target(se_obj) then
+            self:ShowMarker(true)
+            vl("ID %s is a valid waypoint/pin target",id)
+            if not (self.hovered or self.fading_in) then
+                --printf("Initiating fade-in at %s and clearing fading_out flag",time_global())
+                anim_fade(self.reticle,0,reticle_color.a,400,"reticle_fade",false,nil,nil,nil,easing_outquint,nil,abort_fade_in)
+                --anim_fade(self.reticle,0,reticle_color.a,3000,"reticle_fade",false,nil,nil,nil,nil,nil,abort_fade_in)
+                self.fading_in  = true
+                self.fading_out = false
+                self.hovered    = true
+            end
+            return
+        end
+    elseif self.hovered then
+        self.hovered = false
+        self.fading_out = true
+        self.fading_in = false
+        --printf("Initiating fade-out at %s and clearing fading_in flag",time_global())
+        anim_fade(self.reticle,reticle_color.a,0,600,"reticle_fade",false,nil,nil,nil,easing_outquint,nil,abort_fade_out)
+        --anim_fade(self.reticle,reticle_color.a,0,3000,"reticle_fade",false,nil,nil,nil,nil,nil,abort_fade_out)
+        return
+    end
+    if not self.fading_out then
+        self:ShowMarker(false)
+    end
+end
+
 
 function UIPAWReticle:Update()
     --printf("UIPAWReticle:Update")
@@ -3140,35 +3486,14 @@ function UIPAWReticle:Update()
             axr_main.binoc_is_zoomed or
             axr_main.scoped_weapon_is_zoomed) then
 
-        local obj = level.get_target_obj()
-        local id = obj and obj:id()
-        if id and (id > 0) then
-            --printf("Reticle has valid id %s",id)
-            local se_obj = alife_object(id)
-            if (se_obj and (allow_non_wp_targets or valid_waypoint_target(se_obj))) then
-                self:ShowMarker(true)
-                vl("ID %s is a valid waypoint/pin target",id)
-                if not (self.hovered or self.fading_in) then
-                    --printf("Initiating fade-in at %s and clearing fading_out flag",time_global())
-                    anim_fade(self.reticle,0,reticle_color.a,400,"reticle_fade",false,nil,nil,nil,easing_outquint,nil,abort_fade_in)
-                    --anim_fade(self.reticle,0,reticle_color.a,3000,"reticle_fade",false,nil,nil,nil,nil,nil,abort_fade_in)
-                    self.fading_in  = true
-                    self.fading_out = false
-                    self.hovered    = true
-                end
-                return
-            end
-        elseif self.hovered then
-            self.hovered = false
-            self.fading_out = true
-            self.fading_in = false
-            --printf("Initiating fade-out at %s and clearing fading_in flag",time_global())
-            anim_fade(self.reticle,reticle_color.a,0,600,"reticle_fade",false,nil,nil,nil,easing_outquint,nil,abort_fade_out)
-            --anim_fade(self.reticle,reticle_color.a,0,3000,"reticle_fade",false,nil,nil,nil,nil,nil,abort_fade_out)
-            return
-        end
-        if not self.fading_out then
-            self:ShowMarker(false)
+        local obj   = level.get_target_obj()
+        local id    = obj and obj:id()
+        local name  = obj and obj:character_name()
+
+        if mark_on_positive_id then
+            self:UpdateTargetIDReticle(obj,name,id)
+        else
+            self:UpdateValidTargetReticle(obj,name,id)
         end
     else
         self:ShowMarker(false)

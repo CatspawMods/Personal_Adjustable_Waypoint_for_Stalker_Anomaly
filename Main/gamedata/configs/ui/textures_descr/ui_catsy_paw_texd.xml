@@ -108,6 +108,10 @@
 
 		<texture id = "ui_icons_paw_crosshair_valid" x="128" y="96" width="64" height="64" />
 
+		<texture id = "ui_icons_paw_crosshair_targetlock" x="896" y="160" width="128" height="128" />
+
+		<texture id = "ui_icons_paw_crosshair_targetid" x="896" y="288" width="128" height="128" />
+
 	</file>
 
 	<file name ="ui\ui_icon_equipment">
