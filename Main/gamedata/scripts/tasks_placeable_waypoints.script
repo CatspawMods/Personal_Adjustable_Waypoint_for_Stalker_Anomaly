@@ -1191,7 +1191,8 @@ function do_waypoint(act,se_obj,acode,args)
         local wipe_all = args and args.wipe_all
         if not is_empty(hud_pin_objs) then
             for k,v in pairs(hud_pin_objs) do
-                if wipe_all or not v.locked then
+                if wipe_all or not (pins[k] and pins[k].locked) then
+                    vl("Hiding HUD pin for %s",k)
                     get_hud():RemoveDialogToRender(hud_pin_objs[k])
                     hud_pin_objs[k] = nil
                 end
