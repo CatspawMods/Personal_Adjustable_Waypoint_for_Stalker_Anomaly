@@ -91,7 +91,7 @@ function UIPAWReticle:npc_on_net_destroy(npc)
 end
 
 function UIPAWReticle:IsValidTagTarget(obj)
-    return obj and (IsStalker(obj) or IsMonster(obj)) and (obj:id() ~= 0) and (npc_ident.id_bodies or (obj.health > 0))
+    return obj and (IsStalker(obj) or IsMonster(obj)) and (not paw.blacklisted_object(obj:id())) and (obj:id() ~= 0) and (npc_ident.id_bodies or (obj.health > 0))
 end
 
 
@@ -123,7 +123,6 @@ function UIPAWReticle:GetIDProgress(obj,name)
     end
     
     if progress[name] >= 1 then
-        --printf("GetIDProgress: %s is already identified",name)
         return 1
     end
 
@@ -142,7 +141,6 @@ function UIPAWReticle:GetIDProgress(obj,name)
             self.newtags[name] = true
         end
         progress[name] = 1
-        --printf("GetIDProgress: %s is now identified due to distance %s",name,distance)
         return 1
     end
     
@@ -151,7 +149,6 @@ function UIPAWReticle:GetIDProgress(obj,name)
     progress[name] = progress[name] + (power * npc_ident.id_speed)
 
     if progress[name] >= 1 then
-        --printf("GetIDProgress: %s is now identified",name)
         progress[name] = 1
         self.newtags[name] = true
         return 1
@@ -339,9 +336,7 @@ function UIPAWReticle:Update()
             get_hud():RemoveDialogToRender(self)
             return
         end
-        enabled     = ((mode == 1) and not cart_mode) or 
-                        ((mode >= 2) and cart_mode) or 
-                        (mode >= 4)
+        enabled = (mode > 0) and paw.feature_valid_in_mode(mode)
         --printf("UIPAWReticle: mode %s + cart_mode %s = enabled %s",mode,cart_mode,enabled)
     end
     CUIScriptWnd.Update(self)
