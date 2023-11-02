@@ -60,16 +60,7 @@
 
 		<texture id = "ui_icons_paw_hud_waypoint" x="0" y="96" width="128" height="128" />
 
-		<texture id = "ui_paw_menuslide_themes" x="0" y="750" width="274" height="274" />
-		<texture id = "ui_paw_menuslide_main" x="300" y="720" width="512" height="50" />
-		<texture id = "ui_paw_menuslide_pins" x="300" y="770" width="512" height="50" />
-		<texture id = "ui_paw_menuslide_widget" x="300" y="820" width="512" height="50" />
-		<texture id = "ui_paw_menuslide_controls" x="300" y="870" width="512" height="50" />
-		<texture id = "ui_paw_menuslide_badges" x="300" y="920" width="512" height="50" />
-		<texture id = "ui_paw_menuslide_menus" x="300" y="970" width="512" height="50" />
-
-    	<texture id = "ui_paw_mapsquarebg" x="194" y="98" width="70" height="78"/>
-    	<texture id = "ui_paw_mapsquareframe" x="265" y="98" width="70" height="78"/>
+		<texture id = "ui_icons_paw_pin_redskull" x="320" y="160" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_pin_cursor_diamond_f" x="384" y="96" width="64" height="64" />
 
@@ -89,6 +80,7 @@
 
 		<texture id = "ui_icons_paw_pin_cursor_flag_e" x="896" y="96" width="64" height="64" />
 
+		<texture id = "ui_icons_paw_crosshair_gradient" x="320" y="96" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_pin_impobj_mechanic" x="384" y="160" width="64" height="64" />
 
@@ -107,6 +99,10 @@
 		<texture id = "ui_icons_paw_pin_obj_lock" x="832" y="160" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_crosshair_valid" x="128" y="96" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_crosshair_targetlock" x="896" y="160" width="128" height="128" />
+
+		<texture id = "ui_icons_paw_crosshair_targetid" x="896" y="288" width="128" height="128" />
 
 	</file>
 
@@ -186,13 +182,27 @@
 		<texture id = "ui_paw_hud_indicator_minimal_h" x="153" y="0" width="94" height="52" />
 		<texture id = "ui_paw_hud_indicator_minimal_v" x="248" y="0" width="92" height="112" />
 		<texture id = "ui_paw_hud_indicator_minicom" x="303" y="46" width="38" height="38" />
+	</file>
 
+	<file name ="ui\paw\paw_mcm_assets">
+		<texture id = "ui_paw_menuslide_main" x="0" y="0" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_pins" x="0" y="50" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_widget" x="0" y="100" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_controls" x="0" y="150" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_badges" x="0" y="200" width="512" height="50" />
+		<texture id = "ui_paw_menuslide_menus" x="0" y="250" width="512" height="50" />
 
-		<texture id = "ui_paw_menuslide_theme_classic" x="366" y="0" width="146" height="260" />
-		<texture id = "ui_paw_menuslide_theme_gamma" x="366" y="260" width="146" height="191" />
-		<texture id = "ui_paw_menuslide_theme_minimal" x="219" y="417" width="146" height="95" />
+    	<texture id = "ui_paw_mapsquarebg" x="514" y="2" width="70" height="78"/>
+    	<texture id = "ui_paw_mapsquareframe" x="585" y="2" width="70" height="78"/>
+
+		<texture id = "ui_paw_mcm_reticlesquare" x="684" y="0" width="342" height="342" />
+
+		<texture id = "ui_paw_mcm_reticle_header" x="0" y="300" width="512" height="50" />		
+		<texture id = "ui_paw_mcm_autotag_header" x="0" y="350" width="512" height="50" />		
+		<texture id = "ui_paw_mcm_messagebox_transbg" x="349" y="756" width="675" height="268" />		
 
 	</file>
+
 
 	<file name ="ui\paw\mcm_screenpos_preview">
 		<texture id = "ui_paw_mcmpre_21_9" x="0" y="0" width="640" height="270" />

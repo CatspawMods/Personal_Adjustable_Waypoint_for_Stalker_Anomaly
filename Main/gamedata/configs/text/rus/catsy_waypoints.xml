@@ -1166,11 +1166,11 @@
 		<text>При нажатии этой клавиши "Маркер-булавка" будет помещена на объект под перекрестием игрока, если его еще нет, с использованием текущего активного значка. Если для цели уже существует "Маркер-булавка", она будет удалена.</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_pin_auto_visible">
+	<string id="ui_mcm_pawsys_pawret_pin_auto_visible">
 		<text>Маркеры, созданные таким образом, по умолчанию отображаются в HUD</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_pin_auto_visible_desc">
+	<string id="ui_mcm_pawsys_pawret_pin_auto_visible_desc">
 		<text>Если "Маркер-булавка" была создана путем нацеливания на объект с помощью указанной выше комбинации клавиш, она автоматически отобразится в HUD. Вы можете в любое время показать или скрыть метки на HUD с помощью КПК.</text>
 	</string>
 
@@ -1180,7 +1180,7 @@
 	</string>
 
 	<string id="st_paw_pin_added_to_target">
-		<text>Маркер добавлен в $clr_lbl%s$clr_wht используя текущую активную иконку: $clr_lbl%s$clr_wht.\n
+		<text>Маркер добавлен в $clr_lbl%s$clr_wht используя текущую иконку: $clr_lbl%s$clr_wht.\n
 		Вы можете изменить текущую активную иконку с помощью $clr_yel%s$clr_wht/$clr_yel%s$clr_wht.</text>
 	</string>
 
@@ -1234,35 +1234,35 @@
 		<text>Разблокировать маркер</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_mode">
-		<text>Показывает перекрестие при наведении на допустимый объект</text>
+	<string id="ui_mcm_pawsys_pawret_reticle_mode">
+		<text>Показывает смарт перекрестие при наведении на допустимый объект</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_mode_desc">
-		<text>Если в данный момент перекрестие центрировано на допустимом объекте, то будет показан ненавязчивый прицел, указывающий на возможность размещения в нем точка маршрута и маркеров. Прозрачностью можно управлять ниже.</text>
+	<string id="ui_mcm_pawsys_pawret_reticle_mode_desc">
+		<text>Этот параметр определяет, когда может появляться интеллектуальная прицельная сетка: всегда, только при активном режиме картографии или никогда (отключено).</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha">
+	<string id="ui_mcm_pawsys_pawret_reticle_alpha">
 		<text>Прозрачность перекрестия</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_reticle_alpha_desc">
+	<string id="ui_mcm_pawsys_pawret_reticle_alpha_desc">
 		<text>Значение прозрачности (альфа) перекрестия, при этом 0 означает полную прозрачность, а 255 - отсутствие прозрачности.</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time">
+	<string id="ui_mcm_pawsys_pawret_ret_fade_attack_time">
 		<text>Время, необходимое для появления перекрестия</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_attack_time_desc">
+	<string id="ui_mcm_pawsys_pawret_ret_fade_attack_time_desc">
 		<text>Время в миллисекундах, необходимое для завершения появления перекрестия при наведении на допустимый объект.</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time">
+	<string id="ui_mcm_pawsys_pawret_ret_fade_decay_time">
 		<text>Длительность затухания для прицельной сетки</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawbinds_ret_fade_decay_time_desc">
+	<string id="ui_mcm_pawsys_pawret_ret_fade_decay_time_desc">
 		<text>Время в миллисекундах, необходимое для того, чтобы перекрестие закончило исчезать при отсутствии действительной цели.</text>
 	</string>
 
@@ -1308,5 +1308,131 @@
 		<text>\n2560x1080\n3440x1440\n3840x1600</text>
 	</string>
 
-</string_table>
+<!-- Added in 1.16 -->
 
+	<string id="ui_mcm_menu_pawret">
+		<text>Прицельная сетка / Автометка</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_enable_autotag">
+		<text>Включение автоматической интеллектуальной маркировки по идентификатору прицела</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_enable_autotag_desc">
+		<text>При включении этой функции HUD-прицел PAW будет автоматически "помечать" действительные объекты цели соответствующим маркером после их идентификации, как показано ниже.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawhud_reticle_info1">
+		<text>Использование маркеров и точек маршрута на любом действительном объекте под перекрестием с помощью настраиваемых горячих клавиш. По умолчанию прицел затухает и исчезает, указывая на то, что вы нацелились на действительный объект.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawhud_reticle_info2">
+		<text>Чтобы вместо этого автоматически помечать объекты, см. настройку "Автометка" ниже.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawhud_autotag_info">
+		<text>Функция "Автометка" позволяет автоматически помечать определенные типы объектов заранее заданными метками по вашему выбору после их идентификации. Это позволяет освободить клавиши и сосредоточиться на Зоне, а не на КПК или меню.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawhud_autotag_facid">
+		<text>Он функционирует аналогично аддону "Faction Identification", считывая его MCM-настройки, чтобы PAW и FacID могли работать вместе. Изменения, внесенные в MCM-меню FacID, будут учтены PAW.</text>
+	</string>
+
+	<string id="ui_mcm_lst_pawsys_pg_smartpins">
+		<text>Умные маркеры</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawpins_poi_icon_smartpins">
+		<text>Иконка по умолчанию для "Умных маркеров"</text>
+	</string>
+
+
+	<string id="ui_mcm_pawsys_pawret_human_f_enable">
+		<text>Включение автометок для дружественных сталкеров</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_f">
+		<text>Значок человека (друг)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_f_desc">
+		<text>"Автометка" присвоит эту иконку дружественным сталкерам.</text>
+	</string>
+
+
+	<string id="ui_mcm_pawsys_pawret_human_n_enable">
+		<text>Включить автометку для нейтральных сталкеров</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_n">
+		<text>Иконка человека (нейтральный)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_n_desc">
+		<text>"Автометка" присвоит эту иконку нейтральным сталкерам.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_e_enable">
+		<text>Включение автометки для вражеских сталкеров</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_e">
+		<text>Иконка человека (враг)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_human_e_desc">
+		<text>"Автометка" присвоит эту иконку вражеским сталкерам.</text>
+	</string>
+
+
+	<string id="ui_mcm_pawsys_pawret_monster_enable">
+		<text>Включение автометки для монстров</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_monster">
+		<text>Монстры</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_monster_desc">
+		<text>"Автометка" будет присваивать эту иконку мутантам, монстрам и другим нечеловеческим существам.</text>
+	</string>
+
+
+	<string id="ui_mcm_pawsys_pawret_stash_enable">
+		<text>Включение автометки для контейнеров тайников</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_stash">
+		<text>Иконка контейнера тайника</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_stash_desc">
+		<text>"Автометка" присвоит этот иконку тайникам и другим ячейкам инвентаря.</text>
+	</string>
+
+
+	<string id="ui_mcm_pawsys_pawret_reticle_mustzoom">
+		<text>Активен только при использовании оптического прицела/бинокля</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_reticle_mustzoom_desc">
+		<text>Если эта опция включена, то прицел (и его возможности по созданию меток) будет включаться только при увеличении с помощью бинокля или прицела на оружии. Это рекомендуется для того, чтобы метки не создавались просто при приближении или разговоре с НПС.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_manual_smart_pins">
+		<text>Маркеры, размещаемые вручную, также являются «умными»</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_manual_smart_pins_desc">
+		<text>Если эта опция включена, то маркеры прицела, созданные путем ручного запуска связанной с ними привязки клавиш, также будут использовать приведенные ниже настройки "Автометки", назначая выбранную иконку для целевого объекта вместо текущей активной иконки.</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_pin_redskull">
+		<text>Красный звериный череп</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_crosshair_gradient">
+		<text>Градиентное перекрестие</text>
+	</string>
+	
+</string_table>

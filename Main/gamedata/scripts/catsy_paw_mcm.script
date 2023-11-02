@@ -4,18 +4,15 @@
  	MCM initialization script
  	Author: Catspaw (CatspawMods @ ModDB)
 	Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.15.1
-	Updated: 20231024
 
     You probably shouldn't mess with this, even if you're familiar with 
-    MCM's menus. It involves a fair bit of black magic, and updates the 
-    Pin Sets menu dynamically based on the contents of the pin_set_*.ltx 
-    files in configs\scripts\paw, and other sundry things.
+    MCM's menus. It involves a fair bit of black magic, and updates all 
+    sorts of things dynamically based on the contents of the ltx files in
+    configs\scripts\paw, and touches MCM in some fairly unwholesome ways.
 -- ===================================================================--]]
 
-debuglogs 	 					= false   -- Controls debug logging if you don't have MCM
+debuglogs 	 					= true   -- Controls debug logging if you don't have MCM
 verbose                   		= true
-script_version 					= "1.15.1"
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
@@ -99,6 +96,7 @@ local default_widget_state = {
 	use_custom 	= false,
 }
 local pws 		= default_widget_state
+function usr(n) return n * unsquish_ratio end
 
 -- =======================================================================
 
@@ -210,19 +208,79 @@ local function populate_icon_list(group)
 			dl("WARNING: member %s not found in icons.ltx! Check your customizations.",icon)
 		end
 	end
-	--[[
-	printf("#dynamic_faves: %s",dynamic_faves and #dynamic_faves)
-	dynamic_faves = paw and paw.dynamic_faves
-	if dynamic_faves and not is_empty(dynamic_faves) then
-		for i = 1,#dynamic_faves do
-			local entry = {dynamic_faves[i],dynamic_faves[i]}
-			table.insert(content,entry)
-			dl("populate_icon_list adding dynamic_faves option: {%s,%s}",entry[1],entry[2])
-		end
-	end
-	--]]
+
 	return content
 end
+
+function populate_autotag_menus()
+	dl("populate_autotag_menus called")
+
+	local gr = {
+		{id = "reticle_header", type= "image", link = "ui_paw_emptytex", size= {512,170},
+			ui_hook_functor = {catsy_paw_mcm.mcm_init_reticle_headers},
+		},
+
+		{id = "reticle_mustzoom", type = "check", val = 1, def = true},
+		{id = "pin_auto_visible", type = "check", val = 1, def = true},
+		{id = "reticle_mode", type = "list", val = 2, def = 2, 
+			content = {
+			   {4,"pawsys_cmenu_all"},
+			   {2,"pawsys_cmenu_cart"},
+			   {0,"pawsys_cmenu_off"},
+			}
+		},	
+
+		{id = "reticle_alpha", type = "track", val = 2, min = 1, max = 255, step = 1, def = 120},
+		{id = "ret_fade_attack_time", type = "input", val = 2, min = 1, max = 5000, def = 150},
+		{id = "ret_fade_decay_time", type = "input", val = 2, min = 1, max = 5000, def = 250},
+		{id = "autotag_header", type = "image", link = "ui_paw_emptytex", size = {512,50},
+			ui_hook_functor = {catsy_paw_mcm.mcm_init_reticle_headers},
+		},
+		{id = "enable_autotag", type = "check", val = 1, def = false},
+		{id = "manual_smart_pins", type = "check", val = 1, def = true},
+		--{id = "autotag_info", type = "desc", text = "ui_mcm_pawsys_pawhud_autotag_info"},
+	}
+
+	for tag,defs in spairs(paw.smart_pins) do
+		dl("populate_autotag_menus adding entry for %s (default %s)",tag,defs.pin)
+		enable_opt = {
+			id = tag.."_enable",
+			type = "check",
+			val = 1,
+			def = defs.enabled,
+			--on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+		}
+		--local current = axr_main.config:r_value("mcm", "pawsys/pawret/"..tag, {val=0})
+		local def = defs.pin or icon_sets["npcs"].default
+		menu_opt = {
+			id = tag,
+			type = "list",
+			val = 0,
+			def = def,
+			ui_hook_functor = {catsy_paw_mcm.init_mcm_set_ind},
+			on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+			content = populate_icon_list("smartpins")
+		}
+		table.insert(gr,menu_opt)
+		table.insert(gr,enable_opt)
+	end
+	table.insert(gr,{id = "divider", type = "line"})
+
+	vl("results for populate_autotag_menus:")
+	if verbose then
+		for k,v in pairs(gr) do
+			local st = k..string.format("=%s",v)..":\n{"
+		    for m,o in pairs(v) do
+		    	st = st..m.."="..tostring(o)..","
+		    end
+		    st = st.."}"
+		    vl(st)
+		end 
+	end
+
+	return gr
+end
+
 
 function populate_set_menus()
 	dl("populate_set_menus called")
@@ -347,8 +405,8 @@ function on_mcm_load()
 					},
 					{id = "wp_clear_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
 					{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
-					{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 250},
-					{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 25},
+					{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
+					{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
 					{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
 					{id = "pingsound", type= "check", val = 1, def = true},
 					{id = "s_device_pda_1", type= "check", val = 1, def = true},
@@ -367,6 +425,9 @@ function on_mcm_load()
 
 			-- PIN SETTINGS (procedurally generated)
 			{ id = "pawpins", sh=true, gr=populate_set_menus()},
+
+			-- AUTOTAG/SMART PIN SETTINGS
+			{ id = "pawret", sh=true, gr=populate_autotag_menus()},
 
 			-- HUD WIDGET SETTINGS
 			{ id = "pawhud", sh=true, gr={
@@ -426,7 +487,6 @@ function on_mcm_load()
 					{id = "divider", type = "line"},
 
 					{id = "themedesc", type = "desc", text = "ui_mcm_themes_list"},
---					{id = "themes1", type= "image", link= "ui_paw_menuslide_themes", size= {274,274}, spacing= 0},
 
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_classicauto"},
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_classic"},
@@ -481,17 +541,6 @@ function on_mcm_load()
 		                    {2,"mcm_kb_mod_ctrl"}, 
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
-
-					{id = "pin_auto_visible", type = "check", val = 1, def = true},
-					{id = "reticle_mode", type = "list", val = 2, def = 2, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}},
-					{id = "reticle_alpha", type = "track", val = 2, min = 1, max = 255, step = 1, def = 120},
-					{id = "ret_fade_attack_time", type = "input", val = 2, min = 1, max = 5000, def = 150},
-					{id = "ret_fade_decay_time", type = "input", val = 2, min = 1, max = 5000, def = 250},
 
 					{id = "divider", type = "line"},
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_generalbinds_head"},
@@ -748,10 +797,10 @@ local box_pname, ui_img, theme_box, theme_preview, theme_curr_i, theme_next_i, t
 
 function get_cached_pin_for_set(setname)
 	if not setname then return end
-	local sid = "poi_icon_" .. setname
-	local pcur = icoset._changed[sid]
+	local opid = "pawsys/pawpins/poi_icon_" .. setname
+	local pcur = icoset._changed[opid]
 	if pcur == nil then
-		pcur = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..setname, {val=0})				
+		pcur = axr_main.config:r_value("mcm", opid, {val=0})
 		if pcur == nil then
 			local setdata = icon_sets[setname]
 			pcur = ui_mcm.UIMCM:GetDefaultValue(path,icoset_id,{def=(setdata and setdata.default or "redpush32"),val=0})
@@ -815,11 +864,12 @@ pws.adj_y	= 	function()
 				end
 
 
-function populate_mcm_set_ind(opt)
-	local wnd = icoset and icoset[opt]
+function populate_mcm_set_ind(path,opt)
+	local opid = ui_mcm.cc(path,opt)
+	local wnd = icoset and icoset[opid]
 	local tdata = paw and paw.texture_data
 	if not wnd and tdata then return end
-	local pin = (icoset and icoset._changed and icoset._changed[opt]) or axr_main.config:r_value("mcm", "pawsys/pawpins/"..opt, {val=0})
+	local pin = (icoset and icoset._changed and icoset._changed[opid]) or axr_main.config:r_value("mcm", opid, {val=0})
 	local icon = icons[pin]
 	local tex = tdata and tdata[icon] and tdata[icon].t
 	wnd:InitTexture(tex or "ui_icons_paw_pin_redpush32")
@@ -829,14 +879,16 @@ end
 function init_mcm_set_ind(anchor, handlers, opts, flags)
 	local opt = opts and opts.id
 	if not opt then return end
+	local path = flags.path
+	local opid = ui_mcm.cc(path,opt)
 	if handlers and (type(handlers) == "table") then
 		-- This is a newer version of the functor with a different container position
 		anchor = handlers.ctrl
 	end
 	local opt_box = xml:InitStatic("paw_mcm_indicator:mini_left",anchor)
 	opt_box:InitTexture("ui_paw_mapsquareframe")
-	icoset[opt] = xml:InitStatic("paw_mcm_indicator:mini_left:icon",opt_box)
-	populate_mcm_set_ind(opt)
+	icoset[opid] = xml:InitStatic("paw_mcm_indicator:mini_left:icon",opt_box)
+	populate_mcm_set_ind(path,opt)
 end
 
 
@@ -867,13 +919,10 @@ function init_mcm_header_ind(anchor, handlers, opts, flags)
 end
 
 
-
-
-
 local function get_theme_data(mcm_theme_opt)
 	--local thm = string.sub(mcm_theme_opt,7)
 	local theme = paw and paw.hud_themes and paw.hud_themes[mcm_theme_opt]
-	printf("get_theme_data(%s) : %s",mcm_theme_opt,theme and theme.name)
+	--printf("get_theme_data(%s) : %s",mcm_theme_opt,theme and theme.name)
 	return theme
 end
 
@@ -913,13 +962,13 @@ end
 function reset_theme(theme, aspect)
 	local theme = theme or pws.curr_theme
 	local asp 	= aspect or pws.curr_aspect
-	printf("reset_theme(%s, %s)",theme and theme.name,aspect)
+	--printf("reset_theme(%s, %s)",theme and theme.name,aspect)
 	local a 	= aspects[asp]
 	box[asp]:InitTexture("ui_paw_mcmpre_"..asp)
 	box[asp]:SetWndSize(vector2():set(a.x * unsquish_ratio,a.y))
 	local tex 	= theme.pre_tex or theme.tex
 	wid[asp]:InitTexture(tex)
-	printf("Initializing texture %s (%sx%s) in preview_%s",tex,a.x,a.y,asp)
+	--printf("Initializing texture %s (%sx%s) in preview_%s",tex,a.x,a.y,asp)
 	reset_widget_size(wid[asp], pws.curr_theme, pws.curr_aspect, preview_started, 16/9/5)
 	reset_widget_pos()
 	res[asp]:SetText(ts("ui_mcm_paw_resolutions_"..(pws.curr_aspect or "")))
@@ -965,7 +1014,6 @@ function init_mcm_pos_preview(anchor, handlers, opts, flags)
 	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y") or 690
 
 	xml:ParseFile("paw_hud_indicator.xml")
-	printf("anchor size: %sx%s",anchor:GetWidth(),anchor:GetHeight())
 	local theme 	= pws.curr_theme
 	box.wnd 		= xml:InitStatic(xmlroot,anchor)
 	box.wnd:SetWndSize(vector2():set(640 * unsquish_ratio,270))
@@ -977,7 +1025,6 @@ function init_mcm_pos_preview(anchor, handlers, opts, flags)
 
 
 	for k,v in pairs (aspects) do
-		printf("xml path: %s",xmlroot..":"..v.node)
 		local asp 	= k
 		box[asp] 	= xml:InitStatic(xmlroot..":preview_"..asp,box.wnd)
 		wid[asp]	= xml:InitStatic(theme.node,box[asp])
@@ -1032,29 +1079,15 @@ function init_theme_sim(theme)
 	local set_curr		= icoset.set_curr or paw.active_set() or "faves"
     setdata 			= paw.icon_sets[set_curr]
     
-    --[[
-    function dump(tbl,pre)
-    	for k,v in pairs(tbl) do
-	    	if type(v) == "table" then
-	    		dump(v,pre..pre)
-	    	end
-	    	printf("<PAW-MCM> ** %s = %s",k,v)
-    	end
-    end
-    dump(setdata,"|")
-    --]]
-
     local ico_curr 		= icoset.ico_curr or icoset.setdata and icoset.setdata.active_icon
 	local curr_ico_i 	= setdata.ri[ico_curr]
 	local next_i 		= paw.roll(curr_ico_i + 1, 1, #setdata.ii)
 	local prev_i 		= paw.roll(curr_ico_i - 1, 1, #setdata.ii)
-	printf("Icon index curr %s | next %s | prev %s",curr_ico_i,next_i,prev_i)
 	local ico_next 		= setdata.ii[next_i]
 	local ico_prev 		= setdata.ii[prev_i]
 	local tex_c 		= paw.texture_data[ico_curr].t
 	local tex_p 		= paw.texture_data[ico_prev].t
 	local tex_n			= paw.texture_data[ico_next].t
-	printf("Icon textures:\nCurr: %s\nNext: %s\nPrev: %s",tex_c,tex_n,tex_p)
 	--local tex_c 		= paw.texture_data["paw_pin_redround32"].t
 	--local tex_p 		= paw.texture_data["paw_pin_redmodern32"].t
 	--local tex_n		= paw.texture_data["paw_pin_redpush32"].t
@@ -1075,7 +1108,7 @@ function init_theme_sim(theme)
 	wnd:SetWndPos(vector2():set(offset_x,offset_y))
 	wnd:Show(true)
 
-	printf("Showing theme %s | w %s h %s | offsets x %s y %s | tex: %s",theme.name,theme.w,theme.h,offset_x,offset_y)
+	--printf("Showing theme %s | w %s h %s | offsets x %s y %s | tex: %s",theme.name,theme.w,theme.h,offset_x,offset_y)
 	theme_preview.curr_i		= xml:InitStatic(theme.node..":curr",wnd)
     if tex_c then theme_preview.curr_i:InitTexture(tex_c) end
 
@@ -1105,19 +1138,18 @@ end
 
 
 function move_widget_slide(anchor, handlers, opts, flags)
-	printf("<PAW-MCM> Moving widget slide header")
+	--printf("<PAW-MCM> Moving widget slide header")
 	_ = handlers and handlers.pic and handlers.pic:SetWndPos(vector2():set(16,16))
 end
 
 function mcm_init_widget_preview(anchor, handlers, opts, flags)
-	printf("mcm_init_widget_preview called with id %s",opts and opts.id)
+	--printf("mcm_init_widget_preview called with id %s",opts and opts.id)
 	if opts and (opts.id == "widget_header") then
-		printf("<PAW-MCM> mcm_init_widget_preview handing off to move_widget_slide")
+		--printf("<PAW-MCM> mcm_init_widget_preview handing off to move_widget_slide")
 		move_widget_slide(anchor, handlers, opts, flags)
 		return
 	end
 
-	printf("mcm_init_widget_preview called")
 	local desc = handlers and handlers.desc
 	if desc then
 		desc:SetWndSize(vector2():set(300, desc:GetHeight()))
@@ -1138,42 +1170,70 @@ function mcm_init_widget_preview(anchor, handlers, opts, flags)
 	init_theme_sim(theme)
 end
 
---[[
--- not working yet
-function mcm_move_custom_pos_elements(anchor, handlers, opts, flags)
-	--if not (opt and opt.id == "custompos") then return end
-	printf("mcm_move_custom_pos_elements called for id %s | %s/%s",opts.id,flags.path,flags.opt)
-	local input 	= handlers and handlers.ctrl
-	local cap 		= handlers and handlers.cap
-	local id 		= opts and opts.id
-	if input then
-		--printf("Attempting to resize input window %s",id)
-		--input:SetWndSize(vector2():set(50,input:GetHeight()))
-		--printf("Size is now %sx%s",input:GetWidth(),input:GetHeight())
-		input:SetWndPos(vector2():set(0,-150))
-	end
-	printf("mcm_move_custom_pos_elements called for id %s | %s/%s",opts.id,flags.path,flags.opt)
-	local input 	= handlers and handlers.ctrl
-	local cap 		= handlers and handlers.cap
-	local id 		= opts and opts.id
-	local axes ={
-		["pos_x"] 		= true,
-		["pos_y"] 		= true,
-	}
-	if id and axes[id] and input then
-		printf("Attempting to resize input window %s",id)
-		input:SetWndSize(vector2():set(50,input:GetHeight()))
-		printf("Size is now %sx%s",input:GetWidth(),input:GetHeight())
-		input:SetWndPos(vector2():set(0,-150))
+
+function mcm_init_reticle_headers(anchor, handlers, opts, flags)
+	xml:ParseFile("paw_hud_indicator.xml")
+	local head 			= xml:InitStatic(xmlroot,anchor)
+	local tbg1			= xml:InitStatic(xmlroot,anchor)
+	local tbox1			= xml:InitTextWnd(xmlroot,tbg1)
+
+	if (opts and opts.id) == "reticle_header" then
+		local tbox2		= xml:InitTextWnd(xmlroot,tbg1)
+		local ibox 		= xml:InitStatic(xmlroot,anchor)
+		anchor:SetWndSize(vector2():set(usr(640),175))
+		
+		head:SetWndSize(vector2():set(usr(512),50))
+		head:SetWndPos(vector2():set(15,5))
+		head:InitTexture("ui_paw_mcm_reticle_header")
+		
+		tbg1:SetWndSize(vector2():set(usr(430),110))
+		tbg1:SetWndPos(vector2():set(10,60))
+		tbg1:InitTexture("ui_paw_mcm_messagebox_transbg")
+		
+		tbox1:SetWndSize(vector2():set(usr(420),100))
+		tbox1:SetWndPos(vector2():set(13,10))
+		tbox1:SetText(ts("ui_mcm_pawsys_pawhud_reticle_info1"))
+		--[[
+		line:InitTexture("ui_inGame2_opt_slider_bar_back")
+		line:SetWndSize(vector2():set(usr(410),16))
+		line:SetWndPos(vector2():set(10,120))
+		--]]
+		tbox2:SetWndSize(vector2():set(usr(420),50))
+		tbox2:SetText(ts("ui_mcm_pawsys_pawhud_reticle_info2"))
+		tbox2:SetWndPos(vector2():set(13,70))
+		
+		ibox:SetWndSize(vector2():set(usr(280),280))
+		ibox:SetWndPos(vector2():set(335,-10))
+		ibox:InitTexture("ui_paw_mcm_reticlesquare")
+	elseif (opts and opts.id) == "autotag_header" then
+		tbg1:SetWndSize(vector2():set(usr(300),102))
+		tbg1:SetWndPos(vector2():set(323,32))
+		tbg1:InitTexture("ui_paw_mcm_messagebox_transbg")
+
+		line			= xml:InitStatic(xmlroot,anchor)
+		line:InitTexture("ui_inGame2_opt_slider_bar_back")
+		line:SetWndSize(vector2():set(563,16))
+		line:SetWndPos(vector2():set(5,0))
+		
+		head:InitTexture("ui_paw_mcm_autotag_header")
+		head:SetWndSize(vector2():set(usr(512),50))
+		head:SetWndPos(vector2():set(15,15))
+		
+		tbox1:SetWndSize(vector2():set(usr(285),95))
+		--tbox1:InitTexture("ui_inGame2_message_box")
+		tbox1:SetText(ts("ui_mcm_pawsys_pawhud_autotag_info"))
+		tbox1:SetWndPos(vector2():set(10,12))
+		--tbox1:TextControl():SetTextColor(GetARGB(255,250,218,294))
 	end
 end
---]]
+
 
 function mcm_on_value_select(path,opt,value,v)
-	printf("Callback received: MCM value select for %s/%s: %s",path,opt,value)
+	local opid = ui_mcm.cc(path,opt)
+	--printf("Callback received: MCM value select for %s: %s",opid,value)
 	if path == "pawsys/pawpins" then
 		local icon_change = false
-		icoset._changed[opt] = value
+		icoset._changed[opid] = value
 		local icoset_id = "poi_icon_"..icoset.set_curr
 		if opt == "pin_icon_group" then
 			icon_change = true
@@ -1190,9 +1250,9 @@ function mcm_on_value_select(path,opt,value,v)
 		local tdata = paw and paw.texture_data
 		if tdata then
 			icoset.tex_curr = tdata and tdata[icoset.ico_curr] and tdata[icoset.ico_curr].t
-			if icoset[opt] then
-				dl("Updating texture for list item %s",opt)
-				populate_mcm_set_ind(opt)
+			if icoset[opid] then
+				dl("Updating texture for list item %s",opid)
+				populate_mcm_set_ind(path,opt)
 			end
 		end
 		if icoset.tex_curr then
