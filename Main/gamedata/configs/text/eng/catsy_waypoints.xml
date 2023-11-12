@@ -1436,4 +1436,12 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>Gradient Crosshairs</text>
 	</string>
 
+	<string id="st_paw_texture_load_error1">
+		<text>Personal Adjustable Waypoint could not load texture data from map_spots_relations.xml. This is almost ALWAYS caused by loading another addon after PAW which modifies that file. Examples include (but are not limited to) Kill Tracker or Milspec PDA.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error2">
+		<text>If you are using Mod Organizer 2 (or a modpack such as GAMMA that uses it), adjust your load order so that PAW loads after (below) all any addons which modify map_spots_relations.xml. If you are not using MO2, you should do so.</text>
+	</string>
+
 </string_table>

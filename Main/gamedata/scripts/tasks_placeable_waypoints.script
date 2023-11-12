@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.16.2
-    Updated: 20231101
+    Version: 1.16.3
+    Updated: 20231112
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -40,8 +40,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.16.2"
-release_date            = 20231101
+script_version          = "1.16.3"
+release_date            = 20231112
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -76,6 +76,7 @@ paw_enabled             = true -- setting false will killswitch the entire addon
 local icoset_changed    = nil
 started                 = false
 waypoint_active         = false
+local load_failed       = false
 local welcome_msg_shown = false
 local ts                = game.translate_string
 local tm                = task_manager.get_task_manager()
@@ -777,7 +778,9 @@ function blacklisted_object(id)
     if not se_obj then return true end
 
     local cls = se_obj:clsid()
-    if cls == clsid.poltergeist_s then return true end
+    if  (cls == clsid.poltergeist_s) or
+        (cls == clsid.psy_dog_phantom_s) then
+    return true end
 
 end
 
@@ -1891,6 +1894,7 @@ end
 function mcm_reload_general_settings()
     if not ui_mcm then return end
     paw_enabled             = load_mcm("pawgen/enabled",paw_enabled)
+
     wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
     if wp_hud_icon_enabled then
         show_marker_dist["wp"]      = tonumber(load_mcm("pawgen/show_dist_wp",show_marker_dist["wp"]))
@@ -2071,6 +2075,7 @@ end
 
 
 function on_option_change()
+
     -- Sync all MCM values and propagate changes
     language = ui_options.curr_localization()
     if ui_mcm and not mcm_killswitch then
@@ -2086,6 +2091,10 @@ function on_option_change()
         end
 
         mcm_reload_general_settings()
+        if not paw_enabled then
+            printf("<PAW> Personal Adjustable Waypoint has been disabled, aborting all further action.")
+        return end
+
         mcm_reload_keybind_table()
         mcm_reload_keybind_settings()
         mcm_reload_pin_settings()
@@ -3426,6 +3435,10 @@ function load_file_data()
             end
         end
 
+        if spot == "paw_pin_redpush32" then
+            if not tex then return false end
+        end
+
         texture_data[spot] = {
             id      = k,
             t       = tex,
@@ -3532,6 +3545,7 @@ function load_file_data()
     local load_pin_curr = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..load_set_curr, {val=0})
 
     printf(logprefix.."Personal Adjustable Waypoint started")
+    return true
 end
 
 
@@ -3652,7 +3666,31 @@ function on_mouse_wheel(scroll_dir, flags)
 end
 
 
+function unregister_all_callbacks()
+    UnregisterScriptCallback("actor_on_update",actor_on_update)
+    UnregisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
+    UnregisterScriptCallback("on_option_change",on_option_change)
+    UnregisterScriptCallback("actor_on_first_update",actor_on_first_update)
+    UnregisterScriptCallback("load_state",load_state)
+    UnregisterScriptCallback("save_state",save_state)
+    UnregisterScriptCallback("map_spot_menu_add_property",map_spot_menu_add_property)
+    UnregisterScriptCallback("map_spot_menu_property_clicked",map_spot_menu_property_clicked)
+    UnregisterScriptCallback("on_key_press",on_key_press)
+    UnregisterScriptCallback("on_key_release",on_key_release)
+    UnregisterScriptCallback("GUI_on_show",update_hud_on_show_hide)
+    UnregisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)
+    UnregisterScriptCallback("monster_on_death_callback",npc_on_death_callback)
+    UnregisterScriptCallback("npc_on_death_callback",npc_on_death_callback)
+    if mwheel_avail then
+        UnregisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
+    end
+    if right_click_avail then
+        UnregisterScriptCallback("on_map_right_click",on_map_right_click)
+    end
+end
+
 function on_game_start()
+    if load_failed then return end
     RegisterScriptCallback("actor_on_update",actor_on_update)
     RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
     RegisterScriptCallback("on_option_change",on_option_change)
@@ -3713,4 +3751,27 @@ task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
     end
 end
 
-load_file_data()
+if not load_file_data() then
+    paw_enabled         = false
+    started             = false
+    disable_mcm_updates = true
+    load_failed         = true
+    mcm_killswitch      = true
+    _ = unregister_all_callbacks()
+    RegisterScriptCallback("actor_on_first_update", 
+        function()
+            CreateTimeEvent("pawerror",0,5,
+                (function()
+                    db.actor:give_game_news("PAW System","Personal Adjustable Waypoint could not load. Check the game log for errors, and ensure that nothing loads after PAW which modifies map_spots_relations.xml.","ui_inGame2_Mesta_evakuatsii",0,10000)
+                    xr_sound.set_sound_play(AC_ID,"pda_tips")
+                    return true
+                end)
+            )
+        end)
+    local errstr = game.translate_string("st_paw_texture_load_error1").."\n\n"..game.translate_string("st_paw_texture_load_error2")
+    assert(tex ~= nil, "\n\n"..
+        "~ ------------------------------------------------------------------------\n"..
+        errstr.."\n"..
+        "~ ------------------------------------------------------------------------\n"
+    )
+end
