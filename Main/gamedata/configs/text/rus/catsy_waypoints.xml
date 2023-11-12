@@ -1437,8 +1437,18 @@
 
 <!-- Added in 1.16.3 -->
 
-	<string id="st_paw_texture_load_error">
-		<text>Personal Adjustable Waypoint не смог загрузиться и был отключен во избежание сбоя. Проверьте журнал игры на наличие ошибок и убедитесь, что после PAW не загружается ничего, что изменяет файл map_spots_relations.xml.</text>
+	<string id="st_paw_texture_load_error_tip">
+		<text>Аддон $clr_yelPersonal Adjustable Waypoint $clr_redне смог загрузить свои текстурные данные$clr_wht, и отключил свои функции во избежание сбоев.\n \n
+		Проверьте журнал игры на наличие ошибок и убедитесь, что после PAW не загружается ничего, что изменяет файл $clr_yelmap_spots_relations.xml$clr_red.\n \n
+		Если Вы никогда не собираетесь использовать возможности PAW и Вам безразлично, что этот файл заменило что-то другое, Вы можете отключить эту ошибку в меню $clr_yelPAW$clr_wht в MCM.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error_mcmhead1">
+		<text>ВНИМАНИЕ: отсутствуют текстурные данные маркеров карт.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error_mcmhead2">
+		<text>Во избежание сбоев, как PAW, так и многие части меню MCM были отключены до устранения этой проблемы.</text>
 	</string>
 
 	<string id="st_paw_texture_load_error1">
@@ -1449,5 +1459,9 @@
 		<text>Если вы используете GAMMA или Mod Organizer 2, измените порядок загрузки таким образом, чтобы PAW загружался после (ниже) всех аддонов, изменяющих map_spots_relations.xml. Если вы не используете MO2, то вам следует использовать его.
 		</text>
 	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_disable_load_warning">
+		<text>Отключить внутриигровое предупреждение об этой ошибке (НЕ рекомендуется)</text>
+	</string>	
 
 </string_table>

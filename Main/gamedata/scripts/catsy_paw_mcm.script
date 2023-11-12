@@ -31,6 +31,11 @@ local icons                     = icon_ltx
 local pawmenu_path              = "ui_mcm_pawsys_pawmenu_"
 local actions_ini               = ini_file_ex("scripts\\paw\\menu_actions.ltx")
 local actions_ltx               = actions_ini:get_sections(true)
+local load_failed 				= false
+local load_error_text1			= {id = "load_error1", type = "desc", text = "st_paw_texture_load_error1"}
+local load_error_text2			= {id = "load_error2", type = "desc", text = "st_paw_texture_load_error2"}
+local load_error_text_block 	= {load_error_text1,load_error_text2,divider}
+local divider 					= {id = "divider", type = "line"}
 local action_codes              = {}
 local action                    = {}
 local dynamic_faves 			= {}
@@ -241,6 +246,14 @@ function populate_autotag_menus()
 		--{id = "autotag_info", type = "desc", text = "ui_mcm_pawsys_pawhud_autotag_info"},
 	}
 
+	if load_failed then
+		table.insert(gr,divider)
+		table.insert(gr,load_error_text1)
+		table.insert(gr,load_error_text2)
+		table.insert(gr,divider)
+		return gr
+	end
+
 	for tag,defs in spairs(paw.smart_pins) do
 		dl("populate_autotag_menus adding entry for %s (default %s)",tag,defs.pin)
 		enable_opt = {
@@ -264,7 +277,7 @@ function populate_autotag_menus()
 		table.insert(gr,menu_opt)
 		table.insert(gr,enable_opt)
 	end
-	table.insert(gr,{id = "divider", type = "line"})
+	table.insert(gr,divider)
 
 	vl("results for populate_autotag_menus:")
 	if verbose then
@@ -296,6 +309,14 @@ function populate_set_menus()
 		{id = "divider", 		type= "line"},
 		--{id = "fave_recent", type = "list", val = 2, def = 5, content = recfaves},
 	}
+
+	if load_failed then
+		table.insert(gr,divider)
+		table.insert(gr,load_error_text1)
+		table.insert(gr,load_error_text2)
+		table.insert(gr,divider)
+		return gr
+	end
 
 	local newentry = {
 		id = poi.."faves",
@@ -370,68 +391,71 @@ end
 -- ======================================================================
 
 function on_mcm_load()
-	if not (paw and paw.load_me()) then
-		op = { id = "pawsys", gr={
-				{ id = "pawgen", sh=true, gr={
-						{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
-						{id = "load_error1", type = "desc", text = "st_paw_texture_load_error1"},
-						{id = "load_error2", type = "desc", text = "st_paw_texture_load_error2"},
-		}}}}
-		return op
-	end
+	load_failed = not (paw and paw.load_me())
 
 	aspect_ratio = get_current_aspect_ratio()
 	load_icoset_state()
 
+	local pawgen = {
+		{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
+		{id = "wp_hud_icon_enabled", type = "check", val = 1, def = true},
+		{id = "show_dist_wp", type = "list", val = 2, def = 4, 
+			content = {
+			   {4,"pawsys_cmenu_all"},
+			   {1,"pawsys_cmenu_norm"},
+			   {2,"pawsys_cmenu_cart"},
+			   {0,"pawsys_cmenu_off"},
+			}
+		},
+		{id = "show_dist_pins", type = "list", val = 2, def = 4, 
+			content = {
+			   {4,"pawsys_cmenu_all"},
+			   {1,"pawsys_cmenu_norm"},
+			   {2,"pawsys_cmenu_cart"},
+			   {0,"pawsys_cmenu_off"},
+			}
+		},
+		{id = "show_hint_pins", type = "list", val = 2, def = 2, 
+			content = {
+			   {4,"pawsys_cmenu_all"},
+			   {1,"pawsys_cmenu_norm"},
+			   {2,"pawsys_cmenu_cart"},
+			   {0,"pawsys_cmenu_off"},
+			}
+		},
+		{id = "wp_clear_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+		{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+		{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
+		{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
+		{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
+		{id = "pingsound", type= "check", val = 1, def = true},
+		{id = "s_device_pda_1", type= "check", val = 1, def = true},
+		{id = "s_device_pda_2", type= "check", val = 1, def = true},
+		{id = "s_device_pda_3", type= "check", val = 1, def = true},
+		{id = "s_device_pda_milspec", type= "check", val = 1, def = true},
+		{id = "disable_mcmups", type= "check", val = 1, def = false},
+		{id = "welcome_msg_shown", type= "check", val = 1, def = false},
+		{id = "wipe_all", type= "check", val = 1, def = false},
+		{id = "debuglogs", type= "check", val = 1, def = false},
+		{id = "pawlink", type= "desc", text = "ui_mcm_paw_moddb_link"},
+		{id = "milpda", type= "desc", text = "ui_mcm_paw_milpda_link"},
+		{id = "modbin", type= "desc", text = "ui_mcm_paw_modded_binaries"},
+	}
+	if load_failed then
+		table.insert(pawgen,2,{id = "load_header1", type = "desc", text = "st_paw_texture_load_error_mcmhead1", clr = {255,255,0,0}, ui_hook_functor = {catsy_paw_mcm.mcm_init_load_error_block}})
+		table.insert(pawgen,3,{id = "load_header2", type = "desc", text = "st_paw_texture_load_error_mcmhead2", clr = {255,255,0,0}})
+		table.insert(pawgen,4,load_error_text1)
+		table.insert(pawgen,5,load_error_text2)
+		table.insert(pawgen,6,{id = "fix_load_order", type= "image", link = "ui_paw_mcm_fix_mo2_load_order", size= {575,50}, ui_hook_functor = {catsy_paw_mcm.mcm_init_load_error_block}})
+		table.insert(pawgen,7,{id = "disable_load_warning", type = "check", val = 1, def = false})
+		table.insert(pawgen,8,divider)
+	else
+		table.insert(pawgen,2,{id = "enabled", type = "check", val = 1, def = true})
+	end
+
 	op = { id = "pawsys", gr={
 			-- GENERAL SETTINGS
-			{ id = "pawgen", sh=true, gr={
-					{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
-					{id = "enabled", type = "check", val = 1, def = true},
-					{id = "wp_hud_icon_enabled", type = "check", val = 1, def = true},
-					{id = "show_dist_wp", type = "list", val = 2, def = 4, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-					{id = "show_dist_pins", type = "list", val = 2, def = 4, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-					{id = "show_hint_pins", type = "list", val = 2, def = 2, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-					{id = "wp_clear_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
-					{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
-					{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
-					{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
-					{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
-					{id = "pingsound", type= "check", val = 1, def = true},
-					{id = "s_device_pda_1", type= "check", val = 1, def = true},
-					{id = "s_device_pda_2", type= "check", val = 1, def = true},
-					{id = "s_device_pda_3", type= "check", val = 1, def = true},
-					{id = "s_device_pda_milspec", type= "check", val = 1, def = true},
-					{id = "disable_mcmups", type= "check", val = 1, def = false},
-					{id = "welcome_msg_shown", type= "check", val = 1, def = false},
-					{id = "wipe_all", type= "check", val = 1, def = false},
-					{id = "debuglogs", type= "check", val = 1, def = false},
-					{id = "pawlink", type= "desc", text = "ui_mcm_paw_moddb_link"},
-					{id = "milpda", type= "desc", text = "ui_mcm_paw_milpda_link"},
-					{id = "modbin", type= "desc", text = "ui_mcm_paw_modded_binaries"},
-				},
-			},
+			{ id = "pawgen", sh=true, gr=pawgen},
 
 			-- PIN SETTINGS (procedurally generated)
 			{ id = "pawpins", sh=true, gr=populate_set_menus()},
@@ -494,7 +518,7 @@ function on_mcm_load()
 						on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
 					},
 
-					{id = "divider", type = "line"},
+					divider,
 
 					{id = "themedesc", type = "desc", text = "ui_mcm_themes_list"},
 
@@ -508,7 +532,7 @@ function on_mcm_load()
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_minimal_v"},
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_minicom"},
 					{id = "themelist", type = "desc", text = "ui_mcm_themes_compact_noui"},
-					{id = "divider", type = "line"},
+					divider,
 	            },
 			},
 			
@@ -530,7 +554,8 @@ function on_mcm_load()
 					{id = "cartmode_unfade", type = "check", val = 1, def = true},
 					{id = "cart_shows_smarts", type = "check", val = 1, def = true},
 
-					{id = "divider", type = "line"},
+					divider,
+
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_crosshair_target_head"},
 					{id = "featuredesc", type = "desc", text = "ui_mcm_paw_crosshair_target_desc"},
 
@@ -552,7 +577,8 @@ function on_mcm_load()
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
 
-					{id = "divider", type = "line"},
+					divider,
+
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_generalbinds_head"},
 
 	                {id = "bind_wptoggle", type = "key_bind", val = 2, def = DIK_keys.DIK_SEMICOLON },
@@ -572,7 +598,7 @@ function on_mcm_load()
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
 
-					{id = "divider", type = "line"},
+					divider,
 
 	                {id = "bind_set_next", type = "key_bind", val = 2, def = 52 },
 	                {id = "modk_set_next", type = ui_mcm.kb_mod_radio, val = 2, def = 3, hint = "mcm_kb_modifier", 
@@ -607,7 +633,8 @@ function on_mcm_load()
 		                    {2,"mcm_kb_mod_ctrl"}, 
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
-					{id = "divider", type = "line"},
+					
+					divider,
 
 					{id = "featurehead", type = "desc", clr = {255,255,255,0}, text = "ui_mcm_paw_mousewheel_head"},
 
@@ -630,7 +657,7 @@ function on_mcm_load()
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
 
-					{id = "divider", type = "line"},
+					divider,
 		        },
 			},
 -- CONTEXT MENU SETTINGS
@@ -832,7 +859,7 @@ function load_icoset_state()
 	icoset.ico_curr = icons[icoset.pin_curr]
 	icoset.tex_curr = "ui_icons_paw_pin_redpush32"
 	local tdata = paw and paw.texture_data
-	if tdata then
+	if tdata and not load_failed then
 		icoset.tex_curr = tdata and tdata[icoset.ico_curr] and tdata[icoset.ico_curr].t
 	end
 end
@@ -1079,6 +1106,7 @@ end
 
 
 function init_theme_sim(theme)
+	if load_failed then return end
 	dl("init_theme_sim: attempting to initialize %s theme",theme and theme.name)
 	xml:ParseFile("paw_hud_indicator.xml")
 	if theme_preview then
@@ -1238,7 +1266,29 @@ function mcm_init_reticle_headers(anchor, handlers, opts, flags)
 end
 
 
+function mcm_init_load_error_block(anchor, handlers, opts, flags)
+	local id = opts and opts.id
+	printf("mcm_init_load_error_block: id %s",id)
+	if id == "fix_load_order" then
+		xml:ParseFile("paw_hud_indicator.xml")
+		local pic = handlers and handlers.pic
+		if not pic then return end
+		printf("resizing pic")
+		pic:InitTexture("ui_paw_emptytex")
+		local wnd = xml:InitStatic(xmlroot,anchor)
+		wnd:InitTexture("ui_paw_mcm_fix_mo2_load_order")
+		wnd:SetWndSize(vector2():set(575*unsquish_ratio,50))
+	elseif id == "load_header1" then
+		local desc = handlers and handlers.desc
+		if not desc then return end
+		printf("adjusting font of text %s",desc:GetText())
+		desc:SetFont(GetFontGraffiti22Russian())
+	end
+end
+
+
 function mcm_on_value_select(path,opt,value,v)
+	if load_failed then return end
 	local opid = ui_mcm.cc(path,opt)
 	--printf("Callback received: MCM value select for %s: %s",opid,value)
 	if path == "pawsys/pawpins" then

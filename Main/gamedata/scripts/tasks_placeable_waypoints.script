@@ -45,7 +45,7 @@ release_date            = 20231112
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
-debuglogs               = true   -- Controls debug logging if you don't have MCM
+debuglogs               = false   -- Controls debug logging if you don't have MCM
 verbose                 = true
 -- Verbose being on won't do anything if debuglogs isn't also enabled,
 -- but it will ensure that if anyone has to turn on debug logging, 
@@ -74,9 +74,10 @@ disable_mcm_updates     = false
 -- when changing icons or sets in-game.
 paw_enabled             = true -- setting false will killswitch the entire addon
 local icoset_changed    = nil
-started                 = false
-waypoint_active         = false
-local load_failed       = false
+started                 = false -- runtime flag
+waypoint_active         = false -- runtime flag
+disable_load_warning    = false
+local load_failed       = false -- runtime flag
 local welcome_msg_shown = false
 local ts                = game.translate_string
 local tm                = task_manager.get_task_manager()
@@ -99,10 +100,10 @@ right_click_override    = false
 -- Similarly with right_click_override, but for the on_map_right_click callback
 mwheel_enabled          = false -- managed at runtime
 mwheel_notify           = true  -- news tip on state change
-mwheel_poll_interval    = 50
+mwheel_poll_interval    = 50    -- interval between checks for mouse wheel input
 mwheel_next_poll        = time_global()
-local mwheel_exe_ver    = 20230701
-local rclick_exe_ver    = 20230922
+local mwheel_exe_ver    = 20230701 -- mouse wheel support added to demonized binaries in this version
+local rclick_exe_ver    = 20230922 -- right-click map support added to demonized binaries in this version
 mwheel_avail            = mousewheel_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= mwheel_exe_ver))
 right_click_avail       = right_click_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
 last_clicked_id         = nil
@@ -1894,7 +1895,7 @@ end
 function mcm_reload_general_settings()
     if not ui_mcm then return end
     paw_enabled             = load_mcm("pawgen/enabled",paw_enabled)
-
+    disable_load_warning    = load_mcm("pawgen/disable_load_warning",disable_load_warning)
     wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
     if wp_hud_icon_enabled then
         show_marker_dist["wp"]      = tonumber(load_mcm("pawgen/show_dist_wp",show_marker_dist["wp"]))
@@ -3321,32 +3322,7 @@ function on_key_release(key)
             end
         end
     end
---[[
-    for k,v in pairs(keybinds) do
-        if v and v.enabled then
-            local mod = mod_key_codes[v.mod]
-            if v.hold then
-                vl("on_key_release(%s): keybind %s is a hold",DIK_name(key),k)
-                if mod and (not v.bind) and (key == mod) then
-                    vl("on_key_release(%s): keybind %s has mod key but no primary bind, and matched mod %s",key,k,DIK_name(mod))
-                    do_action = true
-                    args = false
-                elseif (key == v.bind) and mod_key_pressed(v.mod) then
-                    vl("on_key_release(%s): keybind %s matched bind %s and mod %s",key,k,DIK_name(v.bind),DIK_name(mod))
-                    do_action = true
-                    args = false
-                end
-            elseif (key == v.bind) and mod_key_pressed(v.mod) then
-                vl("on_key_release(%s): keybind %s matched bind %s and mod %s",key,k,DIK_name(v.bind),DIK_name(mod))
-                do_action = true
-            end
-        end
-        if do_action then
-            v.action(args)
-            return
-        end
-    end
-    --]]
+
 end
 
 
@@ -3751,28 +3727,38 @@ task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
     end
 end
 
+-- ======================================================================
+--  LOAD FILE DATA - KILLSWITCH AND NOTIFY ON FAILURE
+-- ======================================================================
+
 if not load_file_data() then
-    paw_enabled         = false
-    started             = false
     disable_mcm_updates = true
     load_failed         = true
-    mcm_killswitch      = true
+    paw_enabled         = false
+    started             = false
     _ = unregister_all_callbacks()
-    local tiperr = game.translate_string("st_paw_texture_load_error")
-    RegisterScriptCallback("actor_on_first_update", 
-        function()
-            CreateTimeEvent("pawerror",0,5,
-                (function()
-                    db.actor:give_game_news("PAW System",tiperr,"ui_inGame2_Mesta_evakuatsii",0,10000)
-                    xr_sound.set_sound_play(AC_ID,"pda_tips")
-                    return true
-                end)
-            )
-        end)
+
+    if not disable_load_warning then
+        local tiperr = psk(game.translate_string("st_paw_texture_load_error_tip"),text_colors)
+        RegisterScriptCallback("actor_on_first_update", 
+            function()
+                CreateTimeEvent("pawerror",0,5,(
+                    function()
+                        db.actor:give_game_news("PAW System",tiperr,"ui_inGame2_Mesta_evakuatsii",0,15000)
+                        xr_sound.set_sound_play(AC_ID,"pda_tips")
+                        return true
+                    end
+                ))
+            end
+        )
+    end
+
     local errstr = game.translate_string("st_paw_texture_load_error1").."\n\n"..game.translate_string("st_paw_texture_load_error2")
-    assert(tex ~= nil, "\n\n"..
+    assert(not load_failed, "\n\n"..
         "~ ------------------------------------------------------------------------\n"..
         errstr.."\n"..
         "~ ------------------------------------------------------------------------\n"
     )
 end
+
+-- ======================================================================
