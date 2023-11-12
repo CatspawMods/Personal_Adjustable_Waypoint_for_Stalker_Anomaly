@@ -1434,12 +1434,20 @@
 	<string id="ui_mcm_lst_paw_crosshair_gradient">
 		<text>Градиентное перекрестие</text>
 	</string>
-	
+
+<!-- Added in 1.16.3 -->
+
 	<string id="st_paw_texture_load_error">
-		<text>Personal Adjustable Waypoint не смог загрузить текстурные данные из файла map_spots_relations.xml. Практически ВСЕГДА причиной этого является загрузка после PAW другого аддона, который изменяет этот файл. Примерами могут служить (но не ограничиваются ими) Kill Tracker или Milspec PDA.\n\n
-		Если вы используете GAMMA или Mod Organizer 2, измените порядок загрузки таким образом, чтобы PAW загружался после (ниже) всех аддонов, изменяющих map_spots_relations.xml. Если вы не используете MO2, то вам следует использовать его.
+		<text>Personal Adjustable Waypoint не смог загрузиться и был отключен во избежание сбоя. Проверьте журнал игры на наличие ошибок и убедитесь, что после PAW не загружается ничего, что изменяет файл map_spots_relations.xml.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error1">
+		<text>Personal Adjustable Waypoint не смог загрузить текстурные данные из файла map_spots_relations.xml. Практически ВСЕГДА причиной этого является загрузка после PAW другого аддона, который изменяет этот файл. Примерами могут служить (но не ограничиваются ими) Kill Tracker или Milspec PDA.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error2">
+		<text>Если вы используете GAMMA или Mod Organizer 2, измените порядок загрузки таким образом, чтобы PAW загружался после (ниже) всех аддонов, изменяющих map_spots_relations.xml. Если вы не используете MO2, то вам следует использовать его.
 		</text>
 	</string>
 
-	
 </string_table>

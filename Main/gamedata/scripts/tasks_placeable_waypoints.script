@@ -45,7 +45,7 @@ release_date            = 20231112
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
-debuglogs               = false   -- Controls debug logging if you don't have MCM
+debuglogs               = true   -- Controls debug logging if you don't have MCM
 verbose                 = true
 -- Verbose being on won't do anything if debuglogs isn't also enabled,
 -- but it will ensure that if anyone has to turn on debug logging, 
@@ -3758,11 +3758,12 @@ if not load_file_data() then
     load_failed         = true
     mcm_killswitch      = true
     _ = unregister_all_callbacks()
+    local tiperr = game.translate_string("st_paw_texture_load_error")
     RegisterScriptCallback("actor_on_first_update", 
         function()
             CreateTimeEvent("pawerror",0,5,
                 (function()
-                    db.actor:give_game_news("PAW System","Personal Adjustable Waypoint could not load. Check the game log for errors, and ensure that nothing loads after PAW which modifies map_spots_relations.xml.","ui_inGame2_Mesta_evakuatsii",0,10000)
+                    db.actor:give_game_news("PAW System",tiperr,"ui_inGame2_Mesta_evakuatsii",0,10000)
                     xr_sound.set_sound_play(AC_ID,"pda_tips")
                     return true
                 end)

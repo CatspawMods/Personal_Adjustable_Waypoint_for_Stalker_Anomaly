@@ -18,7 +18,6 @@ local logprefix                 = "<PAW_MCM> "
 local paw 						= tasks_placeable_waypoints
 printf(logprefix.."Forcing tasks_placeable_waypoints.script to load first")
 paw.load_me 					= function() return paw and paw.started end
-assert(paw and paw.load_me(),"\nUnable to load tasks_placeable_waypoints.script, aborting its MCM script as well.\n")
 -- Force tasks_placeable_waypoints to load first using a dummy monkeypatch
 local ts                        = game.translate_string
 local psk               		= utils_data.parse_string_keys
@@ -371,6 +370,16 @@ end
 -- ======================================================================
 
 function on_mcm_load()
+	if not (paw and paw.load_me()) then
+		op = { id = "pawsys", gr={
+				{ id = "pawgen", sh=true, gr={
+						{id = "header", type= "slide", link= "ui_paw_menuslide_main", size= {512,50}, spacing= 20},
+						{id = "load_error1", type = "desc", text = "st_paw_texture_load_error1"},
+						{id = "load_error2", type = "desc", text = "st_paw_texture_load_error2"},
+		}}}}
+		return op
+	end
+
 	aspect_ratio = get_current_aspect_ratio()
 	load_icoset_state()
 
