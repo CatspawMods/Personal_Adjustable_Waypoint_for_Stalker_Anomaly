@@ -1436,4 +1436,60 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>Gradient Crosshairs</text>
 	</string>
 
+<!-- Added in 1.16.3 -->
+
+	<string id="st_paw_texture_load_error_tip">
+		<text>The $clr_yelPersonal Adjustable Waypoint$clr_wht addon $clr_redfailed to load its texture data$clr_wht, and has disabled itself in order to protect your game from crashes. \n \n
+		Check the game log for errors, and ensure that nothing loads after PAW which modifies the file $clr_yelmap_spots_relations.xml$clr_wht. \n \n
+		This only requires a change in load order, and is usually easy to resolve. However, if you never intend to use PAW's features, and don't care that something else is breaking it, you can disable this error message under the $clr_yelAdjustable Waypoint$clr_wht menu in MCM.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error_mcmhead1">
+		<text>WARNING: mapspot texture data missing.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error_mcmhead2">
+		<text>To avoid crashes, both PAW and many parts of its MCM menus have been disabled until this issue is resolved.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error1">
+		<text>Personal Adjustable Waypoint could not load texture data from map_spots_relations.xml. This is almost ALWAYS caused by loading another addon after PAW which modifies that file. Examples include (but are not limited to) Kill Tracker or Milspec PDA.</text>
+	</string>
+
+	<string id="st_paw_texture_load_error2">
+		<text>If you are using Mod Organizer 2 (or a modpack such as GAMMA that uses it), adjust your load order so that PAW loads after (below) any and all addons which modify map_spots_relations.xml. If you are not using MO2, you should do so.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_disable_load_warning">
+		<text>Disable the in-game warning for this error (NOT recommended)</text>
+	</string>
+
+<!-- Added in 1.17 -->
+
+	<string id="ui_mcm_pawsys_pawret_autotag_persistence">
+		<text>Autotag pins are persistent</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_autotag_persistence_desc">
+		<text>Unless this option is enabled, all pins added by autotagging will be temporary--that is, they will automatically disappear on next map change or savegame load, or when timed out after the below number of seconds.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_autotag_lifetime">
+		<text>Autotag expiration time (in seconds)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawret_autotag_lifetime_desc">
+		<text>If Autotag persistence is not enabled, tags will be automatically cleared after this many seconds. Setting this to zero will disable the timeout, but temporary tags will still be cleared on the next map change or savegame load.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_headertxt">
+		<text>
+		$clr_yelPAW$clr_wht isn't just a waypoint marker--it's a suite of mapping and navigation tools that give you more control over your map and HUD, letting you mark your own path through the Zone. $clr_yelAll of these features are optional and customizable to your liking.$clr_wht \n \n
+		•$clr_lbl Set your own quest marker anywhere, anytime, and customize its text$clr_wht \n 
+		•$clr_lbl Place, rename, and remove map markers ("pins") anywhere on the map with your choice of icon$clr_wht \n 
+		•$clr_lbl Automatically tag known targets with your choice of icon, and display them on the HUD$clr_wht \n \n
+		$clr_yelDon't let NPCs tell you where to go--put your PAW down and make the map yours.$clr_wht
+		</text>
+	</string>
+
 </string_table>

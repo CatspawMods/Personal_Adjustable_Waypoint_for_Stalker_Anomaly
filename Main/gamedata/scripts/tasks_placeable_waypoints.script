@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 1.16.2
-    Updated: 20231101
+    Version: 2.0-b1
+    Updated: 20231121
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -40,8 +40,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "1.16.2"
-release_date            = 20231101
+script_version          = "2.0-b1"
+release_date            = 20231121
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -51,6 +51,8 @@ verbose                 = true
 -- but it will ensure that if anyone has to turn on debug logging, 
 -- their logs will contain the maximum amount of info automatically.
 -- It's noisy and you can turn it off here if you have to.
+-- ======================================================================
+modxml_map_spots_paw.load_me = function() end
 -- ======================================================================
 function dl(logtext,...)
     -- Debug logging - to disable, set debuglogs to false
@@ -74,9 +76,14 @@ disable_mcm_updates     = false
 -- when changing icons or sets in-game.
 paw_enabled             = true -- setting false will killswitch the entire addon
 local icoset_changed    = nil
-started                 = false
-waypoint_active         = false
+started                 = false -- runtime flag
+waypoint_active         = false -- runtime flag
+waypoint_canceling      = false -- runtime flag
+disable_load_warning    = false
+local load_failed       = false -- runtime flag
 local welcome_msg_shown = false
+local get_game_time     = game.get_game_time
+local get_start_time    = level.get_start_time
 local ts                = game.translate_string
 local tm                = task_manager.get_task_manager()
 local psk               = utils_data.parse_string_keys
@@ -98,10 +105,10 @@ right_click_override    = false
 -- Similarly with right_click_override, but for the on_map_right_click callback
 mwheel_enabled          = false -- managed at runtime
 mwheel_notify           = true  -- news tip on state change
-mwheel_poll_interval    = 50
+mwheel_poll_interval    = 50    -- interval between checks for mouse wheel input
 mwheel_next_poll        = time_global()
-local mwheel_exe_ver    = 20230701
-local rclick_exe_ver    = 20230922
+local mwheel_exe_ver    = 20230701 -- mouse wheel support added to demonized binaries in this version
+local rclick_exe_ver    = 20230922 -- right-click map support added to demonized binaries in this version
 mwheel_avail            = mousewheel_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= mwheel_exe_ver))
 right_click_avail       = right_click_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
 last_clicked_id         = nil
@@ -113,6 +120,8 @@ local mcm_update_throttle   = 3019 -- minimum time between MCM updates of icon/s
 local next_mcm_update       = time_global()
 local wp_proxcheck_interval = 837 -- Time between checks for waypoint proximity
 local next_wp_proxcheck     = time_global()
+local garbcollect_interval  = 4984 -- Time between pin/sz garbage collection checks
+local next_gc_check         = time_global()
 local wp_clear_dist         = 5
 local widget_hide_delay     = 5000
 local next_pin              = time_global()
@@ -128,7 +137,7 @@ local current_ico_max       = 1
 placed_waypoint             = nil
 last_waypoint               = nil
 -- ======================================================================
-local toggle_bind           = DIK_keys.DIK_T
+local toggle_bind           = DIK_keys.DIK_SEMICOLON
 local toggle_mod            = 2
 local quickpin_bind         = DIK_keys.DIK_APOSTROPHE
 local quickpin_mod          = 0
@@ -163,6 +172,10 @@ manual_smart_pins           = false
 mark_on_positive_id         = true
 reticle_mustzoom            = true
 reticle_mode                = 2
+autotag_milpda_feature      = true
+autotag_persistence         = false -- if enabled, autotags are cleared on map change or the below timeout value
+autotag_lifetime            = 120 * 6 -- time in ms before autotags are cleared (def 2 minutes)
+autotags_time_out           = autotag_lifetime > 0
 ret_fade_attack_time        = 400
 ret_fade_decay_time         = 600
 
@@ -214,6 +227,8 @@ map_pin_icon                = default_mapspot
 force_icon_override         = nil
 -- If force_icon_override is set to anything, PAW will try to use it 
 -- for pins instead of what it normally would.
+-- This is purely a debugging tool. There are better ways to use your own
+-- custom icons.
 -- ======================================================================
 icons_ini           = ini_file_ex("scripts\\paw\\icons.ltx")
 icon_sets_ini       = ini_file_ex("scripts\\paw\\icon_sets.ltx")
@@ -579,6 +594,9 @@ function dotip(tiptext,dur,src,beep,icon,snd)
     end
 end
 
+function get_time_elapsed()
+    return math.floor(get_game_time():diffSec(get_start_time()))
+end
 
 function round2(n)
     return (math.floor(n * 100) / 100)
@@ -777,7 +795,9 @@ function blacklisted_object(id)
     if not se_obj then return true end
 
     local cls = se_obj:clsid()
-    if cls == clsid.poltergeist_s then return true end
+    if  (cls == clsid.poltergeist_s) or
+        (cls == clsid.psy_dog_phantom_s) then
+    return true end
 
 end
 
@@ -825,6 +845,7 @@ function remove_mapspot(id,icon)
     vl("Trying to remove mapspot for id %s with icon %s",id,icon)
     level.map_remove_object_spot(id,icon)
     level.map_remove_object_spot(id,icon)
+    return true
 end
 
 --[[
@@ -906,28 +927,31 @@ end
 
 
 function waypoint_task_cleanup()
-    waypoint_active = false
-    placed_waypoint = nil
 end
 
 
 function cancel_task()
+    local id = placed_waypoint and placed_waypoint.id
     tm.task_info[task_id] = nil
-    remove_mapspot(placed_waypoint.id, waypoint_mapspot)
+    remove_mapspot(id, waypoint_mapspot)
+    _ = set_pingspot_persistence(id,false)
+    waypoint_active     = false
+    placed_waypoint     = nil
+    _ = dl("Waypoint task cancellation complete for %s",id)
+    waypoint_canceling  = false
     return true
 end
 
 
-function end_waypoint_task(id)
-    cancel_task()
-    set_pingspot_persistence(id,false)
-    return true
+function end_waypoint_task()
+    waypoint_canceling = true
+    return cancel_task()
 end
 
 
 function set_current_waypoint(se_obj)
     if not se_obj then return end
-    local id        = se_obj.id
+    local id            = se_obj.id
     set_pingspot_persistence(id)
     if waypoint_active then
         last_waypoint   = placed_waypoint
@@ -937,7 +961,8 @@ function set_current_waypoint(se_obj)
         id = id,
         name = safename(id),
     }
-    waypoint_active = true
+    waypoint_active     = true
+    waypoint_canceling  = false
 end
 
 function valid_travel_target(id)
@@ -1033,8 +1058,8 @@ function despawn_pingspot(id)
 end
 
 
-function script_zone_cleanup(ignore_cleanup_time,wipe_all)
-    local now       = time_global()
+function script_zone_cleanup()
+    local now       = get_time_elapsed()
     for k,v in pairs(script_zones) do
         if v.cleanup and (v.cleanup < now) then
             deregister_script_zone(k)
@@ -1044,16 +1069,30 @@ function script_zone_cleanup(ignore_cleanup_time,wipe_all)
     return true
 end
 
-function ping_cleanup(pid)
-    dl("Cleaning up after ping %s",pid)
-    local now = time_global()
-    for k,v in pairs(pings) do
-        vl("pid %s id %s cleanup is %s",pid,k,v.cleanup or "disabled")
-        if v.cleanup and
-          (v.pid == pid) and 
-          (v.cleanup < now) then
-            despawn_pingspot(k)
+function temp_pin_cleanup(wipe_all)
+    local now       = get_time_elapsed()
+    for k,v in pairs(pins) do
+        if v.cleanup then
+            local expired = autotags_time_out and (v.cleanup < now)
+            if expired or wipe_all then
+                do_waypoint("pn_del",nil,nil,{syscall=true,id=k})
+            end
         end
+    end
+    dl("temp_pin_cleanup completed")
+    return true
+end
+
+function set_pin_persistence(id,onoff,lifetime)
+    if not (id and (id > 0)) then return end
+    if onoff or (onoff == nil) then
+        pins[id].cleanup = nil
+        dl("Pin %s given persistence, it will not be subject to cleanup",id)
+    else
+        local now = get_time_elapsed()
+        printf("now = %s",now)
+        pins[id].cleanup = now + (lifetime or autotag_lifetime or 0)
+        dl("Pin %s flagged as temporary, it will be subject to cleanup at %s",id,pins[id].cleanup)
     end
     return true
 end
@@ -1065,9 +1104,10 @@ function set_pingspot_persistence(id,onoff)
         script_zones[id].cleanup = nil
         dl("Temporary pingspot %s given persistence, it will not be subject to cleanup",id)
     else
-        script_zones[id].cleanup = time_global()
+        script_zones[id].cleanup = get_time_elapsed()
         dl("Persistent pingspot %s flagged as unused, it will be subject to cleanup",id)
     end
+    return true
 end
 
 function ping_area_around(obj)
@@ -1103,7 +1143,7 @@ end
 function do_waypoint(act,se_obj,acode,args)
     args = args or {}
     local syscall = args.syscall and true or false
-    if valid_pda() and not (paw_enabled and act) then return end
+    if (not syscall) and valid_pda() and not (paw_enabled and act) then return end
     acode = acode or act
     local id,name
     if se_obj then
@@ -1143,8 +1183,7 @@ function do_waypoint(act,se_obj,acode,args)
         end
         waypoint_active = true
     elseif act == "wp_del" then
-        end_waypoint_task(id)
-        waypoint_task_cleanup()
+        end_waypoint_task()
         last_waypoint = nil
     elseif act == "waypoint_rename" then
         dl("Received call to rename waypoint")
@@ -1443,12 +1482,20 @@ function pin_target_obj(mapspot,notip,silent,smart)
             end
         end
     end
+    return id
 end
 
 
 function create_smart_pin(notip,silent)
     --local mapspot = get_smart_icon_for_obj(obj)
-    pin_target_obj(nil,notip,silent,true)
+    return pin_target_obj(nil,notip,silent,true)
+end
+
+function autotag_target(notip,silent)
+    local id = create_smart_pin(true)
+    set_pingspot_persistence(id,autotag_persistence)
+    set_pin_persistence(id,autotag_persistence)
+    return id
 end
 
 function drop_quick_pin(id,force_text,force_pin,no_tip,no_fast_travel)
@@ -1491,8 +1538,7 @@ function toggle_waypoint(force)
         end
     else
         last_waypoint = placed_waypoint
-        end_waypoint_task(placed_waypoint.id)
-        waypoint_task_cleanup()
+        end_waypoint_task()
     end
 end
 
@@ -1891,6 +1937,7 @@ end
 function mcm_reload_general_settings()
     if not ui_mcm then return end
     paw_enabled             = load_mcm("pawgen/enabled",paw_enabled)
+    disable_load_warning    = load_mcm("pawgen/disable_load_warning",disable_load_warning)
     wp_hud_icon_enabled     = load_mcm("pawgen/wp_hud_icon_enabled",wp_hud_icon_enabled)
     if wp_hud_icon_enabled then
         show_marker_dist["wp"]      = tonumber(load_mcm("pawgen/show_dist_wp",show_marker_dist["wp"]))
@@ -2044,6 +2091,9 @@ end
 function mcm_reload_reticle_settings()
     if ui_mcm then
         mark_on_positive_id     = load_mcm("pawret/enable_autotag",mark_on_positive_id)
+        autotag_persistence     = load_mcm("pawret/autotag_persistence",autotag_persistence)
+        autotag_lifetime        = load_mcm("pawret/autotag_lifetime",(autotag_lifetime / 6)) * 6
+        autotags_time_out       = (autotag_lifetime or 0) > 0
         pin_hud_icon_default    = load_mcm("pawret/pin_auto_visible",pin_hud_icon_default)
         manual_smart_pins       = load_mcm("pawret/manual_smart_pins",manual_smart_pins)
         reticle_mode            = load_mcm("pawret/reticle_mode",reticle_mode)
@@ -2071,6 +2121,7 @@ end
 
 
 function on_option_change()
+
     -- Sync all MCM values and propagate changes
     language = ui_options.curr_localization()
     if ui_mcm and not mcm_killswitch then
@@ -2086,6 +2137,10 @@ function on_option_change()
         end
 
         mcm_reload_general_settings()
+        if not paw_enabled then
+            printf("<PAW> Personal Adjustable Waypoint has been disabled, aborting all further action.")
+        return end
+
         mcm_reload_keybind_table()
         mcm_reload_keybind_settings()
         mcm_reload_pin_settings()
@@ -2163,6 +2218,11 @@ function tick()
     if enable_wp_proxcheck and waypoint_active and (next_wp_proxcheck <= now) then
         next_wp_proxcheck = now + wp_proxcheck_interval
         check_waypoint_proximity(placed_waypoint and placed_waypoint.id)
+    end
+    if (next_gc_check <= now) then
+        next_gc_check = now + garbcollect_interval
+        script_zone_cleanup()
+        temp_pin_cleanup()
     end
     if disable_mcm_updates then return end
     if (next_mcm_update > now) or not icoset_changed then return end
@@ -2775,10 +2835,10 @@ function get_screen_coords(id)
     local se_obj    = alife_object(id)
     --printf("<PAW> get_screen_coords: id %s -> obj %s (%s) | se_obj %s",id,obj and obj:name(),obj and obj:id(),se_obj and se_obj:name())
     if not (obj or se_obj) then
-        local is_wp = (id == (placed_waypoint and placed_waypoint.id)) and end_waypoint_task(id)
+        local is_wp = (id == (placed_waypoint and placed_waypoint.id)) and (not waypoint_canceling) and end_waypoint_task(id)
         local pin   = pins[id] and do_waypoint("pn_del",se_obj,nil,{syscall=true,id=id})
         local exit = (is_wp and " canceling waypoint and") or (pin and " clearing pin and") or ""
-        dl("get_screen_coords: no valid game or server object could be found for %s,%s exiting",exit,id)
+        dl("get_screen_coords: no valid game or server object could be found for %s,%s exiting",id,exit)
         return
     end 
     
@@ -2949,7 +3009,7 @@ end
 
 function UIPAWHUDWaypoint:Update()
     CUIScriptWnd.Update(self)
-    if (main_hud_shown() or axr_main.binoc_is_zoomed or axr_main.scoped_weapon_is_zoomed) then
+    if waypoint_active and (main_hud_shown() or axr_main.binoc_is_zoomed or axr_main.scoped_weapon_is_zoomed) and not waypoint_canceling then
         local vec = placed_waypoint and placed_waypoint.id and get_screen_coords(placed_waypoint.id)
         if (vec) then
             self.marker:SetWndPos(vec)
@@ -3312,32 +3372,7 @@ function on_key_release(key)
             end
         end
     end
---[[
-    for k,v in pairs(keybinds) do
-        if v and v.enabled then
-            local mod = mod_key_codes[v.mod]
-            if v.hold then
-                vl("on_key_release(%s): keybind %s is a hold",DIK_name(key),k)
-                if mod and (not v.bind) and (key == mod) then
-                    vl("on_key_release(%s): keybind %s has mod key but no primary bind, and matched mod %s",key,k,DIK_name(mod))
-                    do_action = true
-                    args = false
-                elseif (key == v.bind) and mod_key_pressed(v.mod) then
-                    vl("on_key_release(%s): keybind %s matched bind %s and mod %s",key,k,DIK_name(v.bind),DIK_name(mod))
-                    do_action = true
-                    args = false
-                end
-            elseif (key == v.bind) and mod_key_pressed(v.mod) then
-                vl("on_key_release(%s): keybind %s matched bind %s and mod %s",key,k,DIK_name(v.bind),DIK_name(mod))
-                do_action = true
-            end
-        end
-        if do_action then
-            v.action(args)
-            return
-        end
-    end
-    --]]
+
 end
 
 
@@ -3424,6 +3459,10 @@ function load_file_data()
                 tex   = xml:ReadValue(attr_tex,0)
                 vl("%s node found: %s",typ,spotnode)
             end
+        end
+
+        if spot == "paw_pin_redpush32" then
+            if not tex then return false end
         end
 
         texture_data[spot] = {
@@ -3532,6 +3571,7 @@ function load_file_data()
     local load_pin_curr = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..load_set_curr, {val=0})
 
     printf(logprefix.."Personal Adjustable Waypoint started")
+    return true
 end
 
 
@@ -3546,7 +3586,6 @@ function load_state(data)
         last_waypoint = ps.last_waypoint
         custom_name = ps.custom_name
         custom_desc = ps.custom_desc
-        dynamic_faves = ps.dynamic_faves or dynamic_faves
         pins = ps.pins
         if placed_waypoint then waypoint_active = true end
         welcome_msg_shown = ps.welcome_msg_shown
@@ -3556,7 +3595,6 @@ function load_state(data)
         dl("load_state: pawdata found, loading")
         pawdata = pd
         pins = pawdata.pins
-        dynamic_faves = pawdata.dynamic_faves
     else
         dl("load_state: pawdata not found, initializing")
         pawdata.curr_set_name = "pins"
@@ -3573,8 +3611,8 @@ end
 
 function save_state(data)
     update_mcm_icoset_data()
-    dl("save_state: Cleaning up script zones")
-    script_zone_cleanup()
+    dl("save_state: Cleaning up script zones and temp markers")
+    _ = script_zone_cleanup()
     dl("save_state: Saving waypoint and config data")
     data.paw_waypoint_info = nil
     data.pawsys = {}
@@ -3597,6 +3635,7 @@ end
 
 function actor_on_first_update()
     on_option_change()
+    temp_pin_cleanup(true)
     active_set(icon_sets[current_active_set].i)
     show_all_pins(true)
     if waypoint_active then
@@ -3652,7 +3691,31 @@ function on_mouse_wheel(scroll_dir, flags)
 end
 
 
+function unregister_all_callbacks()
+    UnregisterScriptCallback("actor_on_update",actor_on_update)
+    UnregisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
+    UnregisterScriptCallback("on_option_change",on_option_change)
+    UnregisterScriptCallback("actor_on_first_update",actor_on_first_update)
+    UnregisterScriptCallback("load_state",load_state)
+    UnregisterScriptCallback("save_state",save_state)
+    UnregisterScriptCallback("map_spot_menu_add_property",map_spot_menu_add_property)
+    UnregisterScriptCallback("map_spot_menu_property_clicked",map_spot_menu_property_clicked)
+    UnregisterScriptCallback("on_key_press",on_key_press)
+    UnregisterScriptCallback("on_key_release",on_key_release)
+    UnregisterScriptCallback("GUI_on_show",update_hud_on_show_hide)
+    UnregisterScriptCallback("GUI_on_hide",update_hud_on_show_hide)
+    UnregisterScriptCallback("monster_on_death_callback",npc_on_death_callback)
+    UnregisterScriptCallback("npc_on_death_callback",npc_on_death_callback)
+    if mwheel_avail then
+        UnregisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
+    end
+    if right_click_avail then
+        UnregisterScriptCallback("on_map_right_click",on_map_right_click)
+    end
+end
+
 function on_game_start()
+    if load_failed then return end
     RegisterScriptCallback("actor_on_update",actor_on_update)
     RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
     RegisterScriptCallback("on_option_change",on_option_change)
@@ -3688,8 +3751,7 @@ task_functor.waypoint_task_target_functor = function (task_id,field,p,tsk)
 
     if placed_waypoint == nil then
         dl("WARNING: waypoint_task_target_functor called but placed_waypoint is nil, cancelling waypoint task to avoid crash")
-        cancel_task()
-        waypoint_task_cleanup()
+        end_waypoint_task()
         return default_id
     end
 
@@ -3713,4 +3775,38 @@ task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
     end
 end
 
-load_file_data()
+-- ======================================================================
+--  LOAD FILE DATA - KILLSWITCH AND NOTIFY ON FAILURE
+-- ======================================================================
+
+if not load_file_data() then
+    disable_mcm_updates = true
+    load_failed         = true
+    paw_enabled         = false
+    started             = false
+    _ = unregister_all_callbacks()
+
+    if not disable_load_warning then
+        local tiperr = psk(game.translate_string("st_paw_texture_load_error_tip"),text_colors)
+        RegisterScriptCallback("actor_on_first_update", 
+            function()
+                CreateTimeEvent("pawerror",0,5,(
+                    function()
+                        db.actor:give_game_news("PAW System",tiperr,"ui_inGame2_Mesta_evakuatsii",0,15000)
+                        xr_sound.set_sound_play(AC_ID,"pda_tips")
+                        return true
+                    end
+                ))
+            end
+        )
+    end
+
+    local errstr = game.translate_string("st_paw_texture_load_error1").."\n\n"..game.translate_string("st_paw_texture_load_error2")
+    assert(not load_failed, "\n\n"..
+        "~ ------------------------------------------------------------------------\n"..
+        errstr.."\n"..
+        "~ ------------------------------------------------------------------------\n"
+    )
+end
+
+-- ======================================================================
