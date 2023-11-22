@@ -11,7 +11,7 @@
     configs\scripts\paw, and touches MCM in some fairly unwholesome ways.
 -- ===================================================================--]]
 
-debuglogs 	 					= true   -- Controls debug logging if you don't have MCM
+debuglogs 	 					= false   -- Controls debug logging if you don't have MCM
 verbose                   		= true
 local scriptname           		= "catsy_paw_mcm"
 local logprefix                 = "<PAW_MCM> "
@@ -51,8 +51,6 @@ aspects = {
 		node 	= "preview_21_9",
 		scale_x = 640/1024,
 		scale_y = 270/768,
-		--scale_x = 0.3125,
-		--scale_y = 0.17578125,
 		unratio	= round_idp((1080/2560)/0.75,4),
 		enabled = true,
 	},
@@ -62,8 +60,6 @@ aspects = {
 		node 	= "preview_16_9",
 		scale_x = 480/1024,
 		scale_y = 270/768,
-		--scale_x = 0.234375,
-		--scale_y = 0.17578125,
 		unratio = round_idp((1080/1920)/0.75,4),
 		enabled = true,
 	},
@@ -73,8 +69,6 @@ aspects = {
 		node 	= "preview_16_10",
 		scale_x = 420/1024,
 		scale_y = 262/768,
-		--scale_x = 0.234375,
-		--scale_y = 0.17578125,
 		unratio	= round_idp((1200/1920)/0.75,4),
 		enabled = true,
 	},
@@ -84,8 +78,6 @@ aspects = {
 		node 	= "preview_4_3",
 		scale_x = 360/1024,
 		scale_y = 270/768,
-		--scale_x = 0.234375,
-		--scale_y = 0.17578125,
 		unratio	= 1,
 		enabled = true,
 	},
@@ -1144,8 +1136,6 @@ function init_theme_sim(theme)
     
     local ico_curr 		= icoset.ico_curr or icoset.setdata and icoset.setdata.active_icon
 	local curr_ico_i 	= setdata.ri[paw.root_patch_name(ico_curr)]
-
-	printf("set_curr %s | ico_curr %s | curr_ico_i %s",set_curr,ico_curr,curr_ico_i)
 
 	local next_i 		= paw.roll(curr_ico_i + 1, 1, #setdata.ii)
 	local prev_i 		= paw.roll(curr_ico_i - 1, 1, #setdata.ii)

@@ -8,7 +8,7 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 2.0-b1
+    Version: 2.0
     Updated: 20231121
 
     You may alter any part of this mod and do whatever you like with it, 
@@ -33,14 +33,13 @@
     Press Period or Comma (default) to cycle through active pins in the 
     current set, or hold Alt while doing this to cycle sets instead.
 
-    Credits: HarukaSai for the exec() function, RavenAscendant for the 
-    tip about using script zones for arbitrary mapspots and various other
-    bits of help.
+    Credits: HarukaSai, RavenAscendant, Ghen Tuong, demonized, and 
+    many others who've assisted in ways big and small.
 -- ======================================================================
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "2.0-b1"
+script_version          = "2.0"
 release_date            = 20231121
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
@@ -1090,7 +1089,6 @@ function set_pin_persistence(id,onoff,lifetime)
         dl("Pin %s given persistence, it will not be subject to cleanup",id)
     else
         local now = get_time_elapsed()
-        printf("now = %s",now)
         pins[id].cleanup = now + (lifetime or autotag_lifetime or 0)
         dl("Pin %s flagged as temporary, it will be subject to cleanup at %s",id,pins[id].cleanup)
     end
@@ -2138,7 +2136,7 @@ function on_option_change()
 
         mcm_reload_general_settings()
         if not paw_enabled then
-            printf("<PAW> Personal Adjustable Waypoint has been disabled, aborting all further action.")
+            printf(logprefix.."Personal Adjustable Waypoint has been disabled, aborting all further action!")
         return end
 
         mcm_reload_keybind_table()
@@ -3257,7 +3255,7 @@ function enable_vo_crosshair()
         if HUD_RET then
             get_hud():AddDialogToRender(HUD_RET)
         else
-            printf("<PAW> ERROR: Unable to load ui_paw_reticle.script or initialize its HUD class")
+            printf(logprefix.."ERROR: Unable to load ui_paw_reticle.script or initialize its HUD class")
         end
     end
 end
@@ -3570,7 +3568,7 @@ function load_file_data()
     local load_set_curr = axr_main.config:r_value("mcm", "pawsys/pawpins/pin_icon_group", {val=0}) or "pins"
     local load_pin_curr = axr_main.config:r_value("mcm", "pawsys/pawpins/poi_icon_"..load_set_curr, {val=0})
 
-    printf(logprefix.."Personal Adjustable Waypoint started")
+    printf(logprefix.."Personal Adjustable Waypoint started at %s",time_global())
     return true
 end
 

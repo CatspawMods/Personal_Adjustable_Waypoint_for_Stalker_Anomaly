@@ -1482,6 +1482,8 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>If Autotag persistence is not enabled, tags will be automatically cleared after this many seconds. Setting this to zero will disable the timeout, but temporary tags will still be cleared on the next map change or savegame load.</text>
 	</string>
 
+<!-- Added in 2.0 -->
+
 	<string id="ui_mcm_pawsys_pawgen_headertxt">
 		<text>
 		$clr_yelPAW$clr_wht isn't just a waypoint marker--it's a suite of mapping and navigation tools that give you more control over your map and HUD, letting you mark your own path through the Zone. $clr_yelAll of these features are optional and customizable to your liking.$clr_wht \n \n
@@ -1490,6 +1492,10 @@ This message won't bother you again. Good hunting, %s.</text>
 		•$clr_lbl Automatically tag known targets with your choice of icon, and display them on the HUD$clr_wht \n \n
 		$clr_yelDon't let NPCs tell you where to go--put your PAW down and make the map yours.$clr_wht
 		</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_clear_dist_desc">
+		<text>When the player comes within this distance of the waypoint marker, it will automatically be cleared. Setting this to zero will disable the autoclear setting entirely.</text>
 	</string>
 
 </string_table>
