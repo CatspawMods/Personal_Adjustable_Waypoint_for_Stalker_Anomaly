@@ -10,6 +10,11 @@
     The main script actually loads the MCM settings for Crook's addon, if
     it is installed, so that reticle behavior should mirror the NPC ID.
 -- ===================================================================--]]
+assert(tasks_placeable_waypoints ~= nil, "\n\n"..
+    "~ ------------------------------------------------------------------------\n"..
+    "Could not find tasks_placeable_waypoints.script - PAW is not installed".."\n"..
+    "~ ------------------------------------------------------------------------\n"
+)
 paw         = tasks_placeable_waypoints
 dl          = paw.dl
 vl          = paw.vl
@@ -19,6 +24,8 @@ easing_outquint = paw.easing_outquint
 npc_ident       = paw.npc_ident
 anim_fade       = paw.anim_fade
 reticle_color   = paw.reticle_color
+autotag_milpda  = paw.autotag_milpda_feature
+pda_feature_en  = item_milpda and item_milpda.pda_feature_enabled
 -- ======================================================================
 
 class "UIPAWReticle" (CUIScriptWnd)
@@ -280,7 +287,7 @@ function UIPAWReticle:UpdateAutotagReticle(obj,name,id)
             local smartpin = target and smart_pins[target]
             --printf("smart pin type %s: enabled %s | pin %s",target,smartpin and smartpin.enabled,smartpin and smartpin.pin)
             if (not (id and paw.pins[id])) and smartpin and smartpin.enabled and smartpin.pin then
-                paw.create_smart_pin(true)
+                paw.autotag_target(true)
             end
             return
         end
@@ -330,6 +337,11 @@ function UIPAWReticle:Update()
     local mode      = paw.reticle_mode
     local cart_mode = paw.cart_mode
     local enabled   = false
+    if autotag_milpda and pda_feature_en then
+        local dev = db.actor:item_in_slot(8)
+        enabled = dev and pda_feature_en(dev:section(),"autotag")
+        if not enabled then mode = 0 end
+    end
     if mode and type(mode) == "number" then
         if mode == 0 then
             self:ShowMarker(false)
