@@ -171,7 +171,7 @@ manual_smart_pins           = false
 mark_on_positive_id         = true
 reticle_mustzoom            = true
 reticle_mode                = 2
-autotag_milpda_feature      = true
+autotag_milpda_feature      = false -- not implemented yet
 autotag_persistence         = false -- if enabled, autotags are cleared on map change or the below timeout value
 autotag_lifetime            = 120 * 6 -- time in ms before autotags are cleared (def 2 minutes)
 autotags_time_out           = autotag_lifetime > 0
@@ -887,6 +887,8 @@ function func_add_mapspot(text,args)
     local id        = args.id
     local icon      = args.icon or map_pin_icon
     if text == "" or text == nil then
+        set_pin_persistence(id,false)
+        set_pingspot_persistence(id,false)
         pins[id] = nil
         vl("Empty text input returned for pin %s, removing",id)
     return end
@@ -901,13 +903,13 @@ function func_ren_mapspot(text,args)
     local old_icon  = args.icon
     if text == "" or text == nil then
         vl("Empty text input returned for pin %s, making no change",id)
-        text = args.name
+        text = pins[id].text
         icon = old_icon
     end
-    pins[id].text = text
+    pins[id].text   = text
     vl("func_ren_mapspot called for id %s | %s | %s",id,icon,text)
     remove_mapspot(id,old_icon)
-    add_mapspot(text,id,icon)
+    add_mapspot(text,id,old_icon)
 end
 
 function func_ren_waypoint(text,args)
