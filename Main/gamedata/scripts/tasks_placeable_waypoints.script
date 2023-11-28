@@ -1085,6 +1085,7 @@ end
 
 function set_pin_persistence(id,onoff,lifetime)
     if not (id and (id > 0)) then return end
+    if not pins[id] then return end
     if onoff or (onoff == nil) then
         pins[id].cleanup = nil
         dl("Pin %s given persistence, it will not be subject to cleanup",id)
@@ -1211,7 +1212,7 @@ function do_waypoint(act,se_obj,acode,args)
         --vl("pin data before input call: %s (%s) % | %",pins[id].name,pins[id].id,pins[id].icon,pins[id].text)
         get_text(title,itex,nil,func,pins[id])
     elseif act == "pn_ren" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         dl("Received call to rename map pin %s (%s)",name,id)
         if not pins[id].locked then
             remove_mapspot(id,icon)
@@ -1224,7 +1225,7 @@ function do_waypoint(act,se_obj,acode,args)
             get_text(title,itex,name,func,pins[id])
         end
     elseif act == "pn_del" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         if syscall or not pins[id].locked then
             local icon = pins[id] and pins[id].icon
             if hud_pin_objs[id] then
@@ -1237,10 +1238,10 @@ function do_waypoint(act,se_obj,acode,args)
             if icon then remove_mapspot(id,icon) end
         end
     elseif act == "lock_pin" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         pins[id].locked = true
     elseif act == "unlock_pin" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         pins[id].locked = false
     elseif act == "pn_clr" then
         local wipe_all = args and args.wipe_all
@@ -1263,13 +1264,13 @@ function do_waypoint(act,se_obj,acode,args)
     elseif act == "mping" then  
         ping_area_around(se_obj)    
     elseif act == "hud_vis_on" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         if syscall or not pins[id].locked then
             pins[id].hud = true
             show_hud_pin(id)
         end
     elseif act == "hud_vis_off" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         if syscall or not pins[id].locked then
             pins[id].hud = false
             hide_hud_pin(id)
