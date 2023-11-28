@@ -9,7 +9,7 @@
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
     Version: 2.0.1
-    Updated: 20231127
+    Updated: 20231123
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -40,7 +40,7 @@
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
 script_version          = "2.0.1"
-release_date            = 20231127
+release_date            = 20231123
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -108,8 +108,10 @@ mwheel_poll_interval    = 50    -- interval between checks for mouse wheel input
 mwheel_next_poll        = time_global()
 local mwheel_exe_ver    = 20230701 -- mouse wheel support added to demonized binaries in this version
 local rclick_exe_ver    = 20230922 -- right-click map support added to demonized binaries in this version
+local game_version      = ts("ui_st_game_version")
+local gamma_modpack     = game_version:find("G.A.M.M.A.")
 mwheel_avail            = mousewheel_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= mwheel_exe_ver))
-right_click_avail       = right_click_override or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
+right_click_avail       = right_click_override or gamma_modpack or (MODDED_EXES_VERSION and (MODDED_EXES_VERSION >= rclick_exe_ver))
 last_clicked_id         = nil
 -- ======================================================================
 unsquish_ratio              = 1
@@ -149,10 +151,6 @@ cart_shows_smarts           = true
 cartmode_unfade             = true
 tip_on_icoset_change        = false
 allow_non_wp_targets        = false
-clear_pin_on_death          = true  -- pin will be cleared if set on a living thing that dies
-pin_near_fade_dist          = 5     -- min distance within which pins will begin to fade out, set to 0 to disable
-pin_far_fade_dist           = 0     -- distance beyond which pins will begin to fade out, set to 0 to disable
-pin_far_hide_dist           = 10    -- max distance after far_fade at which pins will hide, set to 0 to disable
 -- ======================================================================
 enable_wp_proxcheck         = true
 show_pins                   = true
@@ -175,6 +173,10 @@ autotag_milpda_feature      = true
 autotag_persistence         = false -- if enabled, autotags are cleared on map change or the below timeout value
 autotag_lifetime            = 120 * 6 -- time in ms before autotags are cleared (def 2 minutes)
 autotags_time_out           = autotag_lifetime > 0
+clear_pin_on_death          = true  -- pin will be cleared if set on a living thing that dies
+pin_near_fade_dist          = 5     -- min distance within which pins will begin to fade out, set to 0 to disable
+pin_far_fade_dist           = 0     -- distance beyond which pins will begin to fade out, set to 0 to disable
+pin_far_hide_dist           = 10    -- max distance after far_fade at which pins will hide, set to 0 to disable
 ret_fade_attack_time        = 400
 ret_fade_decay_time         = 600
 
@@ -250,6 +252,7 @@ texture_data        = {}
 icon_index          = {}
 set_index           = {}
 valid_clsids        = {}
+map_labels          = {}
 local script_zones  = {}
 local pings         = {}
 local pawdata = {
@@ -345,10 +348,13 @@ managed_options = {
     ["hud_vis_off"]     = true,
     ["show_all_pins"]   = true,
     ["hide_all_pins"]   = true,
+    ["show_label"]      = true,
+    ["hide_label"]      = true,
     ["pn_add"]          = true,
     ["pn_del"]          = true,
     ["pn_ren"]          = true,
     ["pn_clr"]          = true,
+    ["pn_settings"]     = true,
     ["lock_pin"]        = true,
     ["unlock_pin"]      = true,
     ["cm_dbg"]          = true,
@@ -360,7 +366,7 @@ hud_themes = {
         node    = "pawhudind",
         style   = "full",
         tex     = "ui_paw_hud_indicator_classic",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=890,y=620},
         w       = 136,
         h       = 75,
@@ -371,7 +377,7 @@ hud_themes = {
         node    = "pawhudind",
         style   = "full",
         tex     = "ui_paw_hud_indicator_classic",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=890,y=620},
         w       = 136,
         h       = 75,
@@ -381,7 +387,7 @@ hud_themes = {
         node    = "pawhudind_vertright",
         style   = "minimal",
         tex     = "ui_paw_hud_indicator_vertright",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=922,y=440},
         w       = 100,
         h       = 154,
@@ -391,7 +397,7 @@ hud_themes = {
         node    = "pawhudind_vertleft",
         style   = "minimal",
         tex     = "ui_paw_hud_indicator_vertleft",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=4,y=570},
         w       = 100,
         h       = 154,
@@ -401,7 +407,7 @@ hud_themes = {
         node    = "pawhudind_gamma_right",
         style   = "full",
         tex     = "ui_paw_hud_indicator_gamma_right",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=888,y=440},
         w       = 130,
         h       = 150,
@@ -411,7 +417,7 @@ hud_themes = {
         node    = "pawhudind_gamma_left",
         style   = "full",
         tex     = "ui_paw_hud_indicator_gamma_left",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=4,y=440},
         w       = 130,
         h       = 150,
@@ -421,7 +427,7 @@ hud_themes = {
         node    = "pawhudind_minimal_h",
         style   = "minimal",
         tex     = "ui_paw_hud_indicator_minimal_h",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=924,y=645},
         w       = 94,
         h       = 52,
@@ -431,7 +437,7 @@ hud_themes = {
         node    = "pawhudind_minimal_v",
         style   = "minimal",
         tex     = "ui_paw_hud_indicator_minimal_v",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=924,y=440},
         w       = 92,
         h       = 112,
@@ -441,7 +447,7 @@ hud_themes = {
         node    = "pawhudind_minicom",
         style   = "compact",
         tex     = "ui_paw_hud_indicator_minicom",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=820,y=725},
         w       = 38,
         h       = 37,
@@ -450,7 +456,7 @@ hud_themes = {
         name    = "compact_noui",
         node    = "pawhudind_minicom",
         style   = "compact",
-        file    = "paw_hud_indicator.xml",
+        file    = "paw_ui_elements.xml",
         pos     = {x=820,y=725},
         w       = 32,
         h       = 37,
@@ -465,17 +471,29 @@ colors = {
 }
 
 text_colors = {
-    ["clr_255"]     = "%" .. "%c[255,255,255,255]",
-    ["clr_red"]     = "%" .. "%c[255,255,0,0]",
-    ["clr_grn"]   = "%" .. "%c[255,0,255,0]",
-    ["clr_blu"]     = "%" .. "%c[255,0,0,255]",
-    ["clr_lbl"]     = "%" .. "%c[255,0,200,220]",
-    ["clr_yel"]  = "%" .. "%c[255,250,218,94]",
-    ["clr_wht"]   = "%" .. "%c[255,220,220,220]",
-    ["clr_prp"]  = "%" .. "%c[255,138,43,226]",
+    ["clr_255"] = "%" .. "%c[255,255,255,255]",
+    ["clr_red"] = "%" .. "%c[255,255,0,0]",
+    ["clr_grn"] = "%" .. "%c[255,0,255,0]",
+    ["clr_blu"] = "%" .. "%c[255,0,0,255]",
+    ["clr_lbl"] = "%" .. "%c[255,0,200,220]",
+    ["clr_yel"] = "%" .. "%c[255,250,218,94]",
+    ["clr_wht"] = "%" .. "%c[255,220,220,220]",
+    ["clr_prp"] = "%" .. "%c[255,138,43,226]",
     ["clr_blk"] = "%" .. "%c[255,0,0,0]",
 }
 
+null_tokens = {
+    ["clr_255"] = "",
+    ["clr_red"] = "",
+    ["clr_grn"] = "",
+    ["clr_blu"] = "",
+    ["clr_lbl"] = "",
+    ["clr_yel"] = "",
+    ["clr_wht"] = "",
+    ["clr_prp"] = "",
+    ["clr_blk"] = "",
+
+}
 
 local keybinds = {
     ["cartmode"] = {
@@ -681,7 +699,7 @@ function safename(id)
     local cls       = se_obj:clsid()
 
     if pins[id] then
-        -- If there's a pin for this ID, use its label above all else
+        -- If there's a pin for this ID, use its text above all else
         text = pins[id].text or pins[id].name
         vl("%s (%s) is a pin: %s",name,id,text)
     elseif (cls == clsid.script_zone) then
@@ -836,52 +854,40 @@ function add_mapspot(text,id,icon)
     if not id then return end
     icon = icon or default_mapspot
     vl("Adding mapspot %s for id %s with icon %s",text,id,icon)
-    level.map_add_object_spot(id,icon,text)
+    _ = level.map_add_object_spot(id,icon,text)
+    if not pins[id] then return end
+
+    local pin = pins[id]
+    if pin.colors then
+        local clr = pin.colors
+        local spot = level.map_get_object_spot_static(id,icon)
+        spot:SetTextureColor(GetARGB(clr.a, clr.r, clr.g, clr.b))
+    end
+    if pin.hud then
+        show_hud_pin(id)
+    end
+    if pin.show_label then
+        show_pin_label(id,true)
+    end
 end
 
 
 function remove_mapspot(id,icon)
     if not (id and icon) then return end
     vl("Trying to remove mapspot for id %s with icon %s",id,icon)
+
+    local pin = pins[id]
+    if pin and pin.show_label then
+        show_pin_label(id,false,true)
+    end
+    if pin and pin.hud then
+        hide_hud_pin(id)
+    end
     level.map_remove_object_spot(id,icon)
-    level.map_remove_object_spot(id,icon)
+    _ = level.map_remove_object_spot(id,icon)
     return true
 end
 
---[[
--- this isn't working yet, don't enable
-function rotate_dynamic_favorites(icon)
-    if not icon then return end
-
-    local mdf = tonumber(max_dynamic_faves) or 0
-    local faves = 0
-    if (mdf and (mdf == 0)) then return end
-    vl("rotate_dynamic_favorites called with new mapspot %s",icon)
-    if dynamic_faves and (type(dynamic_faves) == "table") then
-        faves = #dynamic_faves or 0
-        if faves > 1 then
-            for i = 1,faves do
-                if (faves[i] == icon) then
-                    vl("%s already in favorites, ignoring")
-                    return 
-
-
-            end
-        if faves < mdf then
-            faves = faves + 1
-        elseif (mdf > 1) and (faves >= mdf) then
-            for i = 2,faves do
-                vl("%s was in position %s, shuffling down to %s",dynamic_faves[i],i,i-1)
-                dynamic_faves[i - 1] = dynamic_faves[i]
-            end
-        end
-    else
-        dynamic_faves = {}
-    end
-    dynamic_faves[faves] = icon
-    vl("%s added to top of dynamic_faves",icon)
-end
---]]
 
 function func_add_mapspot(text,args)
     local id        = args.id
@@ -891,6 +897,7 @@ function func_add_mapspot(text,args)
         vl("Empty text input returned for pin %s, removing",id)
     return end
     vl("func_add_mapspot called for id %s | %s | %s",id,icon,text)
+    text = psk(text,{["obj_id"] = id})
     pins[id].text = text
     add_mapspot(text,id,icon)
 end
@@ -901,13 +908,14 @@ function func_ren_mapspot(text,args)
     local old_icon  = args.icon
     if text == "" or text == nil then
         vl("Empty text input returned for pin %s, making no change",id)
-        text = args.name
+        text = pins[id].text
         icon = old_icon
     end
-    pins[id].text = text
+    text = psk(text,{["obj_id"] = id})
+    pins[id].text   = text
     vl("func_ren_mapspot called for id %s | %s | %s",id,icon,text)
     remove_mapspot(id,old_icon)
-    add_mapspot(text,id,icon)
+    add_mapspot(text,id,old_icon)
 end
 
 function func_ren_waypoint(text,args)
@@ -923,10 +931,6 @@ end
 
 function pins_exist()
     return not is_empty(pins)
-end
-
-
-function waypoint_task_cleanup()
 end
 
 
@@ -1085,6 +1089,7 @@ end
 
 function set_pin_persistence(id,onoff,lifetime)
     if not (id and (id > 0)) then return end
+    if not pins[id] then return end
     if onoff or (onoff == nil) then
         pins[id].cleanup = nil
         dl("Pin %s given persistence, it will not be subject to cleanup",id)
@@ -1136,6 +1141,98 @@ function ping_area_around(obj)
     if use_ping_snd and snd_ping then play_sound_for_actor(snd_ping) end
 
     CreateTimeEvent("paw_ping_cleanup","ping_"..pid,11,tasks_placeable_waypoints.ping_cleanup,pid)
+end
+
+
+function init_mapspot_label_wnd(mapspot_text,id,icon,anchor)
+    vl("init_mapspot_label_wnd(%s,%s,%s)",mapspot_text,id,icon)
+    mapspot_text    = mapspot_text or ""
+    local anchor    = anchor or level.map_get_object_spot_static(id,icon)
+    local xml       = CScriptXmlInit()
+    local xmlroot   = "paw_ui_wnd_box"
+    local frm       = xmlroot..":frm_"
+    xml:ParseFile("paw_ui_elements.xml")
+   
+    local cap       = {}
+    cap.id          = id
+    cap.box         = xml:InitStatic(xmlroot,anchor)
+
+    mapspot_text    = psk(mapspot_text,{["obj_id"] = id})
+    _,tokens        = mapspot_text:gsub("%$","%$")
+    local plaintext = psk(mapspot_text,null_tokens)
+    mapspot_text    = psk(mapspot_text,text_colors)
+    local token_adj = tokens * 17
+    _, nlcnt        = mapspot_text:gsub("\\n", "\\n")
+    local w         = clamp(#mapspot_text * 6,15,200)
+    local h         = ((floor(clamp((#mapspot_text - token_adj) / 35,1,3)) + nlcnt) * 15) + 4
+    cap.box:SetWndPos(vector2():set(15,-h))
+    
+    cap.drop        = xml:InitStatic(xmlroot..":min_full",cap.box)
+    cap.drop:SetWndSize(vector2():set(w,h))
+
+    cap.text_sh  = xml:InitStatic(xmlroot..":content:text_sh",cap.drop)
+    cap.text_sh:SetWndSize(vector2():set(w,h))
+    cap.text_sh:TextControl():SetText(plaintext)
+    cap.text_sh:TextControl():SetTextColor(GetARGB(220,0,0,0))
+
+    cap.text     = xml:InitStatic(xmlroot..":content:text",cap.drop)
+    cap.text:SetWndSize(vector2():set(w,h))
+    cap.text:TextControl():SetText(mapspot_text)
+    cap.text:TextControl():SetTextColor(GetARGB(220,220,220,220))
+
+    cap.BL      = xml:InitStatic(frm.."BL_extend",cap.drop)
+    cap.BP      = xml:InitStatic(frm.."BP",cap.drop)
+    cap.BL:SetWndPos(vector2():set(0,h - 7))
+    cap.BP:SetWndPos(vector2():set(0,h - 7))
+    cap.BM      = xml:InitStatic(frm.."BM_extend",cap.BP)
+    local bmh = cap.BM:GetHeight()
+    cap.BM:SetWndSize(vector2():set(w,bmh))
+    cap.Show = (
+        function(tf)
+            pins[cap.id].show_label = tf
+            cap.box:Show(tf)
+        end
+    )
+
+
+    --[[
+    cap.box:InitTexture("ui_paw_dialog_bg_gray1")
+    cap.box:SetTextureColor(GetARGB(128,220,220,220))
+    cap.UL      = xml:InitStatic(frm.."UL",cap.box)
+    cap.UM      = xml:InitStatic(frm.."UM",cap.box)
+    cap.UR      = xml:InitStatic(frm.."UR",cap.box)
+
+    cap.LM      = xml:InitStatic(frm.."LM",cap.box)
+    cap.content = xml:InitStatic(xmlroot..":content",cap.box)
+    cap.text    = xml:InitTextWnd(xmlroot..":content:text",cap.content)
+    cap.text:SetText(mapspot_text or "")
+    cap.RM      = xml:InitStatic(frm.."RM",cap.box)
+
+    cap.BL      = xml:InitStatic(frm.."BL",cap.box)
+    cap.BM      = xml:InitStatic(frm.."BM",cap.box)
+    cap.BR      = xml:InitStatic(frm.."BR",cap.box)
+
+    --]]
+    return cap
+end
+
+
+function show_pin_label(id,onoff,destroy)
+    vl("show_pin_label(%s,%s,%s)",id,onoff,destroy)
+    onoff = onoff and true or false
+    if not (id and pins[id]) then return end
+    if not map_labels[id] then
+        printf("pin label container doesn't exist yet")
+        local icon = pins[id].icon
+        local text = pins[id].text
+        if not (icon and text) then return end
+        map_labels[id] = init_mapspot_label_wnd(text,id,icon)
+    end
+    map_labels[id].box:Show(onoff)
+    pins[id].show_label = onoff
+    if not destroy then return end
+    dl("Destroying map label for id %s",id)
+    map_labels[id] = nil
 end
 
 
@@ -1210,23 +1307,38 @@ function do_waypoint(act,se_obj,acode,args)
         cartography_mode(false)
         --vl("pin data before input call: %s (%s) % | %",pins[id].name,pins[id].id,pins[id].icon,pins[id].text)
         get_text(title,itex,nil,func,pins[id])
+
+    elseif act == "pn_settings" then
+        if not (id and pins[id]) then return end
+        dl("Received call to open settings for pin %s (%s)",name,id)
+        if not pins[id].locked then
+            local func = ren_mapspot_functor
+            local icon = pins[id] and pins[id].icon
+            local itex = texture_for_icon(icon)
+            local text = pins[id] and pins[id].text
+            local title = ts("ui_mcm_pawsys_pawmenu_pn_ren")
+            open_pin_settings(id)
+        end
+
+
     elseif act == "pn_ren" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         dl("Received call to rename map pin %s (%s)",name,id)
         if not pins[id].locked then
             remove_mapspot(id,icon)
             local func = ren_mapspot_functor
             local icon = pins[id] and pins[id].icon
             local itex = texture_for_icon(icon)
-            local name = pins[id] and pins[id].name
+            local text = pins[id] and pins[id].text
             local title = ts("ui_mcm_pawsys_pawmenu_pn_ren")
             cartography_mode(false)
-            get_text(title,itex,name,func,pins[id])
+            get_text(title,itex,text,func,pins[id])
         end
     elseif act == "pn_del" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         if syscall or not pins[id].locked then
             local icon = pins[id] and pins[id].icon
+            show_pin_label(id,false,true)
             if hud_pin_objs[id] then
                 vl("Removing pin %s from HUD",id)
                 get_hud():RemoveDialogToRender(hud_pin_objs[id])
@@ -1237,10 +1349,10 @@ function do_waypoint(act,se_obj,acode,args)
             if icon then remove_mapspot(id,icon) end
         end
     elseif act == "lock_pin" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         pins[id].locked = true
     elseif act == "unlock_pin" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         pins[id].locked = false
     elseif act == "pn_clr" then
         local wipe_all = args and args.wipe_all
@@ -1263,13 +1375,13 @@ function do_waypoint(act,se_obj,acode,args)
     elseif act == "mping" then  
         ping_area_around(se_obj)    
     elseif act == "hud_vis_on" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         if syscall or not pins[id].locked then
             pins[id].hud = true
             show_hud_pin(id)
         end
     elseif act == "hud_vis_off" then
-        if not id and pins[id] then return end
+        if not (id and pins[id]) then return end
         if syscall or not pins[id].locked then
             pins[id].hud = false
             hide_hud_pin(id)
@@ -1278,6 +1390,12 @@ function do_waypoint(act,se_obj,acode,args)
         show_all_pins(true)
     elseif act == "hide_pins" then
         show_all_pins(false)
+    elseif act == "show_label" then
+        if not (id and pins[id]) then return end
+        show_pin_label(id,true)
+    elseif act == "hide_label" then
+        if not (id and pins[id]) then return end
+        show_pin_label(id,false)
     elseif act == "cm_dbg" then
         local clsid = se_obj and se_obj:clsid() or "empty"
         property_ui:AddItem("[PAW Debug] Mapspot for %s (id %s) has clsid %s)",name,id,clsid)
@@ -1577,6 +1695,7 @@ function get_context_menu_options(property_ui,id,maptbl)
             if pin.locked then
                 add_context_option(property_ui,"unlock_pin",maptbl)
             else
+                add_context_option(property_ui,"pn_settings",maptbl)
                 add_context_option(property_ui,"pn_del",maptbl)
                 add_context_option(property_ui,"pn_ren",maptbl)
                 if pins[id].hud then
@@ -1584,6 +1703,11 @@ function get_context_menu_options(property_ui,id,maptbl)
                 else
                     add_context_option(property_ui,"hud_vis_on",maptbl)
                 end
+                if pins[id].show_label then
+                    add_context_option(property_ui,"hide_label",maptbl)
+                else
+                    add_context_option(property_ui,"show_label",maptbl)
+                end                
                 add_context_option(property_ui,"lock_pin",maptbl)
             end
         else
@@ -1910,7 +2034,8 @@ function show_all_pins(onoff)
             local icon = pin.icon
             local mapspot_text = pin.text
             vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
-            add_mapspot(mapspot_text,id,icon)
+            _ = add_mapspot(mapspot_text,id,icon)
+
         end
     else
         vl("Hiding stored pins from map")
@@ -2338,6 +2463,8 @@ function UITextInputWnd:InitControls()
     local input     = tex.root..":"..tex.input
     local ok        = tex.root..":"..tex.ok
 
+    local ico_next  = tbar..":btn_ico_next"
+
     xml:ParseFile   (tex.file)
 
     self.dialog     = xml:InitStatic(tex.root, self)
@@ -2375,11 +2502,11 @@ end
 
 
 function UITextInputWnd:Reset(title_txt,icon_tex,prepop,func,args)
-    self.icon_tex   = icon_tex
-    self.title_txt  = title_txt
-    self.prepop     = prepop
-    self.func       = func
-    self.args       = args    
+    self.icon_tex   = icon_tex or self.icon_tex
+    self.title_txt  = title_txt or self.title_txt
+    self.prepop     = prepop or self.prepop
+    self.func       = func or self.func
+    self.args       = args or self.args
     if self.title_txt then
         self.text:SetText(self.title_txt)
     end
@@ -2387,6 +2514,12 @@ function UITextInputWnd:Reset(title_txt,icon_tex,prepop,func,args)
         self.icon:InitTexture(self.icon_tex)
     end
     self.input:SetText("")
+end
+
+
+function UITextInputWnd:SetWndContent(title_txt,icon_tex)
+    self.icon_tex   = icon_tex
+    self.title_txt  = title_txt
 end
 
 
@@ -2424,6 +2557,534 @@ function UITextInputWnd:Close()
     self:HideDialog()
     Unregister_UI("UITextInputWnd")
 end
+
+
+-- ======================================================================
+--[[    PIN SETTINGS WINDOW
+-- ====================================================================]]
+
+GUI_PinOpts = nil
+
+function open_pin_settings(id,args)
+    if not GUI_PinOpts then
+        GUI_PinOpts = UIPinSettingsWnd(id,args)
+    end
+    
+    if GUI_PinOpts and not GUI_PinOpts:IsShown() then
+        GUI_PinOpts:ShowDialog(true)
+        Register_UI("UIPinSettingsWnd","get_text")
+    end
+end
+
+-- ======================================================================
+
+class "UIPinSettingsWnd" (CUIScriptWnd)
+
+function UIPinSettingsWnd:__init(id,args) super()
+    vl("UIPinSettingsWnd:__init(%s,args passed: %s",id,args ~= nil)
+    if not ((id and id > 0) and pins[id]) then return end
+    show_indicator(true)
+    _ = self:Reset(id,args)
+    self:InitControls()
+end
+
+function UIPinSettingsWnd:__finalize()
+end
+
+function UIPinSettingsWnd:InitControls()
+    self:SetWndRect(Frect():set(0,0,1024,768))
+    self:SetAutoDelete(true)
+    self.cap = {}
+    local tex = {
+        file    = "paw_input_window.xml",
+        tbar    = "titlebar",
+        paw     = "paw",
+        icon    = "icon",
+        text    = "text",
+        caption = "caption",
+        root    = "dialog",
+        dialog  = "pin_settings",
+        chrome  = "chrome",
+        bg      = "bg_settings",
+        input   = "input_name",
+        input_a = "input_a",
+        input_r = "input_r",
+        input_g = "input_g",
+        input_b = "input_b",
+        check   = "check",
+        ok      = "btn_ok",
+        cancel  = "btn_cancel",
+        delete  = "btn_delete",
+        mainwnd = "main_settings_area",
+        opt_icon= "opt_icon"
+    }
+
+    local clrtxt ={
+        a = ts("st_paw_argb_a"),
+        r = ts("st_paw_argb_r"),
+        g = ts("st_paw_argb_g"),
+        b = ts("st_paw_argb_b")
+    }
+
+    local xml       = CScriptXmlInit()
+    local texroot   = tex.root..":"
+    local tbar      = texroot..tex.tbar
+    local icon      = texroot..tex.icon
+    local paw       = tbar..":"..tex.paw
+    local icopanel  = icon.."_panel"
+    local icoframe  = icon.."_frame"
+    local icowater  = icon.."_watermark"
+    local icoset_c  = texroot.."icoset_controls"
+    local icoset    = icoset_c..":"
+    local btn_iprev = icoset.."btn_ico_prev"
+    local btn_inext = icoset.."btn_ico_next"
+    local btn_sprev = icoset.."btn_set_prev"
+    local btn_snext = icoset.."btn_set_next"
+    local caption   = texroot..tex.caption
+    local bg        = texroot..tex.bg
+    local dialog    = texroot..tex.dialog
+    local chrome    = texroot..tex.chrome
+    local input     = texroot..tex.input
+    local input_a   = texroot..tex.input_a
+    local input_r   = texroot..tex.input_r
+    local input_g   = texroot..tex.input_g
+    local input_b   = texroot..tex.input_b
+    local btn_ok    = texroot..tex.ok
+    local cancel    = texroot..tex.cancel
+    local delete    = texroot..tex.delete
+    local check     = texroot..tex.check
+    local opt_icon  = texroot..tex.opt_icon
+    local opt_cap   = opt_icon..":"..tex.caption
+
+    local head_txt  = ts("ui_mcm_pawsys_pawmenu_pn_settings")
+    local lock_txt  = ts("ui_mcm_pawsys_pawmenu_lock_pin")
+    local label_txt = ts("ui_mcm_pawsys_pawmenu_show_label")
+    local hud_txt   = ts("ui_mcm_pawsys_pawmenu_hud_vis_on")
+
+    local set_curr  = ts("ui_mcm_lst_pawsys_pg_"..pawdata.curr_set_name)
+    local ico_curr  = ts("ui_mcm_lst_"..pawdata.curr_ico_name)
+
+    xml:ParseFile   (tex.file)
+
+    self.dialog     = xml:InitStatic(dialog, self)
+    self.dialog:SetWndSize(vector2():set(240,300))
+    self.dialog:SetWndPos(vector2():set(392,200))
+    self.chrome         = xml:InitStatic(chrome, self.dialog)
+    self.chrome:InitTexture("ui_paw_dialog_classic_chrome")
+    local titletab_sh   = xml:InitStatic(caption, self.chrome)
+    local titletab      = xml:InitStatic(caption, self.chrome)
+    titletab_sh:TextControl():SetText(head_txt)
+    titletab_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
+    titletab_sh:SetWndPos(vector2():set(17,8))
+    titletab_sh:InitTexture("ui_paw_fade_cap_bg_full")
+    titletab:TextControl():SetText(head_txt)
+    titletab:SetWndPos(vector2():set(17,7))
+    --================================================================--
+    --Title bar
+    self.tbar           = xml:InitStatic(tbar,self.dialog)
+    local paw           = xml:InitTextWnd(paw,self.tbar)
+    paw:SetText("PAW".." "..script_version)
+    paw:SetFont(GetFontSmall())
+    paw:SetWndPos(vector2():set(195,34))
+    --================================================================--
+    -- Rename/relabel
+    self.input          = xml:InitEditBox(input,self.dialog)
+    self:Register(self.input,"fld_input")
+    self.input:SetWndSize(vector2():set(190,30))
+    self.input:SetWndPos(vector2():set(8,7))
+    printf("Setting name input field to %s",self.title_txt)
+    self.input:SetText(self.title_txt)
+    --==== Icon and Set initialization ===============================--
+    -- Icon display
+    self.icon_display_panel = xml:InitStatic(icopanel, self.dialog)
+    self.icon_panel         = xml:InitStatic(icowater, self.icon_display_panel)
+    unsquish_aspect(self.icon_panel)
+    local icoframe          = xml:InitStatic(icoframe, self.icon_display_panel)
+    unsquish_aspect(icoframe)
+    self.icon               = xml:InitStatic(icon, self.icon_display_panel)
+    unsquish_aspect(self.icon)
+    if self.icon_tex then
+        self.icon:InitTexture(self.icon_tex)
+    else
+        dl("Empty icon texture passed to input window")
+    end
+    --================================================================--
+    --Set/pin controls
+    self.icoset_controls    = xml:InitStatic(icoset_c, self.dialog)
+    self.icon_controls      = xml:InitStatic(icoset_c,self.icoset_controls)
+    self.set_controls       = xml:InitStatic(icoset_c,self.icoset_controls)
+
+    function setup_icoset_ctrl(icoset_arg, pos_x, pos_y)
+        local stub = string.sub(icoset_arg,1,3)
+    --local btn_iprev = icoset.."btn_ico_prev"
+    --local btn_inext = icoset.."btn_ico_next"
+    --local btn_sprev = icoset.."btn_set_prev"
+    --local btn_snext = icoset.."btn_set_next"
+
+        local function size_btn(element,w,h)
+             element:SetWndSize(vector2():set((w*unsquish_ratio),h))
+        end
+        local btnx_         = "btn_"
+        local abbr          = string.sub(icoset_arg,1,1)
+        local button_prev   = btnx_..abbr.."prev"
+        local button_next   = btnx_..abbr.."next"
+        local node_prev     = icoset..btnx_..stub.."_prev"
+        local node_next     = icoset..btnx_..stub.."_next"
+        local icoset_ctrl   = icoset_arg.."_controls"
+        local text_cap      = (abbr == "s") and
+                                local_set_name() or local_icon_name()
+                                --(icon_sets[pawdata.curr_set_name].name) or
+                                --("ui_mcm_lst_"..pawdata.curr_ico_name)
+
+        self[button_prev]       = xml:Init3tButton(node_prev, self[icoset_ctrl])
+        --size_btn(self[button_prev],24,25)
+        self:Register(self[button_prev],node_prev)
+
+        local logo         = xml:InitStatic(icoset.."logo_"..icoset_arg, self[icoset_ctrl])
+        unsquish_aspect(logo)
+
+        self[button_next]       = xml:Init3tButton(node_next, self[icoset_ctrl])
+        --size_btn(self.btn_snext,24,25)
+        self:Register(self[button_next],node_next)
+
+        self.cap[icoset_arg]    = xml:InitStatic(caption,self[button_prev])
+        self.cap[icoset_arg]:TextControl():SetText(text_cap)
+        self.cap[icoset_arg]:SetWndPos(vector2():set(pos_x,pos_y))
+    end
+
+    --[[================================--
+    self.btn_iprev          = xml:Init3tButton(btn_iprev, self.icon_controls)
+    size_btn(self.btn_iprev,24,25)
+    self:Register(self.btn_iprev,btn_iprev)
+
+    local ilogo             = xml:InitStatic(icoset.."logo_icon", self.icon_controls)
+    unsquish_aspect(ilogo)
+
+    self.btn_inext          = xml:Init3tButton(btn_inext, self.icon_controls)
+    size_btn(self.btn_snext,24,25)
+    self:Register(self.btn_inext,btn_inext)
+
+    self.cap["icon"]        = xml:InitStatic(caption,self.btn_iprev)
+    self.cap["icon"]:TextControl():SetText(ts("ui_mcm_lst_"..pawdata.curr_ico_name))
+    self.cap["icon"]:SetWndPos(vector2():set(10,27))
+    --================================================================--
+    self.btn_sprev          = xml:Init3tButton(btn_sprev, self.set_controls)
+    size_btn(self.btn_sprev,24,25)
+    self:Register(self.btn_sprev,btn_sprev)
+    
+    local slogo = xml:InitStatic(icoset.."logo_set", self.set_controls)
+    unsquish_aspect(slogo)
+
+    self.btn_snext          = xml:Init3tButton(btn_snext, self.set_controls)
+    size_btn(self.btn_snext,24,25)
+    self:Register(self.btn_snext,btn_snext)
+
+    self.cap["set"]         = xml:InitStatic(caption,self.btn_sprev)
+    self.cap["set"]:TextControl():SetText(ts(icon_sets[pawdata.curr_set_name].name))
+    self.cap["set"]:SetWndPos(vector2():set(10,24))
+    --================================================================--]]
+
+    local function setup_argb_control(color,pos_x,pos_y)
+        local inputx = "input_"..color
+        local xsh = color.."_sh"
+        local xtx = color.."_tx"
+        local xmlnode = tex.root..":"..tex[inputx]
+        self[inputx]    = xml:InitEditBox(xmlnode,self.dialog)
+        self:Register(self[inputx],"fld_input_"..color)
+        self[inputx]:SetText(self.colors[color])
+        self[inputx]:SetWndPos(vector2():set(pos_x,pos_y))
+        self.cap[color]      = xml:InitStatic(opt_icon,self[inputx])
+        self.cap[color]:InitTexture("ui_icons_paw_argb_"..color)
+        unsquish_aspect(self.cap[color])
+        self.cap[xsh]   = xml:InitStatic(opt_cap.."_sh",self.cap[color])
+        self.cap[xsh]:TextControl():SetText(clrtxt[color])
+        self.cap[xsh]:TextControl():SetTextColor( GetARGB(255,0,0,0) )
+        self.cap[xtx]   = xml:InitStatic(opt_cap,self.cap[color])
+        self.cap[xtx]:TextControl():SetText(clrtxt[color])
+    end
+
+    local function setup_checkbox(setting,pos_x,pos_y,captext)
+        local checkopt = "check_"..setting
+        self[checkopt]  = xml:InitCheck(check,self.dialog)
+        self:Register(self.check_hud, "check_hud"..self.init_time)
+        self[checkopt]:SetWndPos(vector2():set(pos_x,pos_y))
+        self.cap[checkopt]  = xml:InitTextWnd(caption,self[checkopt])
+        self.cap[checkopt]:SetWndPos(vector2():set(30,8))
+        self.cap[checkopt]:SetText(captext)
+        self.cap[checkopt]:SetVTextAlignment(1)
+    end
+
+    local function setup_button(button,pos_x,pos_y,xmlnode)
+        local buttonx = "btn_"..button
+        self[buttonx] = xml:Init3tButton(xmlnode, self.dialog)
+        self:Register(self[buttonx],buttonx)
+        self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))     
+    end
+
+    --================================================================--
+    -- Setup and place all elements
+    --========================= X = Y ================================--
+    setup_icoset_ctrl( "icon",  10, 27 )
+    setup_icoset_ctrl( "set",   10, 27 )
+
+    setup_argb_control( "a",    33, 207 )
+    setup_argb_control( "r",    86, 207 )
+    setup_argb_control( "g",    139,207 )
+    setup_argb_control( "b",    192,207 )
+
+    setup_checkbox( "hud",      5,  101,    hud_txt )
+    setup_checkbox( "text",     5,  135,    label_txt )
+    setup_checkbox( "lock",     5,  171,    lock_txt )
+
+    setup_button(   "cancel",   12, 239,    cancel )
+    setup_button(   "ok",       93, 239,    btn_ok )
+    setup_button(   "delete",   144,239,    delete )
+    --================================================================--
+
+    self.icon_display_panel:SetWndPos(vector2():set(155,112))
+    self.icoset_controls:SetWndPos(vector2():set(17,48))
+    self.icon_controls:SetWndPos(vector2():set(109,0))
+    self.set_controls:SetWndPos(vector2():set(0,0))
+
+    --[[Buttons
+    self.btn_cancel       = xml:Init3tButton(cancel, self.dialog)
+    self:Register(self.btn_cancel,tex.cancel)
+    self.btn_cancel:SetWndPos(vector2():set(12,239))
+
+    self.btn_ok             = xml:Init3tButton(btn_ok, self.dialog)
+    self:Register(self.btn_ok,tex.ok)
+    self.btn_ok:SetWndPos(vector2():set(93,239))
+ 
+    self.btn_delete       = xml:Init3tButton(delete, self.dialog)
+    self:Register(self.btn_delete,tex.delete)
+    self.btn_delete:SetWndPos(vector2():set(144,239))
+--]]
+    self:InitCallBacks()
+end
+
+function UIPinSettingsWnd:InitCallBacks()
+    vl("UIPinSettingsWnd registering callbacks")
+    self:AddCallback("btn_ok", ui_events.BUTTON_CLICKED, self.OnAccept, self)
+    self:AddCallback("btn_cancel", ui_events.BUTTON_CLICKED, self.Close, self)
+    self:AddCallback("btn_delete", ui_events.BUTTON_CLICKED, self.DeletePin, self)
+
+    self:AddCallback("btn_iprev", ui_events.BUTTON_CLICKED, self.IconPrev, self)
+    self:AddCallback("btn_inext", ui_events.BUTTON_CLICKED, self.IconNext, self)
+    self:AddCallback("btn_sprev", ui_events.BUTTON_CLICKED, self.SetPrev, self)
+    self:AddCallback("btn_snext", ui_events.BUTTON_CLICKED, self.SetNext, self)
+
+    local _check_lock = function()
+        self:Callback_Check(self.check_lock,"locked")
+    end
+    self:AddCallback("check_lock"..self.init_time, ui_events.BUTTON_CLICKED, _check_lock, self)
+
+    local _check_hud = function()
+        self:Callback_Check(self.check_hud,"show_hud")
+    end
+    self:AddCallback("check_lock"..self.init_time, ui_events.BUTTON_CLICKED, _check_hud, self)
+
+    local _check_text = function()
+        self:Callback_Check(self.check_text,"show_label")
+    end
+    self:AddCallback("check_lock"..self.init_time, ui_events.BUTTON_CLICKED, _check_text, self)
+
+    local args = {
+        min     = 0,
+        max     = 255,
+        valtype = 2,
+        color   = "a",
+    }
+    local _input_a = function()
+        args.color = "a"
+        self:Callback_Input(self.input_a,args)
+    end
+    self:AddCallback("input_a"..self.init_time, ui_events.BUTTON_CLICKED, _input_a, self)
+
+
+--[[
+    local _check_del = function()
+        self:Callback_Check(self.check_del)
+    end
+    self:AddCallback("check_del"..self.init_time, ui_events.BUTTON_CLICKED, _check_del, self)
+--]]
+end
+
+function UIPinSettingsWnd:RefreshIcon()
+    self.icon_tex = texture_for_icon(pawdata.curr_ico_name)
+    self.icon:InitTexture(self.icon_tex)
+end
+
+function UIPinSettingsWnd:IconPrev()
+    _ = cycle_icons(-1,false)
+    self.icon_changed = true
+end
+
+function UIPinSettingsWnd:IconNext()
+    _ = cycle_icons(1,false)
+    self.icon_changed = true
+    self:Update()
+end
+
+function UIPinSettingsWnd:SetPrev()
+    _ = cycle_sets(-1,false)
+    self.icon_changed = true
+    self.set_changed = true
+end
+
+function UIPinSettingsWnd:SetNext()
+    _ = cycle_sets(1,false)
+    self.icon_changed = true
+    self.set_changed = true
+end
+
+function UIPinSettingsWnd:Callback_Check(ctrl,opt)
+    if opt == "locked" then
+        self.locked = ctrl:GetCheck()
+        self.btn_delete:Enable(not self.locked)
+        self.check_text:Enable(not self.locked)
+        self.check_hud:Enable(not self.locked)
+        self.input_a:Enable(not self.locked)
+        self.input_r:Enable(not self.locked)
+        self.input_g:Enable(not self.locked)
+        self.input_b:Enable(not self.locked)
+        self.input_a:Enable(not self.locked)
+        self.input:Enable(not self.locked)
+    end
+end
+
+
+function UIPinSettingsWnd:Callback_Input(ctrl,args)
+    vl("UIPinSettingsWnd:Callback_Input")
+    -- largely lifted from MCM
+    local value     = ctrl:GetText()
+    local default   = args and args.default or self.default_all
+    local valtype   = args and args.valtype
+    local color     = args and args.color
+    local min       = args and args.min or 0
+    local max       = args and args.max or 255
+
+    if not (value and value ~= "") then
+        value = default
+    elseif (valtype == 2) then
+        value = tonumber(value)
+        if (not value) then
+            ctrl:SetText(default)
+            return
+        end
+        value = clamp(value, min, max)
+    end
+
+    ctrl:SetText(value)
+    self.colors[color] = value
+    self.icon:SetTextureColor(GetARGB(self.colors.a,self.colors.r,self.colors.g,self.colors.b))
+end
+
+
+function UIPinSettingsWnd:DeletePin()
+    do_waypoint("pn_del",nil,nil,{syscall=true,id=self.pin_id})
+    self:Close()
+end
+
+
+function UIPinSettingsWnd:Reset(id,args)
+    self.pin_id     = id
+    self.pin        = pins[self.pin_id]
+    self.orig_icon  = self.pin.icon
+    self.orig_pin   = pawdata.curr_ico_name
+    self.orig_set   = pawdata.curr_set_name
+    self.locked     = self.pin.locked
+    self.show_hud   = self.pin.hud
+    self.show_label = self.pin.show_label
+    self.title_txt  = self.pin.text or self.pin.name
+    self.init_time  = tostring(get_time_elapsed())
+    self.icon_tex   = texture_for_icon(self.pin.icon)
+    self.colors     = self.pin.colors
+    if not self.colors then
+        printf("no stored colors in pin %s, defaulting ARGB to 255",id)
+        self.colors = {
+            a       = 255,
+            r       = 255,
+            g       = 255,
+            b       = 255
+        }
+    end
+    self.args       = args or self.args
+    if self.icon_tex and self.icon then
+        self.icon:InitTexture(self.icon_tex)
+    end
+    --self.input:SetText("")
+end
+
+
+function UIPinSettingsWnd:Update()
+    CUIScriptWnd.Update(self)
+    if self.icon_changed then
+        if self.set_changed then
+            self.cap["set"]:TextControl():SetText(local_set_name())
+        end
+        self.cap["icon"]:TextControl():SetText(local_icon_name())
+        self.icon_tex = get_current_texture(self.set_changed)
+        self.set_changed = false
+        self.icon_changed = false
+        if self.icon_tex then
+            self.icon:InitTexture(self.icon_tex)
+        end
+    end
+end
+
+
+function UIPinSettingsWnd:OnAccept()
+    local a,r,g,b = clamp(tonumber(self.input_a:GetText() or 255),0,255),
+                    clamp(tonumber(self.input_r:GetText() or 255),0,255),
+                    clamp(tonumber(self.input_g:GetText() or 255),0,255),
+                    clamp(tonumber(self.input_b:GetText() or 255),0,255)
+    
+    pins[self.pin_id].locked = self.check_lock:GetCheck()
+    if not pins[self.pin_id].locked then
+        if not pins[self.pin_id].colors then
+            pins[self.pin_id].colors = {}
+        end
+        pins[self.pin_id].colors.a = a
+        pins[self.pin_id].colors.r = r
+        pins[self.pin_id].colors.g = g
+        pins[self.pin_id].colors.b = b
+
+        self.show_label = (
+            self.check_text:GetCheck() and
+            show_pin_label(self.pin_id,true) or
+            show_pin_label(self.pin_id,false) 
+        )
+        self.show_hud = (
+            self.check_hud:GetCheck() and
+            do_waypoint("show_hud_pin",nil,nil,{syscall=true,id=self.pin_id}) or
+            do_waypoint("hide_hud_pin",nil,nil,{syscall=true,id=self.pin_id})
+        )
+    end
+    self:Close()
+end
+
+
+function UIPinSettingsWnd:OnKeyboard(dik, keyboard_action)
+    local res = CUIScriptWnd.OnKeyboard(self,dik,keyboard_action)
+    if (res == false) then
+        local bind = dik_to_bind(dik)
+        if keyboard_action == ui_events.WINDOW_KEY_PRESSED then
+            if dik == DIK_keys.DIK_ESCAPE then
+                self:Close()
+            end
+        end
+    end
+    return res
+end
+
+
+function UIPinSettingsWnd:Close()
+
+    self:HideDialog()
+    show_indicator(false)
+    Unregister_UI("UIPinSettingsWnd")
+end
+
 
 -- ======================================================================
 --[[    ICON AND SET HUD INDICATOR
@@ -3289,6 +3950,41 @@ function update_vo_crosshair()
 end
 
 -- ======================================================================
+--  TASK FUNCTORS
+-- ======================================================================
+
+
+task_functor.waypoint_task_target_functor = function (task_id,field,p,tsk)
+    if not paw_enabled then return end
+    -- vl("waypoint_task_target_functor called with task_id %s | field %s",task_id,field)
+
+    if placed_waypoint == nil then
+        dl("WARNING: waypoint_task_target_functor called but placed_waypoint is nil, cancelling waypoint task to avoid crash")
+        end_waypoint_task()
+        return default_id
+    end
+
+    if (field == "target") then
+        tsk.target = placed_waypoint.id
+        tsk.current_target = placed_waypoint.id
+        return placed_waypoint.id
+    end
+end
+
+
+task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
+    if not (paw_enabled and placed_waypoint) then return end
+    -- vl("waypoint_task_text_functor called with task_id %s | field %s",task_id,field)
+    if (field == "title") then
+        -- vl("custom_name: %s")
+        return custom_name or ts("st_paw_placed_waypoint")..(": "..placed_waypoint.name or "")
+    elseif (field == "descr") then
+        -- vl("custom_desc: %s")
+        return custom_desc or ts("st_paw_proceed")
+    end
+end
+
+-- ======================================================================
 --  CALLBACKS
 -- ======================================================================
 
@@ -3409,9 +4105,13 @@ function on_map_right_click(property_ui, map_table)
             end
             return
         elseif mod_key_pressed(3) then
-            -- LALT : Add Pin
-            do_waypoint("pn_add",se_obj)
-            return
+            -- LALT : Add or edit Pin
+            if pins[se_obj.id] then
+                open_pin_settings(se_obj.id)
+            else
+                do_waypoint("pn_add",se_obj)
+                return
+            end
         end
         dl("<PAW> Passing right-click to get_context_menu_options with id %s and pos %s",se_obj.id,pos)
         last_clicked_id = se_obj.id
@@ -3616,6 +4316,11 @@ function load_state(data)
         pawdata.curr_ico_ind = setdata.ri[root_patch_name(setdata.active_icon)]
         vl("pawdata: set %s (%s) | icon %s (%s)",pawdata.curr_set_name,pawdata.curr_set_ind,pawdata.curr_ico_name,pawdata.curr_ico_ind)
     end
+    if pins_exist() then
+        for k,v in pairs(pins) do
+            pins[k].label = nil
+        end
+    end
 end
 
 
@@ -3746,42 +4451,6 @@ function on_game_start()
     end
     if right_click_avail then
         RegisterScriptCallback("on_map_right_click",on_map_right_click)
-    end
-end
-
-
--- ======================================================================
---  TASK FUNCTORS
--- ======================================================================
-
-
-task_functor.waypoint_task_target_functor = function (task_id,field,p,tsk)
-    if not paw_enabled then return end
-    -- vl("waypoint_task_target_functor called with task_id %s | field %s",task_id,field)
-
-    if placed_waypoint == nil then
-        dl("WARNING: waypoint_task_target_functor called but placed_waypoint is nil, cancelling waypoint task to avoid crash")
-        end_waypoint_task()
-        return default_id
-    end
-
-    if (field == "target") then
-        tsk.target = placed_waypoint.id
-        tsk.current_target = placed_waypoint.id
-        return placed_waypoint.id
-    end
-end
-
-
-task_functor.waypoint_task_text_functor = function (task_id,field,p,tsk)
-    if not (paw_enabled and placed_waypoint) then return end
-    -- vl("waypoint_task_text_functor called with task_id %s | field %s",task_id,field)
-    if (field == "title") then
-        -- vl("custom_name: %s")
-        return custom_name or ts("st_paw_placed_waypoint")..(": "..placed_waypoint.name or "")
-    elseif (field == "descr") then
-        -- vl("custom_desc: %s")
-        return custom_desc or ts("st_paw_proceed")
     end
 end
 

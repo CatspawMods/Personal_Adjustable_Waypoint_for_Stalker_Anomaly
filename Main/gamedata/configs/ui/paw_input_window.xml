@@ -1,28 +1,157 @@
 <w>
 	<dialog x="392" y="341" width="240" height="110" stretch="1" >
-		<background x="0" y="0" width="240" height="110" stretch="1" >
+
+		<background x="392" y="241" width="240" height="300" stretch="1" >
 			<texture>ui_inGame2_message_box</texture>
 		</background>
 
+		<chrome x="-18" y="-27" width="269" height="335" stretch="1" />
+
+		<pin_settings x="392" y="200" width="240" height="300" stretch="1" />
+
+		<bg_settings x="0" y="0" width="240" height="300" stretch="1" />
+
 		<titlebar x="6" y="3" width="230" height="32">
 			<paw x="200" y="0" width="10" height="10" align="r" stretch="1" font="arial_14"/>
-			<icon x="-1" y="0" width="24" height="32" align="c" vert_align="c" stretch="1" />
-			<text x="30" y="6" width="200" height="26" r="255" g="255" b="255" align="r" vert_align="c" font="graffiti19" />
+			<text x="5" y="10" width="200" height="26" r="255" g="255" b="255" align="r" vert_align="c" font="letterica16" />
 		</titlebar>
+
+		<icon_panel x="0" y="0" width="120" height="100" />
+
+		<icon x="10" y="10" width="64" height="64" align="c" vert_align="c" stretch="1" />
+
+		<icon_watermark x="0" y="0" width="95" height="95" align="c" vert_align="c" stretch="1" >
+			<texture>ui_paw_dialog_iconwater_hq</texture>
+		</icon_watermark>
+
+		<icon_frame x="0" y="0" width="95" height="95" align="c" vert_align="c" stretch="1" >
+			<texture>ui_paw_dialog_iconframe_hq</texture>
+		</icon_frame>
+
+<!--
+
+		<icon x="8" y="9" width="32" height="32" align="c" vert_align="c" stretch="1" />
+
+		<icon_watermark x="125" y="200" width="53" height="53" align="c" vert_align="c" stretch="1" >
+			<texture>ui_paw_dialog_iconwater</texture>
+		</icon_watermark>
+
+		<icon_frame x="0" y="0" width="53" height="53" align="c" vert_align="c" stretch="1" >
+			<texture>ui_paw_dialog_iconframe</texture>
+		</icon_frame>
+
+
+
+-->
+		<icoset_controls x="0" y="0" width="200" height="70" align="c" vert_align="c" stretch="1">
+		<!--
+			Known good backup
+			<btn_set_prev x="0" y="2" width="40" height="26">
+				<texture>ui_button_arrow_left</texture>
+			</btn_set_prev>
+
+			<logo_set x="39" y="0" width="24" height="28" align="c" vert_align="c" stretch="1">
+				<texture>ui_icons_paw_btn_set</texture>
+			</logo_set>
+
+			<btn_set_next x="55" y="2" width="40" height="26">
+				<texture>ui_button_arrow_right</texture>
+			</btn_set_next>
+
+			<btn_ico_prev x="0" y="2" width="40" height="26">
+				<texture>ui_button_arrow_left</texture>
+			</btn_ico_prev>
+
+			<logo_icon x="39" y="0" width="28" height="28" align="c" vert_align="c" stretch="1">
+				<texture>ui_icons_paw_btn_icon</texture>
+			</logo_icon>
+			
+			<btn_ico_next x="55" y="2" width="40" height="26">
+				<texture>ui_button_arrow_right</texture>
+			</btn_ico_next>
+		-->
+			<btn_set_prev x="8" y="4" width="24" height="25">
+				<texture>ui_beltbut_min</texture>
+			</btn_set_prev>
+
+			<logo_set x="25" y="0" width="24" height="28" align="c" vert_align="c" stretch="1">
+				<texture>ui_icons_paw_btn_set</texture>
+			</logo_set>
+
+			<btn_set_next x="52" y="4" width="24" height="25">
+				<texture>ui_beltbut_plus</texture>
+			</btn_set_next>
+
+			<btn_ico_prev x="8" y="4" width="24" height="25">
+				<texture>ui_beltbut_min</texture>
+			</btn_ico_prev>
+
+			<logo_icon x="25" y="0" width="28" height="28" align="c" vert_align="c" stretch="1">
+				<texture>ui_icons_paw_btn_icon</texture>
+			</logo_icon>
+			
+			<btn_ico_next x="52" y="4" width="24" height="25">
+				<texture>ui_beltbut_plus</texture>
+			</btn_ico_next>
+
+		</icoset_controls>
+
+
+		<caption x="-10" y="8" width="100" height="18" align="l" vert_align="c" font="letterica16" complex_mode="1" stretch="1"/>
+
+
+		<check x="0" y="0" width="35" height="30" stretch="1">
+            <texture>ui_inGame2_checkbox</texture>
+        </check>
+
+        <opt_icon x="-19" y="5" width="21" height="21" align="c" vert_align="c" stretch="1">
+        	<caption x="4" y="3.5" align="c" vert_align="c" stretch="1" font="letterica16" complex_mode="1" />
+        	<caption_sh x="5" y="4.5" align="c" vert_align="c" stretch="1" font="letterica16" complex_mode="1" />
+        </opt_icon>
 
 		<input x="15" y="35" width="200" height="30" stretch="1">
 			<text x="5" font="letterica16" vert_align="c" align="l"/>
 			<texture>ui_inGame2_edit_box_2</texture>
 		</input>
 
-		<btn_cancel x="35" y="72" width="70" height="28" stretch="1" check_mode="0">
+		<input_name x="15" y="35" width="200" height="30" stretch="1">
+			<text x="5" font="letterica16" vert_align="c" align="l"/>
+		</input_name>
+
+		<input_a x="30" y="85" width="30" height="30" stretch="1">
+			<text x="5" font="letterica16" vert_align="c" align="l"/>
+			<texture>ui_inGame2_edit_box_2</texture>
+		</input_a>
+
+		<input_r x="80" y="85" width="30" height="30" stretch="1">
+			<text x="5" font="letterica16" vert_align="c" align="l"/>
+			<texture>ui_inGame2_edit_box_2</texture>
+		</input_r>
+
+		<input_g x="120" y="85" width="30" height="30" stretch="1">
+			<text x="5" font="letterica16" vert_align="c" align="l"/>
+			<texture>ui_inGame2_edit_box_2</texture>
+		</input_g>
+
+		<input_b x="170" y="85" width="30" height="30" stretch="1">
+			<text x="5" font="letterica16" vert_align="c" align="l"/>
+			<texture>ui_inGame2_edit_box_2</texture>
+		</input_b>		
+
+		<btn_delete x="0" y="0" width="80" height="28" stretch="1" check_mode="0">
+			<text font="letterica16">ui_mcm_pawsys_pawmenu_pn_del</text>
+			<texture>ui_button_ordinary</texture>
+		</btn_delete>
+
+		<btn_cancel x="0" y="0" width="80" height="28" stretch="1" check_mode="0">
 			<text font="letterica16">ui_inv_cancel</text>
 			<texture>ui_button_ordinary</texture>
 		</btn_cancel>
 
-		<btn_ok x="125" y="72" width="70" height="28" stretch="1" check_mode="0">
+		<btn_ok x="0" y="0" width="50" height="28" stretch="1" check_mode="0">
 			<text font="letterica16">ui_inv_ok</text>
 			<texture>ui_button_ordinary</texture>
 		</btn_ok>
+
 	</dialog>
 </w>

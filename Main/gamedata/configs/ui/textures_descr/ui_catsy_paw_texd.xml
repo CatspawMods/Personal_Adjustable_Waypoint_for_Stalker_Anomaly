@@ -60,6 +60,10 @@
 
 		<texture id = "ui_icons_paw_hud_waypoint" x="0" y="96" width="128" height="128" />
 
+		<texture id = "ui_icons_paw_btn_icon" x="192" y="160" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_btn_set" x="256" y="160" width="64" height="64" />
+
 		<texture id = "ui_icons_paw_pin_redskull" x="320" y="160" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_pin_cursor_diamond_f" x="384" y="96" width="64" height="64" />
@@ -104,7 +108,17 @@
 
 		<texture id = "ui_icons_paw_crosshair_targetid" x="896" y="288" width="128" height="128" />
 
+		<texture id = "ui_paw_dialog_bg_gray1" x="0" y="702" width="640" height="320" />
+
+    	<texture id="paw_backpack_stash_icon_green" x="258" y="2" width="27" height="27" />
+
+    	<texture id="ui_icons_paw_argb_a" x="289" y="1" width="29" height="29" />
+    	<texture id="ui_icons_paw_argb_r" x="321" y="1" width="29" height="29" />
+    	<texture id="ui_icons_paw_argb_g" x="353" y="1" width="29" height="29" />
+    	<texture id="ui_icons_paw_argb_b" x="385" y="1" width="29" height="29" />
+
 	</file>
+
 
 	<file name ="ui\ui_icon_equipment">
 		<texture id = "ui_icons_paw_badge_army" x="0" y="50" width="50" height="50" />
@@ -120,6 +134,7 @@
 		<texture id = "ui_icons_paw_badge_greh" x="500" y="50" width="50" height="50" />
 		<texture id = "ui_icons_paw_badge_renegade" x="550" y="50" width="50" height="50" />
 	</file>
+
 
 	<file name ="ui\paw\ui_icons_paw_body_marks">
 		<texture id = "ui_icons_paw_badge_hr_stalker" 	x="0" y="384" width="64" height="64" />
@@ -162,9 +177,15 @@
 		<texture id="ui_AlphaLion_XCorpseMarker-large" x="286" y="512" width="9" height="9" />
 	</file>
 
+
     <file name="ui\ui_common">
-    	<texture id="ui_paw_wnd_title_1" x="3" y="87" width="113" height="25" />
+    	<texture id = "ui_paw_wnd_title_1" x="3" y="87" width="113" height="25" />
+
+		<texture id = "ui_paw_dialog_icobg1" x="826" y="252" width="96" height="96" />
+
+
    	</file>
+
 
     <file name="ui\ui_actor_hint_wnd">
     	<texture id="paw_vanilla_stash_icon_green" x="51" y="562" width="27" height="27" />
@@ -173,7 +194,8 @@
 	    <texture id="paw_vanilla_stash_icon_red"  x="932" y="962" width="27" height="27" />
    	</file>
 
-	<file name ="ui\paw\paw_hud_indicators">
+
+	<file name ="ui\paw\paw_hud_assets">
 		<texture id = "ui_paw_hud_indicator_classic" x="0" y="0" width="138" height="75" />
 		<texture id = "ui_paw_hud_indicator_vertleft" x="0" y="76" width="100" height="154" />
 		<texture id = "ui_paw_hud_indicator_vertright" x="0" y="232" width="100" height="154" />
@@ -182,6 +204,43 @@
 		<texture id = "ui_paw_hud_indicator_minimal_h" x="153" y="0" width="94" height="52" />
 		<texture id = "ui_paw_hud_indicator_minimal_v" x="248" y="0" width="92" height="112" />
 		<texture id = "ui_paw_hud_indicator_minicom" x="303" y="46" width="38" height="38" />
+
+		<texture id = "ui_paw_hud_wnd_frmcrv_UL" x="0" 	y="400" width="24" height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_UM" x="24" y="400" width="24" height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_UT" x="48" y="400" width="8"  height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_UR" x="72" y="400" width="24" height="24" />
+
+		<texture id = "ui_paw_hud_wnd_frmcrv_LM" x="0" 	y="424" width="24" height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_RM" x="72" y="424" width="24" height="24" />
+
+		<texture id = "ui_paw_hud_wnd_frmcrv_LT" x="0" 	y="448" width="24" height="8" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_RT" x="72" y="448" width="24" height="8" />
+
+		<texture id = "ui_paw_hud_wnd_frmcrv_BL" x="0" 	y="472" width="24" height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_BM" x="24" y="472" width="24" height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_BP" x="24" y="424" width="32" height="48" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_BT" x="48" y="472" width="8"  height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_BR" x="72" y="472" width="24" height="24" />
+
+		<texture id = "ui_paw_hud_wnd_frmcrv_BL_extend" x="154" y="455" width="24" height="24" />
+		<texture id = "ui_paw_hud_wnd_frmcrv_BM_extend" x="178" y="455" width="170" height="24" />	
+		<texture id = "ui_paw_hud_wnd_frmcrv_underline" x="154" y="455" width="194" height="24" />
+
+		<texture id = "ui_paw_fade_cap_bg_left" x="178" y="481" width="24" height="31" />	
+		<texture id = "ui_paw_fade_cap_bg_right" x="192" y="481" width="320" height="31" />	
+		<texture id = "ui_paw_fade_cap_bg_full" x="178" y="481" width="334" height="31" />	
+
+		<texture id = "ui_paw_dialog_classic_chrome" x="755" y="689" width="269" height="355" />
+		<texture id = "ui_paw_dialog_classic_bg" x="773" y="716" width="240" height="300" />
+
+		<texture id = "ui_paw_dialog_iconframe" x="917" y="635" width="53" height="53" />
+
+		<texture id = "ui_paw_dialog_iconframe_hq" x="833" y="445" width="190" height="190" />
+
+		<texture id = "ui_paw_dialog_iconwater" x="970" y="635" width="53" height="53" />
+
+		<texture id = "ui_paw_dialog_iconwater_hq" x="833" y="255" width="190" height="190" />
+
 	</file>
 
 	<file name ="ui\paw\paw_mcm_assets">

@@ -9,7 +9,7 @@
 #include "ui\map_spots_paw_patches.xml"
 #include "ui\map_spots_paw_bwhr.xml"
 #include "ui\map_spots_paw_npcs.xml"
-#include "ui\map_spots_milpda.xml"
+#include "ui\map_spots_paw_bodies.xml"
 
 	<!-- Cartography Mode icon for smart terrain -->
 	<paw_pin_magnifier32>
@@ -87,71 +87,12 @@
             <texture>paw_vanilla_stash_icon_red</texture>
     </paw_stash_red_spot>
 
-<!-- Body marks -->
- 	<paw_death_small>
-		<level_map spot="paw_death_small_spot"/>
-		<mini_map spot="paw_death_small_spot"/>
-	</paw_death_small>
+	<paw_stash_backpack>
+        <level_map spot="paw_stash_backpack_spot"/>
+        <mini_map spot="paw_stash_backpack_spot"/>
+    </paw_stash_backpack>
 
-	<paw_death_small_spot width="12" height="12" alignment="c" stretch="0" scale="1" scale_min="1.0" scale_max="1.2">
-		<texture>ui_icons_paw_pin_bwhr_death64</texture>
-	</paw_death_small_spot>
-
-
-	<paw_blue_circle>
-        <level_map spot="paw_blue_circle_spot"/>
-        <mini_map spot="paw_blue_circle_spot"/>
-    </paw_blue_circle>
-
-	<paw_blue_circle_spot width="7" height="7" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
-            <texture>ui_icons_paw_blue_circle</texture>
-    </paw_blue_circle_spot>	
-
-
-	<paw_crosshair_white>
-        <level_map spot="paw_crosshair_white_spot"/>
-        <mini_map spot="paw_crosshair_white_spot"/>
-    </paw_crosshair_white>
-
-	<paw_crosshair_white_spot width="12" height="12" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
-            <texture>ui_icons_paw_crosshair_white</texture>
-    </paw_crosshair_white_spot>	
-
-
-   	<paw_crosshair_red>
-        <level_map spot="paw_crosshair_red_spot"/>
-        <mini_map spot="paw_crosshair_red_spot"/>
-    </paw_crosshair_red>
-
-	<paw_crosshair_red_spot width="12" height="12" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
-            <texture>ui_icons_paw_crosshair_red</texture>
-    </paw_crosshair_red_spot>
-
-
-	<paw_crosshair_green>
-        <level_map spot="paw_crosshair_green_spot"/>
-        <mini_map spot="paw_crosshair_green_spot"/>
-    </paw_crosshair_green>
-
-	<paw_crosshair_green_spot width="12" height="12" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
-            <texture>ui_icons_paw_crosshair_green</texture>
-    </paw_crosshair_green_spot>
-
-	<paw_crosshair_gradient>
-        <level_map spot="paw_crosshair_gradient_spot"/>
-        <mini_map spot="paw_crosshair_gradient_spot"/>
-    </paw_crosshair_gradient>
-
-	<paw_crosshair_gradient_spot width="12" height="12" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
-            <texture>ui_icons_paw_crosshair_gradient</texture>
-    </paw_crosshair_gradient_spot>	
-
-	<paw_pin_redskull>
-        <level_map spot="paw_pin_redskull_spot"/>
-        <mini_map spot="paw_pin_redskull_spot"/>
-    </paw_pin_redskull>
-
-	<paw_pin_redskull_spot width="12" height="12" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
-            <texture>ui_icons_paw_pin_redskull</texture>
-    </paw_pin_redskull_spot>	
+	<paw_stash_backpack_spot width="12" height="12" alignment="c" stretch="1" scale="1" scale_min="1" scale_max="1.5">
+            <texture>paw_backpack_stash_icon_green</texture>
+    </paw_stash_backpack_spot>
 

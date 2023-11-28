@@ -443,7 +443,7 @@ function on_mcm_load()
 		table.insert(pawgen,7,{id = "disable_load_warning", type = "check", val = 1, def = false})
 		table.insert(pawgen,8,divider)
 	else
-		table.insert(pawgen,2,{id = "pawgen_header", type = "image", link = "ui_paw_emptytex", size = {512,155},
+		table.insert(pawgen,2,{id = "pawgen_header", type = "image", link = "ui_paw_emptytex", size = {512,160},
 			ui_hook_functor = {catsy_paw_mcm.mcm_init_header_text_block},
 		})
 
@@ -957,7 +957,7 @@ function init_mcm_header_ind(anchor, handlers, opts, flags)
 	
 	local xmlroot = "paw_mcm_indicator"
 
-    xml:ParseFile("paw_hud_indicator.xml")
+    xml:ParseFile("paw_ui_elements.xml")
 	box_wnd 	= xml:InitStatic(xmlroot,anchor)
 	box_wnd:SetWndSize(vector2():set(563,40))
 	box_img		= xml:InitStatic(xmlroot..":curr",box_wnd)
@@ -1067,7 +1067,7 @@ function init_mcm_pos_preview(anchor, handlers, opts, flags)
 	pws.cust_x 		= ui_mcm.get("pawsys/pawhud/pos_x") or 491
 	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y") or 690
 
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	local theme 	= pws.curr_theme
 	box.wnd 		= xml:InitStatic(xmlroot,anchor)
 	box.wnd:SetWndSize(vector2():set(640 * unsquish_ratio,270))
@@ -1125,7 +1125,7 @@ end
 function init_theme_sim(theme)
 	if load_failed then return end
 	dl("init_theme_sim: attempting to initialize %s theme",theme and theme.name)
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	if theme_preview then
 		if theme_preview.wnd then theme_preview.wnd:Show(false) end
 		if theme_preview.empty then theme_preview.empty:Show(false) end
@@ -1211,7 +1211,7 @@ function mcm_init_widget_preview(anchor, handlers, opts, flags)
 	if desc then
 		desc:SetWndSize(vector2():set(300, desc:GetHeight()))
 	end
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	theme_box 	= xml:InitStatic(xmlroot,anchor)
 	theme_box:SetWndPos(vector2():set(330,-70))
 	theme_box:SetWndSize(vector2():set(200,200))
@@ -1229,18 +1229,18 @@ end
 
 
 function mcm_init_header_text_block(anchor, handlers, opts, flags)
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	local head 			= xml:InitStatic(xmlroot,anchor)
 	local tbg1			= xml:InitStatic(xmlroot,anchor)
 	local tbox1			= xml:InitTextWnd(xmlroot,tbg1)
 
 	if (opts and opts.id) == "pawgen_header" then
-		tbg1:SetWndSize(vector2():set(usr(640),155))
+		tbg1:SetWndSize(vector2():set(usr(640),160))
 		tbg1:SetWndPos(vector2():set(10,0))
 		tbg1:InitTexture("ui_paw_mcm_messagebox_transbg")
 
 		local text = psk(ts("ui_mcm_pawsys_pawgen_headertxt"),text_colors)
-		tbox1:SetWndSize(vector2():set(usr(620),145))
+		tbox1:SetWndSize(vector2():set(usr(620),150))
 		tbox1:SetText(text)
 		tbox1:SetWndPos(vector2():set(10,12))
 
@@ -1299,7 +1299,7 @@ end
 function mcm_init_load_error_block(anchor, handlers, opts, flags)
 	local id = opts and opts.id
 	if id == "fix_load_order" then
-		xml:ParseFile("paw_hud_indicator.xml")
+		xml:ParseFile("paw_ui_elements.xml")
 		local pic = handlers and handlers.pic
 		if not pic then return end
 		pic:InitTexture("ui_paw_emptytex")
