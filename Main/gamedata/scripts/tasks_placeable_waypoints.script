@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 2.0
-    Updated: 20231121
+    Version: 2.0.1
+    Updated: 20231127
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -39,8 +39,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "2.0"
-release_date            = 20231121
+script_version          = "2.0.1"
+release_date            = 20231127
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -472,7 +472,8 @@ text_colors = {
     ["clr_lbl"]     = "%" .. "%c[255,0,200,220]",
     ["clr_yel"]  = "%" .. "%c[255,250,218,94]",
     ["clr_wht"]   = "%" .. "%c[255,220,220,220]",
-    ["clr_prp"]  = "%" .. "%c[255,138,43,226]"
+    ["clr_prp"]  = "%" .. "%c[255,138,43,226]",
+    ["clr_blk"] = "%" .. "%c[255,0,0,0]",
 }
 
 
@@ -629,7 +630,7 @@ function paw_enabled_check()
 end
 
 function valid_bind(kb)
-    return (kb ~= nil) and (kb ~= "") and (kb ~= "<!!!>")
+    return (kb ~= nil) and (kb ~= "") and (kb ~= "<!!!>") and (kb ~= -1)
 end
 
 
@@ -1662,6 +1663,13 @@ function faction_body_icon(comm)
     return icon or current_body_icon
 end
 
+function local_set_name(setname)
+    local name = ts(setname or icon_sets[pawdata.curr_set_name].name)
+end
+
+function local_icon_name(iconame)
+    local name = ts(iconame or "ui_mcm_lst_"..pawdata.curr_ico_name)
+end
 
 function icon_for_pin(pin_name)
     if icons and pin_name then return icons[pin_name] end
@@ -1692,6 +1700,10 @@ function texture_for_set(setname)
     local tex = td.t
     vl("texture_for_set(%s) returned %s",setname,tex)
     return tex
+end
+
+function get_current_texture(set_changed)
+    return set_changed and texture_for_set(pawdata.curr_set_name) or texture_for_icon(pawdata.curr_ico_name)
 end
 
 function set_or_icon(str)
