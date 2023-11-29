@@ -1528,4 +1528,8 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>B</text>
 	</string>
 
+	<string id="ui_paw_use_custom_color">
+		<text>Customize color</text>
+	</string>
+
 </string_table>

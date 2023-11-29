@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 2.0.1
-    Updated: 20231123
+    Version: 2.1
+    Updated: 20231201
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -39,8 +39,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "2.0.1"
-release_date            = 20231123
+script_version          = "2.1"
+release_date            = 20231201
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -352,7 +352,7 @@ managed_options = {
     ["hide_label"]      = true,
     ["pn_add"]          = true,
     ["pn_del"]          = true,
-    ["pn_ren"]          = true,
+    --["pn_ren"]          = true,
     ["pn_clr"]          = true,
     ["pn_settings"]     = true,
     ["lock_pin"]        = true,
@@ -869,6 +869,7 @@ function add_mapspot(text,id,icon)
     if pin.show_label then
         show_pin_label(id,true)
     end
+    return true
 end
 
 
@@ -889,6 +890,27 @@ function remove_mapspot(id,icon)
 end
 
 
+function change_mapspot(text,id,icon)
+    if not id then return end
+    icon = icon or (pins and pins[id] and pins[id].icon) or default_mapspot
+    text = text or (pins and pins[id] and pins[id].text)
+    vl("Trying to change mapspot with id %s to icon %s and text %s",id,icon,text)
+    _ = remove_mapspot(id,icon)
+    return add_mapspot(text,id,icon)
+end
+
+
+function set_mapspot_colors(id,icon,a,r,g,b)
+    if not id and icon and a and r and g and b then return end
+    local pin = pins[id]
+    if pin and pin.colors then
+        local clr = pin.colors
+        local spot = level.map_get_object_spot_static(id,icon)
+        if spot then spot:SetTextureColor(GetARGB(clr.a, clr.r, clr.g, clr.b)) end
+    end
+end
+
+
 function func_add_mapspot(text,args)
     local id        = args.id
     local icon      = args.icon or map_pin_icon
@@ -902,6 +924,7 @@ function func_add_mapspot(text,args)
     add_mapspot(text,id,icon)
 end
 
+--[[
 function func_ren_mapspot(text,args)
     local id        = args.id
     local icon      = map_pin_icon
@@ -917,6 +940,7 @@ function func_ren_mapspot(text,args)
     remove_mapspot(id,old_icon)
     add_mapspot(text,id,old_icon)
 end
+--]]
 
 function func_ren_waypoint(text,args)
     if text == "" then text = nil end
@@ -1233,6 +1257,7 @@ function show_pin_label(id,onoff,destroy)
     if not destroy then return end
     dl("Destroying map label for id %s",id)
     map_labels[id] = nil
+    return onoff
 end
 
 
@@ -1299,28 +1324,21 @@ function do_waypoint(act,se_obj,acode,args)
         get_text(title,itex,name,func,args)
     elseif act == "pn_add" then
         dl("Received call to add new pin to map for %s (%s)",name,id)
-        local func = add_mapspot_functor
+        --local func = add_mapspot_functor
         local icon = icons[ac.icon] or map_pin_icon
-        local itex = texture_for_icon(icon)
-        local title = ts("ui_mcm_pawsys_pawmenu_pn_add")
-        init_new_pin(id,name,ts("st_paw_pin_default_name"),icon)
-        cartography_mode(false)
+        --local itex = texture_for_icon(icon)
+        --local title = ts("ui_mcm_pawsys_pawmenu_pn_add")
+        local defname = ts("st_paw_pin_default_name")
+        init_new_pin(id,name,defname,icon)
+        add_mapspot(defname,id,icon)
+        --cartography_mode(false)
         --vl("pin data before input call: %s (%s) % | %",pins[id].name,pins[id].id,pins[id].icon,pins[id].text)
-        get_text(title,itex,nil,func,pins[id])
-
+        --get_text(title,itex,nil,func,pins[id])
+        open_pin_settings(id)
     elseif act == "pn_settings" then
         if not (id and pins[id]) then return end
         dl("Received call to open settings for pin %s (%s)",name,id)
-        if not pins[id].locked then
-            local func = ren_mapspot_functor
-            local icon = pins[id] and pins[id].icon
-            local itex = texture_for_icon(icon)
-            local text = pins[id] and pins[id].text
-            local title = ts("ui_mcm_pawsys_pawmenu_pn_ren")
-            open_pin_settings(id)
-        end
-
-
+        open_pin_settings(id)
     elseif act == "pn_ren" then
         if not (id and pins[id]) then return end
         dl("Received call to rename map pin %s (%s)",name,id)
@@ -1332,7 +1350,7 @@ function do_waypoint(act,se_obj,acode,args)
             local text = pins[id] and pins[id].text
             local title = ts("ui_mcm_pawsys_pawmenu_pn_ren")
             cartography_mode(false)
-            get_text(title,itex,text,func,pins[id])
+            open_pin_settings(title,itex,text,func,pins[id])
         end
     elseif act == "pn_del" then
         if not (id and pins[id]) then return end
@@ -1694,10 +1712,11 @@ function get_context_menu_options(property_ui,id,maptbl)
 
             if pin.locked then
                 add_context_option(property_ui,"unlock_pin",maptbl)
+                add_context_option(property_ui,"pn_settings",maptbl)
             else
                 add_context_option(property_ui,"pn_settings",maptbl)
                 add_context_option(property_ui,"pn_del",maptbl)
-                add_context_option(property_ui,"pn_ren",maptbl)
+                --add_context_option(property_ui,"pn_ren",maptbl)
                 if pins[id].hud then
                     add_context_option(property_ui,"hud_vis_off",maptbl)
                 else
@@ -2424,7 +2443,7 @@ class "UITextInputWnd" (CUIScriptWnd)
 
 function UITextInputWnd:__init(title_txt,icon_tex,prepop,func,args) super()
     vl("UITextInputWnd:__init:\nTitle: %s\nIcon: %s\nExisting text: %s",title_txt,icon_tex,prepop)
-    self.title_txt  = title_txt
+    self.pin_text  = title_txt
     self.icon_tex   = icon_tex
     self.prepop     = prepop
     self.func       = func
@@ -2480,7 +2499,7 @@ function UITextInputWnd:InitControls()
         dl("Empty icon texture passed to input window")
     end
     self.text       = xml:InitTextWnd(text, self.tbar)
-    self.text:SetText(self.title_txt)
+    self.text:SetText(self.pin_text)
     self.text:SetFont(GetFontGraffiti22Russian())
 
     self.input      = xml:InitEditBox(input,self.dialog)
@@ -2503,12 +2522,12 @@ end
 
 function UITextInputWnd:Reset(title_txt,icon_tex,prepop,func,args)
     self.icon_tex   = icon_tex or self.icon_tex
-    self.title_txt  = title_txt or self.title_txt
+    self.pin_text  = title_txt or self.pin_text
     self.prepop     = prepop or self.prepop
     self.func       = func or self.func
     self.args       = args or self.args
-    if self.title_txt then
-        self.text:SetText(self.title_txt)
+    if self.pin_text then
+        self.text:SetText(self.pin_text)
     end
     if self.icon_tex then
         self.icon:InitTexture(self.icon_tex)
@@ -2519,7 +2538,7 @@ end
 
 function UITextInputWnd:SetWndContent(title_txt,icon_tex)
     self.icon_tex   = icon_tex
-    self.title_txt  = title_txt
+    self.pin_text  = title_txt
 end
 
 
@@ -2571,6 +2590,7 @@ function open_pin_settings(id,args)
     end
     
     if GUI_PinOpts and not GUI_PinOpts:IsShown() then
+        GUI_PinOpts:Reset(id)
         GUI_PinOpts:ShowDialog(true)
         Register_UI("UIPinSettingsWnd","get_text")
     end
@@ -2583,7 +2603,7 @@ class "UIPinSettingsWnd" (CUIScriptWnd)
 function UIPinSettingsWnd:__init(id,args) super()
     vl("UIPinSettingsWnd:__init(%s,args passed: %s",id,args ~= nil)
     if not ((id and id > 0) and pins[id]) then return end
-    show_indicator(true)
+    self.init_time  = tostring(get_time_elapsed())
     _ = self:Reset(id,args)
     self:InitControls()
 end
@@ -2594,6 +2614,7 @@ end
 function UIPinSettingsWnd:InitControls()
     self:SetWndRect(Frect():set(0,0,1024,768))
     self:SetAutoDelete(true)
+    self.empty = "ui_paw_emptytex"
     self.cap = {}
     local tex = {
         file    = "paw_input_window.xml",
@@ -2656,75 +2677,74 @@ function UIPinSettingsWnd:InitControls()
     local opt_icon  = texroot..tex.opt_icon
     local opt_cap   = opt_icon..":"..tex.caption
 
-    local head_txt  = ts("ui_mcm_pawsys_pawmenu_pn_settings")
+    local head_txt  = self.title
     local lock_txt  = ts("ui_mcm_pawsys_pawmenu_lock_pin")
     local label_txt = ts("ui_mcm_pawsys_pawmenu_show_label")
     local hud_txt   = ts("ui_mcm_pawsys_pawmenu_hud_vis_on")
+    local argb_txt  = ts("ui_paw_use_custom_color")
 
     local set_curr  = ts("ui_mcm_lst_pawsys_pg_"..pawdata.curr_set_name)
     local ico_curr  = ts("ui_mcm_lst_"..pawdata.curr_ico_name)
 
     xml:ParseFile   (tex.file)
 
-    self.dialog     = xml:InitStatic(dialog, self)
-    self.dialog:SetWndSize(vector2():set(240,300))
-    self.dialog:SetWndPos(vector2():set(392,200))
-    self.chrome         = xml:InitStatic(chrome, self.dialog)
-    self.chrome:InitTexture("ui_paw_dialog_classic_chrome")
-    local titletab_sh   = xml:InitStatic(caption, self.chrome)
-    local titletab      = xml:InitStatic(caption, self.chrome)
-    titletab_sh:TextControl():SetText(head_txt)
-    titletab_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
-    titletab_sh:SetWndPos(vector2():set(17,8))
-    titletab_sh:InitTexture("ui_paw_fade_cap_bg_full")
-    titletab:TextControl():SetText(head_txt)
-    titletab:SetWndPos(vector2():set(17,7))
     --================================================================--
     --Title bar
-    self.tbar           = xml:InitStatic(tbar,self.dialog)
-    local paw           = xml:InitTextWnd(paw,self.tbar)
-    paw:SetText("PAW".." "..script_version)
-    paw:SetFont(GetFontSmall())
-    paw:SetWndPos(vector2():set(195,34))
+    if not self.dialog then
+        self.dialog     = xml:InitStatic(dialog, self)
+        self.dialog:SetWndSize(vector2():set(240,300))
+        self.dialog:SetWndPos(vector2():set(392,200))
+        self.chrome         = xml:InitStatic(chrome, self.dialog)
+        self.chrome:InitTexture("ui_paw_dialog_classic_chrome")
+        local titletab_sh   = xml:InitStatic(caption, self.chrome)
+        local titletab      = xml:InitStatic(caption, self.chrome)
+        titletab_sh:TextControl():SetText(head_txt)
+        titletab_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
+        titletab_sh:SetWndPos(vector2():set(18,9))
+        titletab_sh:InitTexture("ui_paw_fade_cap_bg_full")
+        titletab:TextControl():SetText(head_txt)
+        titletab:SetWndPos(vector2():set(17,8))
+        self.tbar           = xml:InitStatic(tbar,self.dialog)
+        local paw           = xml:InitTextWnd(paw,self.tbar)
+        paw:SetText("PAW".." "..script_version)
+        paw:SetFont(GetFontSmall())
+        paw:SetWndPos(vector2():set(195,33.75))
+    end
+
     --================================================================--
-    -- Rename/relabel
-    self.input          = xml:InitEditBox(input,self.dialog)
-    self:Register(self.input,"fld_input")
-    self.input:SetWndSize(vector2():set(190,30))
-    self.input:SetWndPos(vector2():set(8,7))
-    printf("Setting name input field to %s",self.title_txt)
-    self.input:SetText(self.title_txt)
+    -- Rename/relabel input box
+    if not self.input then
+        self.input          = xml:InitEditBox(input,self.dialog)
+        self:Register(self.input,"fld_input"..self.init_time)
+        self.input:SetWndSize(vector2():set(190,30))
+        self.input:SetWndPos(vector2():set(8,7))
+    end
+    vl("Setting name input field to %s",self.pin_text)
+    self.input:SetText(self.pin_text)
+
     --==== Icon and Set initialization ===============================--
     -- Icon display
-    self.icon_display_panel = xml:InitStatic(icopanel, self.dialog)
-    self.icon_panel         = xml:InitStatic(icowater, self.icon_display_panel)
-    unsquish_aspect(self.icon_panel)
-    local icoframe          = xml:InitStatic(icoframe, self.icon_display_panel)
-    unsquish_aspect(icoframe)
-    self.icon               = xml:InitStatic(icon, self.icon_display_panel)
-    unsquish_aspect(self.icon)
-    if self.icon_tex then
-        self.icon:InitTexture(self.icon_tex)
-    else
-        dl("Empty icon texture passed to input window")
+    if not self.icon_display_panel then
+        self.icon_display_panel = xml:InitStatic(icopanel, self.dialog)
+        self.icon_panel         = xml:InitStatic(icowater, self.icon_display_panel)
+        unsquish_aspect(self.icon_panel)
+        local icoframe          = xml:InitStatic(icoframe, self.icon_display_panel)
+        unsquish_aspect(icoframe)
+        self.icon               = xml:InitStatic(icon, self.icon_display_panel)
+        unsquish_aspect(self.icon)
+        local w = self.icon:GetWidth()
+        self.icon:SetWndPos(vector2():set(11.75,16))
     end
+    self:RefreshIcon(self.icon_tex)
     --================================================================--
     --Set/pin controls
     self.icoset_controls    = xml:InitStatic(icoset_c, self.dialog)
-    self.icon_controls      = xml:InitStatic(icoset_c,self.icoset_controls)
-    self.set_controls       = xml:InitStatic(icoset_c,self.icoset_controls)
+    self.icon_controls      = xml:InitStatic(icoset_c, self.icoset_controls)
+    self.set_controls       = xml:InitStatic(icoset_c, self.icoset_controls)
 
     function setup_icoset_ctrl(icoset_arg, pos_x, pos_y)
-        local stub = string.sub(icoset_arg,1,3)
-    --local btn_iprev = icoset.."btn_ico_prev"
-    --local btn_inext = icoset.."btn_ico_next"
-    --local btn_sprev = icoset.."btn_set_prev"
-    --local btn_snext = icoset.."btn_set_next"
-
-        local function size_btn(element,w,h)
-             element:SetWndSize(vector2():set((w*unsquish_ratio),h))
-        end
         local btnx_         = "btn_"
+        local stub          = string.sub(icoset_arg,1,3)
         local abbr          = string.sub(icoset_arg,1,1)
         local button_prev   = btnx_..abbr.."prev"
         local button_next   = btnx_..abbr.."next"
@@ -2733,80 +2753,65 @@ function UIPinSettingsWnd:InitControls()
         local icoset_ctrl   = icoset_arg.."_controls"
         local text_cap      = (abbr == "s") and
                                 local_set_name() or local_icon_name()
-                                --(icon_sets[pawdata.curr_set_name].name) or
-                                --("ui_mcm_lst_"..pawdata.curr_ico_name)
+
+        printf("setup_icoset_ctrl(%s,%s,%s) for %s\nstub = %s\nabbr = %s\nbutton_prev = %s\nbutton_next = %s\nnode_prev = %s\nnode_next = %s\nicoset_ctrl = %s\n",icoset_arg, pos_x, pos_y,text_cap,stub,abbr,button_prev,button_next,node_prev,node_next,icoset_ctrl)
 
         self[button_prev]       = xml:Init3tButton(node_prev, self[icoset_ctrl])
-        --size_btn(self[button_prev],24,25)
         self:Register(self[button_prev],node_prev)
 
         local logo         = xml:InitStatic(icoset.."logo_"..icoset_arg, self[icoset_ctrl])
         unsquish_aspect(logo)
 
         self[button_next]       = xml:Init3tButton(node_next, self[icoset_ctrl])
-        --size_btn(self.btn_snext,24,25)
         self:Register(self[button_next],node_next)
 
-        self.cap[icoset_arg]    = xml:InitStatic(caption,self[button_prev])
-        self.cap[icoset_arg]:TextControl():SetText(text_cap)
-        self.cap[icoset_arg]:SetWndPos(vector2():set(pos_x,pos_y))
+        --self.cap[icoset_arg]    = xml:InitStatic(caption,self[button_prev])
+        --self.cap[icoset_arg]:TextControl():SetText(text_cap)
+        self[icoset_ctrl]:SetWndPos(vector2():set(pos_x,pos_y))
     end
-
-    --[[================================--
-    self.btn_iprev          = xml:Init3tButton(btn_iprev, self.icon_controls)
-    size_btn(self.btn_iprev,24,25)
-    self:Register(self.btn_iprev,btn_iprev)
-
-    local ilogo             = xml:InitStatic(icoset.."logo_icon", self.icon_controls)
-    unsquish_aspect(ilogo)
-
-    self.btn_inext          = xml:Init3tButton(btn_inext, self.icon_controls)
-    size_btn(self.btn_snext,24,25)
-    self:Register(self.btn_inext,btn_inext)
-
-    self.cap["icon"]        = xml:InitStatic(caption,self.btn_iprev)
-    self.cap["icon"]:TextControl():SetText(ts("ui_mcm_lst_"..pawdata.curr_ico_name))
-    self.cap["icon"]:SetWndPos(vector2():set(10,27))
-    --================================================================--
-    self.btn_sprev          = xml:Init3tButton(btn_sprev, self.set_controls)
-    size_btn(self.btn_sprev,24,25)
-    self:Register(self.btn_sprev,btn_sprev)
     
-    local slogo = xml:InitStatic(icoset.."logo_set", self.set_controls)
-    unsquish_aspect(slogo)
+    --================================================================--
 
-    self.btn_snext          = xml:Init3tButton(btn_snext, self.set_controls)
-    size_btn(self.btn_snext,24,25)
-    self:Register(self.btn_snext,btn_snext)
-
-    self.cap["set"]         = xml:InitStatic(caption,self.btn_sprev)
-    self.cap["set"]:TextControl():SetText(ts(icon_sets[pawdata.curr_set_name].name))
-    self.cap["set"]:SetWndPos(vector2():set(10,24))
-    --================================================================--]]
+    self.argb_controls = xml:InitStatic(texroot.."argb_chrome",self.dialog)
 
     local function setup_argb_control(color,pos_x,pos_y)
         local inputx = "input_"..color
         local xsh = color.."_sh"
         local xtx = color.."_tx"
-        local xmlnode = tex.root..":"..tex[inputx]
-        self[inputx]    = xml:InitEditBox(xmlnode,self.dialog)
+        local xmlnode   = tex.root..":"..tex[inputx]
+        self.argb_box = {}
+        self.argb_box[color]    = xml:InitStatic(xmlnode,self.argb_controls)
+        self.argb_box[color]:SetWndSize(vector2():set(65,31))
+        unsquish_aspect(self.argb_box[color])
+        self.argb_box[color]:SetWndPos(vector2():set(pos_x,pos_y))
+        self.argb_box[color]:InitTexture("ui_paw_dialog_argb_single")
+
+        self[inputx]    = xml:InitEditBox(xmlnode,self.argb_box[color])
         self:Register(self[inputx],"fld_input_"..color)
-        self[inputx]:SetText(self.colors[color])
-        self[inputx]:SetWndPos(vector2():set(pos_x,pos_y))
-        self.cap[color]      = xml:InitStatic(opt_icon,self[inputx])
+        printf("Original method - inputx: %s | color: %s | self.colors[%s]",inputx,color,color,self.colors[color])
+        --self[inputx]:SetText(self.colors[color])
+        --self[inputx]:SetWndPos(vector2():set(pos_x,pos_y))
+
+        self.cap[color]      = xml:InitStatic(opt_icon,self.argb_box[color])
         self.cap[color]:InitTexture("ui_icons_paw_argb_"..color)
         unsquish_aspect(self.cap[color])
-        self.cap[xsh]   = xml:InitStatic(opt_cap.."_sh",self.cap[color])
-        self.cap[xsh]:TextControl():SetText(clrtxt[color])
-        self.cap[xsh]:TextControl():SetTextColor( GetARGB(255,0,0,0) )
-        self.cap[xtx]   = xml:InitStatic(opt_cap,self.cap[color])
-        self.cap[xtx]:TextControl():SetText(clrtxt[color])
+        --self.cap[xsh]   = xml:InitStatic(opt_cap.."_sh",self.cap[color])
+        --self.cap[xsh]:TextControl():SetTextColor( GetARGB(255,0,0,0) )
+        --self.cap[xtx]   = xml:InitStatic(opt_cap,self.cap[color])
+        self:SetARGBVal(color,self.colors[color])
+        self[inputx]:SetWndPos(vector2():set(18.5,2.5))
+
+        local boxframe  = xml:InitStatic(xmlnode,self.argb_box[color])
+        boxframe:SetWndSize(vector2():set(65,31))
+        unsquish_aspect(boxframe)
+        --boxframe:SetWndPos(vector2():set(pos_x,pos_y))
+        boxframe:InitTexture("ui_paw_dialog_argb_single_nobg")
     end
 
     local function setup_checkbox(setting,pos_x,pos_y,captext)
         local checkopt = "check_"..setting
         self[checkopt]  = xml:InitCheck(check,self.dialog)
-        self:Register(self.check_hud, "check_hud"..self.init_time)
+        self:Register(self[checkopt], checkopt..self.init_time)
         self[checkopt]:SetWndPos(vector2():set(pos_x,pos_y))
         self.cap[checkopt]  = xml:InitTextWnd(caption,self[checkopt])
         self.cap[checkopt]:SetWndPos(vector2():set(30,8))
@@ -2818,33 +2823,37 @@ function UIPinSettingsWnd:InitControls()
         local buttonx = "btn_"..button
         self[buttonx] = xml:Init3tButton(xmlnode, self.dialog)
         self:Register(self[buttonx],buttonx)
-        self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))     
+        self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))
     end
 
     --================================================================--
     -- Setup and place all elements
-    --========================= X = Y ================================--
-    setup_icoset_ctrl( "icon",  10, 27 )
-    setup_icoset_ctrl( "set",   10, 27 )
+    --========================= X ===== Y ============================--
+    setup_icoset_ctrl( "icon",  130,     27 )
+    setup_icoset_ctrl( "set",   130,     150 )
 
-    setup_argb_control( "a",    33, 207 )
-    setup_argb_control( "r",    86, 207 )
-    setup_argb_control( "g",    139,207 )
-    setup_argb_control( "b",    192,207 )
+    setup_argb_control( "a",    15,     17.5 )
+    setup_argb_control( "r",    65,     17.5 )
+    setup_argb_control( "g",    115,    17.5 )
+    setup_argb_control( "b",    170,    17.5 )
 
-    setup_checkbox( "hud",      5,  101,    hud_txt )
-    setup_checkbox( "text",     5,  135,    label_txt )
-    setup_checkbox( "lock",     5,  171,    lock_txt )
+    setup_checkbox( "hud",      5,      80,     hud_txt )
+    setup_checkbox( "text",     5,      105,    label_txt )
+    setup_checkbox( "lock",     5,      130,    lock_txt )
+    setup_checkbox( "argb",     5,      155,    argb_txt )
+    
+    self:RefreshChecks()
 
-    setup_button(   "cancel",   12, 239,    cancel )
-    setup_button(   "ok",       93, 239,    btn_ok )
-    setup_button(   "delete",   144,239,    delete )
+    setup_button(   "delete",   5.5,    245,    delete )
+    setup_button(   "ok",       93,     245,    btn_ok )
+    setup_button(   "cancel",   150,    245,    cancel )
     --================================================================--
 
-    self.icon_display_panel:SetWndPos(vector2():set(155,112))
-    self.icoset_controls:SetWndPos(vector2():set(17,48))
-    self.icon_controls:SetWndPos(vector2():set(109,0))
-    self.set_controls:SetWndPos(vector2():set(0,0))
+    self.icoset_controls:SetWndPos(vector2():set(150,48))
+    self.icon_controls:SetWndPos(vector2():set(0,0))
+    self.set_controls:SetWndPos(vector2():set(0,112))
+    self.icon_display_panel:SetWndPos(vector2():set(154.5,73))
+    self.argb_controls:SetWndPos(vector2():set(-1,188))
 
     --[[Buttons
     self.btn_cancel       = xml:Init3tButton(cancel, self.dialog)
@@ -2860,6 +2869,7 @@ function UIPinSettingsWnd:InitControls()
     self.btn_delete:SetWndPos(vector2():set(144,239))
 --]]
     self:InitCallBacks()
+    self.init_done = true
 end
 
 function UIPinSettingsWnd:InitCallBacks()
@@ -2872,56 +2882,79 @@ function UIPinSettingsWnd:InitCallBacks()
     self:AddCallback("btn_inext", ui_events.BUTTON_CLICKED, self.IconNext, self)
     self:AddCallback("btn_sprev", ui_events.BUTTON_CLICKED, self.SetPrev, self)
     self:AddCallback("btn_snext", ui_events.BUTTON_CLICKED, self.SetNext, self)
-
+--[[
     local _check_lock = function()
         self:Callback_Check(self.check_lock,"locked")
     end
-    self:AddCallback("check_lock"..self.init_time, ui_events.BUTTON_CLICKED, _check_lock, self)
+    self:AddCallback("check_lock", ui_events.BUTTON_CLICKED, _check_lock, self)
 
     local _check_hud = function()
         self:Callback_Check(self.check_hud,"show_hud")
     end
-    self:AddCallback("check_lock"..self.init_time, ui_events.BUTTON_CLICKED, _check_hud, self)
+    self:AddCallback("check_hud", ui_events.BUTTON_CLICKED, _check_hud, self)
 
     local _check_text = function()
         self:Callback_Check(self.check_text,"show_label")
     end
-    self:AddCallback("check_lock"..self.init_time, ui_events.BUTTON_CLICKED, _check_text, self)
+    self:AddCallback("check_label", ui_events.BUTTON_CLICKED, _check_text, self)
 
+    local _check_argb = function()
+        self:Callback_Check(self.check_argb,"check_argb")
+    end
+    self:AddCallback("check_argb", ui_events.BUTTON_CLICKED, _check_argb, self)
+
+--]]
+--[[
     local args = {
         min     = 0,
         max     = 255,
         valtype = 2,
         color   = "a",
     }
-    local _input_a = function()
-        args.color = "a"
-        self:Callback_Input(self.input_a,args)
-    end
-    self:AddCallback("input_a"..self.init_time, ui_events.BUTTON_CLICKED, _input_a, self)
 
-
---[[
-    local _check_del = function()
-        self:Callback_Check(self.check_del)
+    local _wrapper = function(handler) -- we need wrapper in order to pass ctrl to method
+        self:Callback_Input(ctrl, path, opt, v)
     end
-    self:AddCallback("check_del"..self.init_time, ui_events.BUTTON_CLICKED, _check_del, self)
+    self:AddCallback(id_ctrl, ui_events.EDIT_TEXT_COMMIT, _wrapper, self)
 --]]
+
+    --self:AddCallback("input_a", ui_events.EDIT_TEXT_COMMIT, self.Callback_Input, self, "a")
 end
 
-function UIPinSettingsWnd:RefreshIcon()
-    self.icon_tex = texture_for_icon(pawdata.curr_ico_name)
-    self.icon:InitTexture(self.icon_tex)
+function UIPinSettingsWnd:SetARGBVal(color,val)
+        local inputx = "input_"..color
+            printf("SetARGB method - inputx: %s | color: %s | val %s",inputx,color,val)
+    if color and val and self[inputx] then
+        printf("Current color for %s is %s, setting to value %s",color,self[inputx]:GetText(),val)
+        self[inputx]:SetText(val)
+    end
+end
+
+function UIPinSettingsWnd:RefreshIcon(texture)
+    if not self.icon then return end
+    texture = texture or texture_for_icon(pawdata.curr_ico_name)
+    if texture then
+        self.icon:InitTexture(texture)
+    else
+        dl("No texture found by UIPinSettingsWnd:RefreshIcon!")
+        return
+    end
+    self.icon:InitTexture(texture)
+    self.icon:SetTextureColor(GetARGB(self.colors.a,self.colors.r,self.colors.g,self.colors.b))
+    return true
 end
 
 function UIPinSettingsWnd:IconPrev()
     _ = cycle_icons(-1,false)
     self.icon_changed = true
+    self.new_icon_on_accept = true
+    self:Update()
 end
 
 function UIPinSettingsWnd:IconNext()
     _ = cycle_icons(1,false)
     self.icon_changed = true
+    self.new_icon_on_accept = true
     self:Update()
 end
 
@@ -2929,15 +2962,20 @@ function UIPinSettingsWnd:SetPrev()
     _ = cycle_sets(-1,false)
     self.icon_changed = true
     self.set_changed = true
+    self.new_icon_on_accept = true
+    self:Update()
 end
 
 function UIPinSettingsWnd:SetNext()
     _ = cycle_sets(1,false)
     self.icon_changed = true
     self.set_changed = true
+    self.new_icon_on_accept = true
+    self:Update()
 end
 
 function UIPinSettingsWnd:Callback_Check(ctrl,opt)
+    dl("UIPinSettingsWnd:Callback_Check for opt %s",opt)
     if opt == "locked" then
         self.locked = ctrl:GetCheck()
         self.btn_delete:Enable(not self.locked)
@@ -2953,19 +2991,19 @@ function UIPinSettingsWnd:Callback_Check(ctrl,opt)
 end
 
 
-function UIPinSettingsWnd:Callback_Input(ctrl,args)
-    vl("UIPinSettingsWnd:Callback_Input")
+function UIPinSettingsWnd:Callback_Input(color)
+    vl("UIPinSettingsWnd:Callback_Input for color %s",color)
     -- largely lifted from MCM
+    local is_color  = self.colors[color] and true or false
     local value     = ctrl:GetText()
-    local default   = args and args.default or self.default_all
-    local valtype   = args and args.valtype
-    local color     = args and args.color
-    local min       = args and args.min or 0
-    local max       = args and args.max or 255
+    local default   = self.default_all
+    local min       = 0
+    local max       = 255
+    local ctrl      = is_color and "input" or "input_"..color
 
     if not (value and value ~= "") then
         value = default
-    elseif (valtype == 2) then
+    elseif is_color then
         value = tonumber(value)
         if (not value) then
             ctrl:SetText(default)
@@ -2973,10 +3011,18 @@ function UIPinSettingsWnd:Callback_Input(ctrl,args)
         end
         value = clamp(value, min, max)
     end
-
+    printf("Input callback got value %s",value)
+    if value ~= ctrl:GetText() then
+        self.cust_argb = true
+    end
     ctrl:SetText(value)
     self.colors[color] = value
-    self.icon:SetTextureColor(GetARGB(self.colors.a,self.colors.r,self.colors.g,self.colors.b))
+    local a = self.colors.a
+    local r = self.colors.r
+    local g = self.colors.g
+    local b = self.colors.b
+    dl("Setting custom ARGB of %s|%s|%s|%s for %s",a,r,g,b)
+    self.icon:SetTextureColor(GetARGB(a,r,g,b))
 end
 
 
@@ -2985,8 +3031,43 @@ function UIPinSettingsWnd:DeletePin()
     self:Close()
 end
 
+function UIPinSettingsWnd:RefreshChecks()
+    if self.check_text then
+        self.check_text:SetCheck(self.show_label)
+    end
+    if self.check_hud then
+        self.check_hud:SetCheck(self.show_hud)
+    end
+    if self.check_lock then
+        self.check_lock:SetCheck(self.locked)
+    end
+end
 
 function UIPinSettingsWnd:Reset(id,args)
+    self.new_icon       = nil
+    self.args           = args
+    if args and args.wipe then
+        self.icon_changed       = false
+        self.set_changed        = false
+        self.new_icon_on_accept = false
+
+        self.cust_argb  = nil
+        self.title      = nil
+        self.pin_id     = nil
+        self.pin        = nil
+        self.locked     = nil
+        self.show_hud   = nil
+        self.show_label = nil
+        self.pin_text   = nil
+        self.init_time  = nil
+        self.icon_tex   = nil
+        self.colors     = nil
+        self.icon:InitTexture(self.empty)
+        return
+    end
+
+    self.title      = args and args.title or ts("ui_mcm_pawsys_pawmenu_pn_settings")
+    self.cust_argb  = pins[id].custom_colors
     self.pin_id     = id
     self.pin        = pins[self.pin_id]
     self.orig_icon  = self.pin.icon
@@ -2995,7 +3076,7 @@ function UIPinSettingsWnd:Reset(id,args)
     self.locked     = self.pin.locked
     self.show_hud   = self.pin.hud
     self.show_label = self.pin.show_label
-    self.title_txt  = self.pin.text or self.pin.name
+    self.pin_text   = self.pin.text or self.pin.name
     self.init_time  = tostring(get_time_elapsed())
     self.icon_tex   = texture_for_icon(self.pin.icon)
     self.colors     = self.pin.colors
@@ -3008,15 +3089,19 @@ function UIPinSettingsWnd:Reset(id,args)
             b       = 255
         }
     end
-    self.args       = args or self.args
-    if self.icon_tex and self.icon then
-        self.icon:InitTexture(self.icon_tex)
+    for k,v in pairs(self.colors) do
+        self:SetARGBVal(k,v)
     end
-    --self.input:SetText("")
+    self:RefreshChecks()
+    if self.input then
+        self.input:SetText(self.pin_text)
+    end
+    self:RefreshIcon()
 end
 
 
 function UIPinSettingsWnd:Update()
+    if not self.init_done then return end
     CUIScriptWnd.Update(self)
     if self.icon_changed then
         if self.set_changed then
@@ -3029,37 +3114,88 @@ function UIPinSettingsWnd:Update()
         if self.icon_tex then
             self.icon:InitTexture(self.icon_tex)
         end
+        self.new_icon = pawdata.curr_ico_name
     end
+    -- locking
+    self.locked = self.check_lock:GetCheck()
+    --self.show_hud = self.check_hud:GetCheck()
+    --self.show_label = self.check_text:GetCheck()
+    self.cust_argb = self.check_argb:GetCheck()
+    self.argb_controls:Show(self.cust_argb)
+    self.btn_delete:Enable(not self.locked)
+    self.btn_iprev:Enable(not self.locked)
+    self.btn_inext:Enable(not self.locked)
+    self.btn_sprev:Enable(not self.locked)
+    self.btn_snext:Enable(not self.locked)
+    self.check_text:Enable(not self.locked)
+    self.check_hud:Enable(not self.locked)
+    self.check_argb:Enable(not self.locked)
+    self.input_a:Enable(self.cust_argb and not self.locked)
+    self.input_r:Enable(self.cust_argb and not self.locked)
+    self.input_g:Enable(self.cust_argb and not self.locked)
+    self.input_b:Enable(self.cust_argb and not self.locked)
+    self.input:Enable(not self.locked)
+
+    local text = self.input:GetText()
+    local a,r,g,b = clamp(tonumber(self.input_a:GetText()) or 255,0,255),
+                    clamp(tonumber(self.input_r:GetText()) or 255,0,255),
+                    clamp(tonumber(self.input_g:GetText()) or 255,0,255),
+                    clamp(tonumber(self.input_b:GetText()) or 255,0,255)
+
+    if not self.colors then
+        self.colors = {}
+    end
+
+    for c,v in pairs({["a"]=a,["r"]=r,["g"]=g,["b"]=b}) do
+        if self.colors[c] ~= v then
+            self.cust_argb = true
+        end
+        self.colors[c] = v
+    end
+    pins[self.pin_id].custom_colors = self.cust_argb
+    self:RefreshIcon()
 end
 
 
 function UIPinSettingsWnd:OnAccept()
-    local a,r,g,b = clamp(tonumber(self.input_a:GetText() or 255),0,255),
-                    clamp(tonumber(self.input_r:GetText() or 255),0,255),
-                    clamp(tonumber(self.input_g:GetText() or 255),0,255),
-                    clamp(tonumber(self.input_b:GetText() or 255),0,255)
-    
-    pins[self.pin_id].locked = self.check_lock:GetCheck()
-    if not pins[self.pin_id].locked then
-        if not pins[self.pin_id].colors then
-            pins[self.pin_id].colors = {}
-        end
-        pins[self.pin_id].colors.a = a
-        pins[self.pin_id].colors.r = r
-        pins[self.pin_id].colors.g = g
-        pins[self.pin_id].colors.b = b
-
-        self.show_label = (
-            self.check_text:GetCheck() and
-            show_pin_label(self.pin_id,true) or
-            show_pin_label(self.pin_id,false) 
-        )
-        self.show_hud = (
-            self.check_hud:GetCheck() and
-            do_waypoint("show_hud_pin",nil,nil,{syscall=true,id=self.pin_id}) or
-            do_waypoint("hide_hud_pin",nil,nil,{syscall=true,id=self.pin_id})
-        )
+    local id = self.pin_id
+    if self.new_icon then
+        dl("UIPinSettingsWnd:OnAccept: Pin %s has new icon %s, calling change_mapspot",self.pin_id,self.new_icon)
+        _ = change_mapspot(self.pin_text,id,self.new_icon)
+        pins[id].icon = self.new_icon
     end
+    pins[id].text = self.input:GetText()
+    local a,r,g,b = clamp(tonumber(self.input_a:GetText()) or 255,0,255),
+                    clamp(tonumber(self.input_r:GetText()) or 255,0,255),
+                    clamp(tonumber(self.input_g:GetText()) or 255,0,255),
+                    clamp(tonumber(self.input_b:GetText()) or 255,0,255)
+
+    if not pins[id].colors then
+        pins[id].colors = {}
+    end
+    pins[id].colors.a = a
+    pins[id].colors.r = r
+    pins[id].colors.g = g
+    pins[id].colors.b = b
+    pins[id].custom_colors = self.cust_argb
+    set_mapspot_colors(id,pins[id].icon,a,r,g,b)
+
+    vl("UIPinSettingsWnd:OnAccept: ARGB is %s|%s|%s|%s",a,r,g,b)
+
+    self.show_label = self.check_text:GetCheck()
+    show_pin_label(id,self.show_label)
+    vl("UIPinSettingsWnd:OnAccept: show_label is %s",self.show_label)
+
+    self.show_hud = self.check_hud:GetCheck()
+    if self.show_hud then
+        show_hud_pin(id)
+    else
+        hide_hud_pin(id)
+    end
+    vl("UIPinSettingsWnd:OnAccept: show_hud is %s",self.show_hud)
+
+    pins[id].locked = self.check_lock:GetCheck()
+
     self:Close()
 end
 
@@ -3079,9 +3215,8 @@ end
 
 
 function UIPinSettingsWnd:Close()
-
+    self:Reset(nil,{wipe=true})
     self:HideDialog()
-    show_indicator(false)
     Unregister_UI("UIPinSettingsWnd")
 end
 
@@ -3729,6 +3864,7 @@ function hide_hud_pin(id)
         get_hud():RemoveDialogToRender(hud_pin_objs[id])
         hud_pin_objs[id] = nil
     end
+    return true
 end
 
 function show_hud_pin(id)
@@ -3738,6 +3874,7 @@ function show_hud_pin(id)
     end
     hud_pin_objs[id] = UIPAWHUDPin(id)
     get_hud():AddDialogToRender(hud_pin_objs[id])
+    return true
 end
 
 function init_hud_pins()

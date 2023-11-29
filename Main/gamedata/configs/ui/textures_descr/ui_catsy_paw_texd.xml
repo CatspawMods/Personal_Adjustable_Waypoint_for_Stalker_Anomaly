@@ -241,6 +241,14 @@
 
 		<texture id = "ui_paw_dialog_iconwater_hq" x="833" y="255" width="190" height="190" />
 
+		<texture id = "ui_paw_dialog_argb" x="783" y="188" width="240" height="66" />
+		
+		<texture id = "ui_paw_dialog_argb_long" x="769" y="656" width="86" height="30" />
+
+		<texture id = "ui_paw_dialog_argb_single_nobg" x="769" y="593" width="65" height="31" />		
+
+		<texture id = "ui_paw_dialog_argb_single" x="769" y="624" width="65" height="31" />		
+
 	</file>
 
 	<file name ="ui\paw\paw_mcm_assets">

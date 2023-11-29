@@ -1528,5 +1528,8 @@
 		<text>B</text>
 	</string>
 
+	<string id="ui_paw_use_custom_color">
+		<text>Настроить цвет</text>
+	</string>
 
 </string_table>
