@@ -335,6 +335,7 @@ end
 
 function UIPAWReticle:Update()
     local mode      = paw.reticle_mode
+    local tag_mode  = paw.autotag_mode
     local cart_mode = paw.cart_mode
     local enabled   = false
     if autotag_milpda and pda_feature_en then

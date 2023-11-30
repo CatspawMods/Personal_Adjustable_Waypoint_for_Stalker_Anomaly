@@ -1532,4 +1532,8 @@
 		<text>Настроить цвет</text>
 	</string>
 
+	<string id="ui_mcm_lst_paw_bwhr_tag">
+		<text>BWHR (иконка "Помеченная цель")</text>
+	</string>
+
 </string_table>

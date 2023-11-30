@@ -103,3 +103,13 @@
 	<paw_bwhr_bio_spot width="20" height="20" alignment="c" stretch="0" scale="1" scale_min="1.0" scale_max="1.2">
 		<texture>ui_icons_paw_pin_bwhr_bio64</texture>
 	</paw_bwhr_bio_spot>
+
+
+	<paw_bwhr_tag>
+		<level_map spot="paw_bwhr_tag_spot"/>
+		<mini_map spot="paw_bwhr_tag_spot"/>
+	</paw_bwhr_tag>
+
+	<paw_bwhr_tag_spot width="20" height="20" alignment="c" stretch="0" scale="1" scale_min="1.0" scale_max="1.2">
+		<texture>ui_icons_paw_pin_bwhr_horizon64</texture>
+	</paw_bwhr_tag_spot>

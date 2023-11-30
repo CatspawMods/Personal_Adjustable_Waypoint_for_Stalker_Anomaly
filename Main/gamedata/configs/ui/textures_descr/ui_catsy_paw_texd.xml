@@ -58,6 +58,8 @@
 
 		<texture id = "ui_icons_paw_ping_spot_alpha" x="832" y="32" width="64" height="64" />
 
+		<texture id = "ui_icons_paw_pin_bwhr_horizon64" x="896" y="32" width="64" height="64" />
+
 		<texture id = "ui_icons_paw_hud_waypoint" x="0" y="96" width="128" height="128" />
 
 		<texture id = "ui_icons_paw_btn_icon" x="192" y="160" width="64" height="64" />
@@ -248,6 +250,14 @@
 		<texture id = "ui_paw_dialog_argb_single_nobg" x="769" y="593" width="65" height="31" />		
 
 		<texture id = "ui_paw_dialog_argb_single" x="769" y="624" width="65" height="31" />		
+
+		<texture id = "ui_paw_btn_open_sidebar_h" x="713" y="578" width="40" height="60" />		
+
+		<texture id = "ui_paw_btn_open_sidebar_e" x="713" y="638" width="40" height="60" />		
+
+		<texture id = "ui_paw_btn_open_sidebar_t" x="713" y="698" width="40" height="60" />		
+
+		<texture id = "ui_paw_dialog_sidebar" x="710" y="818" width="45" height="175" />
 
 	</file>
 

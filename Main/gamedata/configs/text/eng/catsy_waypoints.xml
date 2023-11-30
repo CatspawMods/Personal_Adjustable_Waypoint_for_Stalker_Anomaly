@@ -1532,4 +1532,9 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>Customize color</text>
 	</string>
 
+	<string id="ui_mcm_lst_paw_bwhr_tag">
+		<text>BWHR Target Tag</text>
+	</string>
+
+
 </string_table>

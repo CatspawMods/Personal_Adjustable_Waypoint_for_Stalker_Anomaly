@@ -11,6 +11,14 @@
 
 		<bg_settings x="0" y="0" width="240" height="300" stretch="1" />
 
+		<btn_sidebar x="0" y="0" width="40" height="60" stretch="1" check_mode="0">
+			<texture>ui_paw_btn_open_sidebar</texture>
+		</btn_sidebar>
+
+		<sidebar x="0" y="35" width="45" height="175" stretch="1">
+			<texture>ui_paw_dialog_sidebar</texture>
+		</sidebar>
+
 		<titlebar x="6" y="3" width="230" height="32">
 			<paw x="200" y="0" width="10" height="10" align="r" stretch="1" font="arial_14"/>
 			<text x="5" y="10" width="200" height="26" r="255" g="255" b="255" align="r" vert_align="c" font="letterica16" />

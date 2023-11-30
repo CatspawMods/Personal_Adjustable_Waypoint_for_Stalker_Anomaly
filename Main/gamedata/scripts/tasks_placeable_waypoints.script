@@ -157,6 +157,7 @@ show_pins                   = true
 local custom_task_info      = false
 local icon_cycle_active     = false
 local set_cycle_active      = false
+local psw_sidebar_state     = true
 widget_enabled              = true
 widget_active               = true
 hide_widget                 = true
@@ -169,6 +170,7 @@ manual_smart_pins           = false
 mark_on_positive_id         = true
 reticle_mustzoom            = true
 reticle_mode                = 2
+autotag_mode                = 0
 autotag_milpda_feature      = true
 autotag_persistence         = false -- if enabled, autotags are cleared on map change or the below timeout value
 autotag_lifetime            = 120 * 6 -- time in ms before autotags are cleared (def 2 minutes)
@@ -461,6 +463,16 @@ hud_themes = {
         w       = 32,
         h       = 37,
         pre_tex = "ui_paw_hud_indicator_minicom",
+    }, 
+    ["pin_sidebar"] = {
+        name    = "pin_sidebar",
+        node    = "pawhudind_pin_sidebar",
+        style   = "minimal",
+        tex     = "ui_paw_hud_indicator_vertright",
+        file    = "paw_ui_elements.xml",
+        pos     = {x=640,y=340},
+        w       = 100,
+        h       = 154,
     }, 
 }
 
@@ -2251,6 +2263,7 @@ function mcm_reload_reticle_settings()
         pin_hud_icon_default    = load_mcm("pawret/pin_auto_visible",pin_hud_icon_default)
         manual_smart_pins       = load_mcm("pawret/manual_smart_pins",manual_smart_pins)
         reticle_mode            = load_mcm("pawret/reticle_mode",reticle_mode)
+        autotag_mode            = load_mcm("pawret/reticle_mode",autotag_mode)
         reticle_mustzoom        = load_mcm("pawret/reticle_mustzoom",reticle_mustzoom)
         reticle_color.a         = load_mcm("pawret/reticle_alpha",reticle_color.a)
         ret_fade_attack_time    = load_mcm("pawret/ret_fade_attack_time",ret_fade_attack_time)
@@ -2584,6 +2597,11 @@ end
 
 GUI_PinOpts = nil
 
+
+function pin_window_is_open()
+    return GUI_PinOpts and GUI_PinOpts:IsShown()
+end
+
 function open_pin_settings(id,args)
     if not GUI_PinOpts then
         GUI_PinOpts = UIPinSettingsWnd(id,args)
@@ -2596,6 +2614,10 @@ function open_pin_settings(id,args)
     end
 end
 
+function destroy_pin_window()
+    GUI_PinOpts = nil
+end
+
 -- ======================================================================
 
 class "UIPinSettingsWnd" (CUIScriptWnd)
@@ -2603,12 +2625,44 @@ class "UIPinSettingsWnd" (CUIScriptWnd)
 function UIPinSettingsWnd:__init(id,args) super()
     vl("UIPinSettingsWnd:__init(%s,args passed: %s",id,args ~= nil)
     if not ((id and id > 0) and pins[id]) then return end
-    self.init_time  = tostring(get_time_elapsed())
+    self.init_time      = tostring(get_time_elapsed())
+    self.next_update    = time_global()
+    _ = self:BackupTempSettings()
     _ = self:Reset(id,args)
     self:InitControls()
+    self:HijackWidget()
 end
 
 function UIPinSettingsWnd:__finalize()
+end
+
+function UIPinSettingsWnd:BackupTempSettings(restore)
+    if not self.backups then
+        self.backups = {}
+    end
+    if restore then
+        dl("UIPinSettingsWnd | restoring old settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
+        widget_enable       = self.backups.enable
+        active_theme        = self.backups.active or active_theme
+        widget_hide_delay   = self.backups.autohide or widget_hide_delay
+        self.backups        = {}
+    else
+        dl("UIPinSettingsWnd | storing current settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
+        self.backups = {
+            enabled     = widget_enable,
+            autohide    = widget_hide_delay,
+            active      = active_theme,
+        }
+        active_theme        = "pin_sidebar"
+        widget_hide_delay   = 0
+    end
+end
+
+function UIPinSettingsWnd:HijackWidget()
+    active_theme        = "pin_sidebar"
+    widget_hide_delay   = 0
+    widget_enable       = true
+    reset_indicator()
 end
 
 function UIPinSettingsWnd:InitControls()
@@ -2676,7 +2730,8 @@ function UIPinSettingsWnd:InitControls()
     local check     = texroot..tex.check
     local opt_icon  = texroot..tex.opt_icon
     local opt_cap   = opt_icon..":"..tex.caption
-
+    local sidebar   = texroot.."sidebar"
+    local sb_btn    = texroot.."btn_sidebar"
     local head_txt  = self.title
     local lock_txt  = ts("ui_mcm_pawsys_pawmenu_lock_pin")
     local label_txt = ts("ui_mcm_pawsys_pawmenu_show_label")
@@ -2692,23 +2747,31 @@ function UIPinSettingsWnd:InitControls()
     --Title bar
     if not self.dialog then
         self.dialog     = xml:InitStatic(dialog, self)
-        self.dialog:SetWndSize(vector2():set(240,300))
+        self.dialog:SetWndSize(vector2():set(400,300))
         self.dialog:SetWndPos(vector2():set(392,200))
+
         self.chrome         = xml:InitStatic(chrome, self.dialog)
         self.chrome:InitTexture("ui_paw_dialog_classic_chrome")
         local titletab_sh   = xml:InitStatic(caption, self.chrome)
         local titletab      = xml:InitStatic(caption, self.chrome)
         titletab_sh:TextControl():SetText(head_txt)
+        titletab_sh:TextControl():SetFont(GetFontDI())
         titletab_sh:TextControl():SetTextColor( GetARGB(255,0,0,0) )
         titletab_sh:SetWndPos(vector2():set(18,9))
         titletab_sh:InitTexture("ui_paw_fade_cap_bg_full")
         titletab:TextControl():SetText(head_txt)
+        titletab:TextControl():SetFont(GetFontDI())
         titletab:SetWndPos(vector2():set(17,8))
+        
         self.tbar           = xml:InitStatic(tbar,self.dialog)
         local paw           = xml:InitTextWnd(paw,self.tbar)
         paw:SetText("PAW".." "..script_version)
         paw:SetFont(GetFontSmall())
         paw:SetWndPos(vector2():set(195,33.75))
+        
+        self.sidebar        = xml:InitStatic(texroot.."bg_settings", self.dialog)
+        self.sidebar_ctrl   = xml:InitStatic(sidebar, self.sidebar)
+        psw_sidebar_state   = true
     end
 
     --================================================================--
@@ -2844,16 +2907,19 @@ function UIPinSettingsWnd:InitControls()
     
     self:RefreshChecks()
 
+    setup_button(   "sidebar",  230,    0,      sb_btn )
     setup_button(   "delete",   5.5,    245,    delete )
     setup_button(   "ok",       93,     245,    btn_ok )
     setup_button(   "cancel",   150,    245,    cancel )
+
     --================================================================--
 
-    self.icoset_controls:SetWndPos(vector2():set(150,48))
-    self.icon_controls:SetWndPos(vector2():set(0,0))
-    self.set_controls:SetWndPos(vector2():set(0,112))
+    self.icoset_controls:SetWndPos(vector2():set(   150,48))
+    self.sidebar:SetWndPos(vector2():set(           242,10))
+    self.icon_controls:SetWndPos(vector2():set(     0,  0))
+    self.set_controls:SetWndPos(vector2():set(      0,  112))
     self.icon_display_panel:SetWndPos(vector2():set(154.5,73))
-    self.argb_controls:SetWndPos(vector2():set(-1,188))
+    self.argb_controls:SetWndPos(vector2():set(    -1,  188))
 
     --[[Buttons
     self.btn_cancel       = xml:Init3tButton(cancel, self.dialog)
@@ -2877,48 +2943,14 @@ function UIPinSettingsWnd:InitCallBacks()
     self:AddCallback("btn_ok", ui_events.BUTTON_CLICKED, self.OnAccept, self)
     self:AddCallback("btn_cancel", ui_events.BUTTON_CLICKED, self.Close, self)
     self:AddCallback("btn_delete", ui_events.BUTTON_CLICKED, self.DeletePin, self)
+    self:AddCallback("btn_sidebar", ui_events.BUTTON_CLICKED, self.ToggleSidebar, self)
 
     self:AddCallback("btn_iprev", ui_events.BUTTON_CLICKED, self.IconPrev, self)
     self:AddCallback("btn_inext", ui_events.BUTTON_CLICKED, self.IconNext, self)
     self:AddCallback("btn_sprev", ui_events.BUTTON_CLICKED, self.SetPrev, self)
     self:AddCallback("btn_snext", ui_events.BUTTON_CLICKED, self.SetNext, self)
---[[
-    local _check_lock = function()
-        self:Callback_Check(self.check_lock,"locked")
-    end
-    self:AddCallback("check_lock", ui_events.BUTTON_CLICKED, _check_lock, self)
+    
 
-    local _check_hud = function()
-        self:Callback_Check(self.check_hud,"show_hud")
-    end
-    self:AddCallback("check_hud", ui_events.BUTTON_CLICKED, _check_hud, self)
-
-    local _check_text = function()
-        self:Callback_Check(self.check_text,"show_label")
-    end
-    self:AddCallback("check_label", ui_events.BUTTON_CLICKED, _check_text, self)
-
-    local _check_argb = function()
-        self:Callback_Check(self.check_argb,"check_argb")
-    end
-    self:AddCallback("check_argb", ui_events.BUTTON_CLICKED, _check_argb, self)
-
---]]
---[[
-    local args = {
-        min     = 0,
-        max     = 255,
-        valtype = 2,
-        color   = "a",
-    }
-
-    local _wrapper = function(handler) -- we need wrapper in order to pass ctrl to method
-        self:Callback_Input(ctrl, path, opt, v)
-    end
-    self:AddCallback(id_ctrl, ui_events.EDIT_TEXT_COMMIT, _wrapper, self)
---]]
-
-    --self:AddCallback("input_a", ui_events.EDIT_TEXT_COMMIT, self.Callback_Input, self, "a")
 end
 
 function UIPinSettingsWnd:SetARGBVal(color,val)
@@ -2932,7 +2964,8 @@ end
 
 function UIPinSettingsWnd:RefreshIcon(texture)
     if not self.icon then return end
-    texture = texture or texture_for_icon(pawdata.curr_ico_name)
+    self.icon_curr = pins[self.pin_id].icon or self.icon_curr
+    texture = texture or texture_for_icon(self.icon_curr)
     if texture then
         self.icon:InitTexture(texture)
     else
@@ -2945,51 +2978,27 @@ function UIPinSettingsWnd:RefreshIcon(texture)
 end
 
 function UIPinSettingsWnd:IconPrev()
-    _ = cycle_icons(-1,false)
-    self.icon_changed = true
-    self.new_icon_on_accept = true
-    self:Update()
+    cycle_icons(-1,false)
 end
 
 function UIPinSettingsWnd:IconNext()
-    _ = cycle_icons(1,false)
-    self.icon_changed = true
-    self.new_icon_on_accept = true
-    self:Update()
+    cycle_icons(1,false)
 end
 
 function UIPinSettingsWnd:SetPrev()
-    _ = cycle_sets(-1,false)
-    self.icon_changed = true
-    self.set_changed = true
-    self.new_icon_on_accept = true
-    self:Update()
+    cycle_sets(-1,false)
 end
 
 function UIPinSettingsWnd:SetNext()
-    _ = cycle_sets(1,false)
-    self.icon_changed = true
-    self.set_changed = true
-    self.new_icon_on_accept = true
-    self:Update()
+    cycle_sets(1,false)
 end
 
-function UIPinSettingsWnd:Callback_Check(ctrl,opt)
-    dl("UIPinSettingsWnd:Callback_Check for opt %s",opt)
-    if opt == "locked" then
-        self.locked = ctrl:GetCheck()
-        self.btn_delete:Enable(not self.locked)
-        self.check_text:Enable(not self.locked)
-        self.check_hud:Enable(not self.locked)
-        self.input_a:Enable(not self.locked)
-        self.input_r:Enable(not self.locked)
-        self.input_g:Enable(not self.locked)
-        self.input_b:Enable(not self.locked)
-        self.input_a:Enable(not self.locked)
-        self.input:Enable(not self.locked)
-    end
+function UIPinSettingsWnd:ToggleSidebar()
+    printf("\n\nIs this even firing?\n\n")
+    psw_sidebar_state = not psw_sidebar_state
+    self.sidebar_ctrl:Show(psw_sidebar_state)
+    play_sound_for_actor(snd_cycle_blip)
 end
-
 
 function UIPinSettingsWnd:Callback_Input(color)
     vl("UIPinSettingsWnd:Callback_Input for color %s",color)
@@ -3025,11 +3034,6 @@ function UIPinSettingsWnd:Callback_Input(color)
     self.icon:SetTextureColor(GetARGB(a,r,g,b))
 end
 
-
-function UIPinSettingsWnd:DeletePin()
-    do_waypoint("pn_del",nil,nil,{syscall=true,id=self.pin_id})
-    self:Close()
-end
 
 function UIPinSettingsWnd:RefreshChecks()
     if self.check_text then
@@ -3070,9 +3074,6 @@ function UIPinSettingsWnd:Reset(id,args)
     self.cust_argb  = pins[id].custom_colors
     self.pin_id     = id
     self.pin        = pins[self.pin_id]
-    self.orig_icon  = self.pin.icon
-    self.orig_pin   = pawdata.curr_ico_name
-    self.orig_set   = pawdata.curr_set_name
     self.locked     = self.pin.locked
     self.show_hud   = self.pin.hud
     self.show_label = self.pin.show_label
@@ -3102,7 +3103,11 @@ end
 
 function UIPinSettingsWnd:Update()
     if not self.init_done then return end
+    if time_global() < self.next_update then return end
+    self.next_update = time_global() + 10
+
     CUIScriptWnd.Update(self)
+    --[[
     if self.icon_changed then
         if self.set_changed then
             self.cap["set"]:TextControl():SetText(local_set_name())
@@ -3116,6 +3121,7 @@ function UIPinSettingsWnd:Update()
         end
         self.new_icon = pawdata.curr_ico_name
     end
+    --]]
     -- locking
     self.locked = self.check_lock:GetCheck()
     --self.show_hud = self.check_hud:GetCheck()
@@ -3214,10 +3220,17 @@ function UIPinSettingsWnd:OnKeyboard(dik, keyboard_action)
 end
 
 
+function UIPinSettingsWnd:DeletePin()
+    do_waypoint("pn_del",nil,nil,{syscall=true,id=self.pin_id})
+    self:Close()
+end
+
 function UIPinSettingsWnd:Close()
-    self:Reset(nil,{wipe=true})
     self:HideDialog()
+    self:Show(false)
     Unregister_UI("UIPinSettingsWnd")
+    play_sound_for_actor(snd_cycle_blip)
+    destroy_pin_window()
 end
 
 
@@ -3323,6 +3336,9 @@ function UIPAWIndicator:InitControls()
     vl("UIPAWIndicator:InitControls: active icon is %s",self.icon_curr)
 end
 
+function UIPAWIndicator:SettingsMode(onoff)
+    self.settings_mode = true
+end
 
 function UIPAWIndicator:Update(force)
     CUIScriptWnd.Update(self)
@@ -4504,7 +4520,7 @@ function actor_on_first_update()
     else
         hide_hud_waypoint()
     end
-    if reticle_mode > 0 then
+    if (reticle_mode > 0) or (autotag_mode > 0) then
         enable_vo_crosshair()
     else
         disable_vo_crosshair()
@@ -4528,8 +4544,10 @@ function on_mouse_wheel(scroll_dir, flags)
         UnregisterScriptCallback("on_mouse_wheel",on_mouse_wheel)
         return
     end
-    if not (icon_cycle_active or set_cycle_active) then return end
-    if actor_menu.inventory_opened() then return end
+
+    if (not pin_window_is_open()) and (
+        actor_menu.inventory_opened() or not (icon_cycle_active or set_cycle_active)
+    ) then return end
 
     flags.ret_value = false
     local now = time_global()
