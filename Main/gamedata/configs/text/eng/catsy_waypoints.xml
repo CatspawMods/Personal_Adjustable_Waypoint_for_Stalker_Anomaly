@@ -1536,5 +1536,11 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>BWHR Target Tag</text>
 	</string>
 
+	<string id="ui_mcm_pawsys_pawmenu_convert">
+		<text>Convert to Pin and Customize</text>
+	</string>
+
+
+
 
 </string_table>

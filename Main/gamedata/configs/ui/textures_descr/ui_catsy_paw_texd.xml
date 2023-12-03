@@ -173,6 +173,8 @@
 		<texture id = "ui_icons_paw_crosshair_red" 		x="128" y="512" width="64" height="64" />
 		<texture id = "ui_icons_paw_crosshair_green" 	x="192" y="512" width="64" height="64" />
 
+		<texture id = "ui_icons_paw_change"	x="256" y="96" width="64" height="64" />
+
 		<texture id="ui_mapspot_skull_small" x="256" y="512" width="9" height="10" />
 		<texture id="ui_mapspot_skull_large" x="266" y="512" width="11" height="12" />
 		<texture id="ui_AlphaLion_XCorpseMarker-small" x="278" y="512" width="7" height="7" />
@@ -232,8 +234,8 @@
 		<texture id = "ui_paw_fade_cap_bg_right" x="192" y="481" width="320" height="31" />	
 		<texture id = "ui_paw_fade_cap_bg_full" x="178" y="481" width="334" height="31" />	
 
-		<texture id = "ui_paw_dialog_classic_chrome" x="755" y="689" width="269" height="355" />
-		<texture id = "ui_paw_dialog_classic_bg" x="773" y="716" width="240" height="300" />
+		<texture id = "ui_paw_dialog_classic_chrome" x="656" y="688" width="360" height="355" />
+		<texture id = "ui_paw_dialog_classic_bg" x="674" y="715" width="338" height="300" />
 
 		<texture id = "ui_paw_dialog_iconframe" x="917" y="635" width="53" height="53" />
 
@@ -243,21 +245,93 @@
 
 		<texture id = "ui_paw_dialog_iconwater_hq" x="833" y="255" width="190" height="190" />
 
-		<texture id = "ui_paw_dialog_argb" x="783" y="188" width="240" height="66" />
+		<texture id = "ui_paw_dialog_argb" x="685" y="188" width="338" height="66" />
 		
-		<texture id = "ui_paw_dialog_argb_long" x="769" y="656" width="86" height="30" />
-
 		<texture id = "ui_paw_dialog_argb_single_nobg" x="769" y="593" width="65" height="31" />		
 
 		<texture id = "ui_paw_dialog_argb_single" x="769" y="624" width="65" height="31" />		
 
-		<texture id = "ui_paw_btn_open_sidebar_h" x="713" y="578" width="40" height="60" />		
+		<texture id = "ui_paw_btn_open_sidebar_h" x="613" y="578" width="40" height="60" />		
 
-		<texture id = "ui_paw_btn_open_sidebar_e" x="713" y="638" width="40" height="60" />		
+		<texture id = "ui_paw_btn_open_sidebar_e" x="613" y="638" width="40" height="60" />		
 
-		<texture id = "ui_paw_btn_open_sidebar_t" x="713" y="698" width="40" height="60" />		
+		<!-- Disabled texture is unused, set to same as enabled to avoid log spam -->
+		<texture id = "ui_paw_btn_open_sidebar_d" x="613" y="638" width="40" height="60" />		
 
-		<texture id = "ui_paw_dialog_sidebar" x="710" y="818" width="45" height="175" />
+		<texture id = "ui_paw_btn_open_sidebar_t" x="613" y="698" width="40" height="60" />		
+
+		<texture id = "ui_paw_btn_close_sidebar_h" x="655" y="578" width="40" height="60" />		
+
+		<texture id = "ui_paw_btn_close_sidebar_t" x="695" y="578" width="40" height="60" />		
+
+		<!-- Disabled texture is unused, set to same as enabled to avoid log spam -->
+		<texture id = "ui_paw_btn_close_sidebar_d" x="577" y="487" width="40" height="60" />		
+
+		<texture id = "ui_paw_btn_close_sidebar_e" x="577" y="487" width="40" height="60" />		
+
+
+		<texture id = "ui_paw_dialog_sidebar" x="618" y="417" width="215" height="161" />
+
+		<texture id = "ui_paw_btn_arw_nobg_left_d" x="258" y="658" width="28" height="60" />
+		<texture id = "ui_paw_btn_arw_nobg_left_e" x="287" y="658" width="28" height="60" />
+		<texture id = "ui_paw_btn_arw_nobg_left_h" x="316" y="658" width="28" height="60" />
+		<texture id = "ui_paw_btn_arw_nobg_left_t" x="345" y="658" width="28" height="60" />
+
+		<texture id = "ui_paw_btn_arw_nobg_right_d" x="374" y="658" width="28" height="60" />
+		<texture id = "ui_paw_btn_arw_nobg_right_e" x="403" y="658" width="28" height="60" />
+		<texture id = "ui_paw_btn_arw_nobg_right_h" x="432" y="658" width="28" height="60" />
+		<texture id = "ui_paw_btn_arw_nobg_right_t" x="461" y="658" width="28" height="60" />
+
+		<texture id = "ui_paw_btn_tallarrow_left_d" x="258" y="719" width="28" height="60" />
+		<texture id = "ui_paw_btn_tallarrow_left_e" x="287" y="719" width="28" height="60" />
+		<texture id = "ui_paw_btn_tallarrow_left_h" x="316" y="719" width="28" height="60" />
+		<texture id = "ui_paw_btn_tallarrow_left_t" x="345" y="719" width="28" height="60" />
+
+		<texture id = "ui_paw_btn_tallarrow_right_d" x="374" y="719" width="28" height="60" />
+		<texture id = "ui_paw_btn_tallarrow_right_e" x="403" y="719" width="28" height="60" />
+		<texture id = "ui_paw_btn_tallarrow_right_h" x="432" y="719" width="28" height="60" />
+		<texture id = "ui_paw_btn_tallarrow_right_t" x="461" y="719" width="28" height="60" />
+
+		<texture id = "ui_paw_btn_tallarrow_up_d" 	x="490" y="664" width="60" height="28" />
+		<texture id = "ui_paw_btn_tallarrow_up_e" 	x="490" y="693" width="60" height="28" />
+		<texture id = "ui_paw_btn_tallarrow_up_h" 	x="490" y="772" width="60" height="28" />
+		<texture id = "ui_paw_btn_tallarrow_up_t" 	x="490" y="751" width="60" height="28" />
+
+		<texture id = "ui_paw_btn_tallarrow_down_d" x="551" y="664" width="60" height="28" />
+		<texture id = "ui_paw_btn_tallarrow_down_e" x="551" y="693" width="60" height="28" />
+		<texture id = "ui_paw_btn_tallarrow_down_h" x="551" y="772" width="60" height="28" />
+		<texture id = "ui_paw_btn_tallarrow_down_t" x="551" y="751" width="60" height="28" />
+
+		<texture id = "ui_paw_btn_applyicon_t" x="533" y="780" width="78" height="60" />
+		<texture id = "ui_paw_btn_applyicon_d" x="533" y="841" width="78" height="60" />
+		<texture id = "ui_paw_btn_applyicon_e" x="533" y="902" width="78" height="60" />
+		<texture id = "ui_paw_btn_applyicon_h" x="533" y="963" width="78" height="60" />
+
+		<texture id = "ui_paw_btn_yelarrow_left_t" x="472" y="780" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_left_d" x="472" y="841" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_left_e" x="472" y="902" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_left_h" x="472" y="963" width="60" height="60" />
+
+		<texture id = "ui_paw_btn_yelarrow_right_t" x="411" y="780" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_right_d" x="411" y="841" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_right_e" x="411" y="902" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_right_h" x="411" y="963" width="60" height="60" />
+
+		<texture id = "ui_paw_btn_yelarrow_up_t" x="350" y="780" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_up_d" x="350" y="841" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_up_e" x="350" y="902" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_up_h" x="350" y="963" width="60" height="60" />
+
+		<texture id = "ui_paw_btn_yelarrow_down_t" x="289" y="780" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_down_d" x="289" y="841" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_down_e" x="289" y="902" width="60" height="60" />
+		<texture id = "ui_paw_btn_yelarrow_down_h" x="289" y="963" width="60" height="60" />
+
+		<texture id = "ui_paw_btn_blank_t" x="551" y="548" width="60" height="28" />
+		<texture id = "ui_paw_btn_blank_h" x="551" y="577" width="60" height="28" />
+		<texture id = "ui_paw_btn_blank_e" x="551" y="606" width="60" height="28" />
+		<texture id = "ui_paw_btn_blank_d" x="551" y="635" width="60" height="28" />
+	
 
 	</file>
 

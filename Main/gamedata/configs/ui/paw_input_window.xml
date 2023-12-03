@@ -4,18 +4,20 @@
 		<background x="392" y="241" width="240" height="300" stretch="1" >
 			<texture>ui_inGame2_message_box</texture>
 		</background>
-
+<!--
 		<chrome x="-18" y="-27" width="269" height="335" stretch="1" />
+-->
+		<chrome x="-18" y="-27" width="270" height="335" stretch="1" />
 
 		<pin_settings x="392" y="200" width="240" height="300" stretch="1" />
 
 		<bg_settings x="0" y="0" width="240" height="300" stretch="1" />
 
-		<btn_sidebar x="0" y="0" width="40" height="60" stretch="1" check_mode="0">
+		<btn_sidebar x="0" y="0" width="30" height="60" stretch="1" check_mode="0">
 			<texture>ui_paw_btn_open_sidebar</texture>
 		</btn_sidebar>
 
-		<sidebar x="0" y="35" width="45" height="175" stretch="1">
+		<sidebar x="0" y="35" width="161.25" height="161" stretch="1">
 			<texture>ui_paw_dialog_sidebar</texture>
 		</sidebar>
 
@@ -51,61 +53,8 @@
 
 
 -->
-		<icoset_controls x="0" y="0" width="200" height="70" align="c" vert_align="c" stretch="1">
-		<!--
-			Known good backup
-			<btn_set_prev x="0" y="2" width="40" height="26">
-				<texture>ui_button_arrow_left</texture>
-			</btn_set_prev>
 
-			<logo_set x="39" y="0" width="24" height="28" align="c" vert_align="c" stretch="1">
-				<texture>ui_icons_paw_btn_set</texture>
-			</logo_set>
-
-			<btn_set_next x="55" y="2" width="40" height="26">
-				<texture>ui_button_arrow_right</texture>
-			</btn_set_next>
-
-			<btn_ico_prev x="0" y="2" width="40" height="26">
-				<texture>ui_button_arrow_left</texture>
-			</btn_ico_prev>
-
-			<logo_icon x="39" y="0" width="28" height="28" align="c" vert_align="c" stretch="1">
-				<texture>ui_icons_paw_btn_icon</texture>
-			</logo_icon>
-			
-			<btn_ico_next x="55" y="2" width="40" height="26">
-				<texture>ui_button_arrow_right</texture>
-			</btn_ico_next>
-		-->
-			<btn_set_prev x="8" y="4" width="24" height="25">
-				<texture>ui_beltbut_min</texture>
-			</btn_set_prev>
-
-			<logo_set x="30" y="2" width="24" height="28" align="c" vert_align="c" stretch="1">
-				<texture>ui_icons_paw_btn_set</texture>
-			</logo_set>
-
-			<btn_set_next x="47" y="4" width="24" height="25">
-				<texture>ui_beltbut_plus</texture>
-			</btn_set_next>
-
-			<btn_ico_prev x="8" y="4" width="24" height="25">
-				<texture>ui_beltbut_min</texture>
-			</btn_ico_prev>
-
-			<logo_icon x="30" y="2" width="28" height="28" align="c" vert_align="c" stretch="1">
-				<texture>ui_icons_paw_btn_icon</texture>
-			</logo_icon>
-			
-			<btn_ico_next x="48.5" y="4" width="24" height="25">
-				<texture>ui_beltbut_plus</texture>
-			</btn_ico_next>
-
-		</icoset_controls>
-
-
-		<argb_chrome x="0" y="0" width="240" height="66" stretch="1">
+		<argb_chrome x="0" y="0" width="253" height="66" stretch="1">
 			<texture>ui_paw_dialog_argb</texture>
 		</argb_chrome>
 
@@ -121,7 +70,7 @@
         </opt_icon>
 
 		<input x="15" y="36" width="200" height="30" stretch="1">
-			<text x="5" font="letterica16" vert_align="c" align="l"/>
+			<text x="0" y="2" font="letterica16" vert_align="c" align="l"/>
 			<!-- <texture>ui_inGame2_edit_box_2</texture>-->
 		</input>
 

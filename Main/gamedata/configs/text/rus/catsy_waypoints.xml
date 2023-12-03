@@ -1536,4 +1536,8 @@
 		<text>BWHR (иконка "Помеченная цель")</text>
 	</string>
 
+	<string id="ui_mcm_pawsys_pawmenu_convert">
+		<text>Преобразование в настраиваемый маркер</text>
+	</string>
+
 </string_table>

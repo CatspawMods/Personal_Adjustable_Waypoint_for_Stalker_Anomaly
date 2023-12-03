@@ -44,7 +44,7 @@ release_date            = 20231201
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
-debuglogs               = false   -- Controls debug logging if you don't have MCM
+debuglogs               = true   -- Controls debug logging if you don't have MCM
 verbose                 = true
 -- Verbose being on won't do anything if debuglogs isn't also enabled,
 -- but it will ensure that if anyone has to turn on debug logging, 
@@ -321,6 +321,17 @@ pda_defs = {
 --  },
 }
 
+
+local default_stash_icon_basic  = "treasure"
+local default_stash_icon_rare   = "treasure_searched"
+local default_stash_icon_isg    = "treasure_unique"
+
+stash_icons = {
+    ["basic"]   = axr_main.config:r_value("mcm", "pawsys/custom_stash_icon_basic", {val=0}) or default_stash_icon_basic, -- Normal stashes
+    ["rare"]    = axr_main.config:r_value("mcm", "pawsys/custom_stash_icon_rare", {val=0}) or default_stash_icon_rare,   -- Rare stashes
+    ["isg"]     = axr_main.config:r_value("mcm", "pawsys/custom_stash_icon_isg", {val=0}) or default_stash_icon_isg,     -- Special (e.g. ISG) stashes
+}
+
 managed_factions = {
     -- editing this may cause crashes or other unexpected results
     ["army"]        = true,
@@ -343,7 +354,6 @@ managed_options = {
     ["wp_set"]          = true,
     ["wp_mov"]          = true,
     ["wp_del"]          = true,
---    ["wp_ren"]      = true,
     ["waypoint_rename"] = true,
     ["waypoint_redesc"] = true,
     ["hud_vis_on"]      = true,
@@ -354,11 +364,12 @@ managed_options = {
     ["hide_label"]      = true,
     ["pn_add"]          = true,
     ["pn_del"]          = true,
-    --["pn_ren"]          = true,
+    ["pn_ren"]          = true, -- deprecated, included here so it doesn't appear if someone re-adds it
     ["pn_clr"]          = true,
     ["pn_settings"]     = true,
     ["lock_pin"]        = true,
     ["unlock_pin"]      = true,
+    ["convert_to_pin"]  = true,
     ["cm_dbg"]          = true,
 }
 
@@ -468,11 +479,11 @@ hud_themes = {
         name    = "pin_sidebar",
         node    = "pawhudind_pin_sidebar",
         style   = "minimal",
-        tex     = "ui_paw_hud_indicator_vertright",
+        tex     = "ui_paw_dialog_sidebar",
         file    = "paw_ui_elements.xml",
-        pos     = {x=640,y=340},
-        w       = 100,
-        h       = 154,
+        pos     = {x=0,y=0},
+        w       = 161.25,
+        h       = 188,
     }, 
 }
 
@@ -870,7 +881,7 @@ function add_mapspot(text,id,icon)
     if not pins[id] then return end
 
     local pin = pins[id]
-    if pin.colors then
+    if pin.custom_colors and pin.colors then
         local clr = pin.colors
         local spot = level.map_get_object_spot_static(id,icon)
         spot:SetTextureColor(GetARGB(clr.a, clr.r, clr.g, clr.b))
@@ -912,6 +923,30 @@ function change_mapspot(text,id,icon)
 end
 
 
+function has_mapspot(id,icon)
+    return level.map_has_object_spot(id,icon) == 1
+end
+
+function get_mapspot(id,icon)
+    local found
+    if icon then
+        return has_mapspot(id,icon) and icon
+    else
+        for k,v in pairs(stash_icons) do
+            local has_spot = has_mapspot(id,v)
+            printf("id %s has mapspot %s: %s",id,v,has_spot)
+            if has_spot then
+                found = v
+                printf("found %s",found)
+                --return v
+
+            end
+        end
+    end
+    return found
+end
+
+
 function set_mapspot_colors(id,icon,a,r,g,b)
     if not id and icon and a and r and g and b then return end
     local pin = pins[id]
@@ -919,6 +954,13 @@ function set_mapspot_colors(id,icon,a,r,g,b)
         local clr = pin.colors
         local spot = level.map_get_object_spot_static(id,icon)
         if spot then spot:SetTextureColor(GetARGB(clr.a, clr.r, clr.g, clr.b)) end
+    end
+end
+
+
+function remove_stash_mapspots(id)
+    for _,mapspot in pairs(stash_icons) do
+        level.map_remove_object_spot(id,mapspot)
     end
 end
 
@@ -967,6 +1009,27 @@ end
 
 function pins_exist()
     return not is_empty(pins)
+end
+
+function pin_exists(id)
+    return pins[id] and true or false
+end
+
+
+function can_convert_to_pin(id)
+    if not (id and (id > 0) and (id < 65535)) then return end
+
+    local se_obj = alife_object(id)
+    if not se_obj then return end
+
+    local cls = se_obj:clsid()
+    local is_stash = IsInvbox(nil,cls)
+    local mapspot = get_mapspot(id)
+    local is_pin = pin_exists(id)
+    local can_convert = mapspot and is_stash and not is_pin
+    vl("can_convert_to_pin(%s): is_stash: %s | is a pin: %s | mapspot: %s | can_convert = %s",id,is_stash,is_pin,mapspot,can_convert)
+
+    return can_convert
 end
 
 
@@ -1336,16 +1399,10 @@ function do_waypoint(act,se_obj,acode,args)
         get_text(title,itex,name,func,args)
     elseif act == "pn_add" then
         dl("Received call to add new pin to map for %s (%s)",name,id)
-        --local func = add_mapspot_functor
         local icon = icons[ac.icon] or map_pin_icon
-        --local itex = texture_for_icon(icon)
-        --local title = ts("ui_mcm_pawsys_pawmenu_pn_add")
         local defname = ts("st_paw_pin_default_name")
         init_new_pin(id,name,defname,icon)
-        add_mapspot(defname,id,icon)
-        --cartography_mode(false)
-        --vl("pin data before input call: %s (%s) % | %",pins[id].name,pins[id].id,pins[id].icon,pins[id].text)
-        --get_text(title,itex,nil,func,pins[id])
+        _ = add_mapspot(defname,id,icon)
         open_pin_settings(id)
     elseif act == "pn_settings" then
         if not (id and pins[id]) then return end
@@ -1361,7 +1418,6 @@ function do_waypoint(act,se_obj,acode,args)
             local itex = texture_for_icon(icon)
             local text = pins[id] and pins[id].text
             local title = ts("ui_mcm_pawsys_pawmenu_pn_ren")
-            cartography_mode(false)
             open_pin_settings(title,itex,text,func,pins[id])
         end
     elseif act == "pn_del" then
@@ -1384,6 +1440,18 @@ function do_waypoint(act,se_obj,acode,args)
     elseif act == "unlock_pin" then
         if not (id and pins[id]) then return end
         pins[id].locked = false
+    elseif act == "convert_to_pin" then
+        local mapspot = get_mapspot(id)
+        if can_convert_to_pin(id) then
+            if not texture_data[mapspot] then
+                _ = get_mapspot_data(mapspot)
+            end
+            _ = remove_stash_mapspots(id)
+            local hint = safename(id)
+            init_new_pin(id,name,hint,mapspot)
+            _ = add_mapspot(hint,id,mapspot)
+            open_pin_settings(id)
+        end
     elseif act == "pn_clr" then
         local wipe_all = args and args.wipe_all
         if not is_empty(hud_pin_objs) then
@@ -1743,7 +1811,11 @@ function get_context_menu_options(property_ui,id,maptbl)
             end
         else
             vl("No pin")
-            add_context_option(property_ui,"pn_add",maptbl)
+            if can_convert_to_pin(id) then
+                add_context_option(property_ui,"convert_to_pin",maptbl)
+            else
+                add_context_option(property_ui,"pn_add",maptbl)
+            end
         end
 
         local name = se_obj:name()
@@ -1819,11 +1891,11 @@ function faction_body_icon(comm)
 end
 
 function local_set_name(setname)
-    local name = ts(setname or icon_sets[pawdata.curr_set_name].name)
+    return ts(setname or icon_sets[pawdata.curr_set_name].name)
 end
 
 function local_icon_name(iconame)
-    local name = ts(iconame or "ui_mcm_lst_"..pawdata.curr_ico_name)
+    return ts(iconame or "ui_mcm_lst_"..pawdata.curr_ico_name)
 end
 
 function icon_for_pin(pin_name)
@@ -1839,7 +1911,7 @@ end
 function texture_for_icon(icon)
     --printf("texture_for_icon(%s) called",icon)
     local tex = texture_data and texture_data[icon] and texture_data[icon].t
-    vl("texture_for_icon(%s) returned %s",icon,tex)
+    --vl("texture_for_icon(%s) returned %s",icon,tex)
     return tex
 end
 
@@ -1849,9 +1921,9 @@ function texture_for_set(setname)
     if not (setdata and setdata.active_icon) then
         dl("WARNING: No active icon found for %s",setname)
     return end
-    vl("active_icon for %s: %s",setname,setdata.active_icon)
+    --vl("active_icon for %s: %s",setname,setdata.active_icon)
     local td = texture_data[setdata.active_icon]
-    vl("texture exists for %s: %s",setdata.active_icon,td ~= nil)
+    --vl("texture exists for %s: %s",setdata.active_icon,td ~= nil)
     local tex = td.t
     vl("texture_for_set(%s) returned %s",setname,tex)
     return tex
@@ -1859,6 +1931,57 @@ end
 
 function get_current_texture(set_changed)
     return set_changed and texture_for_set(pawdata.curr_set_name) or texture_for_icon(pawdata.curr_ico_name)
+end
+
+function get_mapspot_data(spot)
+    local attr_tex      = "texture"
+    local attr_minimap  = "mini_map"
+    local attr_levelmap = "level_map"
+
+    xml:ParseFile("map_spots.xml")
+    xml:NavigateToRoot()
+    th    = xml:ReadAttribute(spot,0,"height")
+    tw    = xml:ReadAttribute(spot,0,"width")
+    xml:NavigateToNode(spot,0)
+    vl("trying to find texture data for %s",spot)
+    if xml:NodeExist(attr_tex,0) then
+        tex   = xml:ReadValue(attr_tex,0)
+        vl("texture node found with value %s",tex)
+    else
+        local spotnode = ""
+        local typ = ""
+        if xml:NodeExist(attr_minimap) then
+            spotnode = xml:ReadAttribute(attr_minimap,0,"spot")
+            typ = attr_minimap
+        end
+        if xml:NodeExist(attr_levelmap) then
+            spotnode = xml:ReadAttribute(attr_levelmap,0,"spot")
+            typ = attr_levelmap
+        end
+        if spotnode ~= "" then
+            xml:NavigateToRoot()
+            th    = xml:ReadAttribute(spotnode,0,"height")
+            tw    = xml:ReadAttribute(spotnode,0,"width")
+            vl("ReadAttribute for %s: h %s w %s",spot,th,tw)
+            xml:NavigateToNode(spotnode,0)
+            tex   = xml:ReadValue(attr_tex,0)
+            vl("%s node found: %s",typ,spotnode)
+        end
+    end
+    texture_data[spot] = {
+        id      = k,
+        t       = tex,
+        h       = th,
+        w       = tw,
+    }
+    local ind = #icon_index + 1
+    icon_index[ind] = {
+        id      = k,
+        icon    = spot,
+        data    = texture_data[spot],
+    }
+    vl("Texture for %s: %s (%sx%s)",spot,tex,tw,th)
+    return texture_data[spot],ind
 end
 
 function set_or_icon(str)
@@ -2423,7 +2546,10 @@ end
 -- ======================================================================
 --      UI ELEMENTS
 -- ======================================================================
-
+function setwndpos(wnd,x,y)
+    if not (wnd and x and y) then return end
+    wnd:SetWndPos(vector2():set(x,y))
+end
 -- ======================================================================
 --[[    TEXT INPUT WINDOW
     Originally adapted from parts of the vanilla backpack stash script
@@ -2627,7 +2753,7 @@ function UIPinSettingsWnd:__init(id,args) super()
     if not ((id and id > 0) and pins[id]) then return end
     self.init_time      = tostring(get_time_elapsed())
     self.next_update    = time_global()
-    _ = self:BackupTempSettings()
+    --_ = self:BackupTempSettings()
     _ = self:Reset(id,args)
     self:InitControls()
     self:HijackWidget()
@@ -2636,15 +2762,19 @@ end
 function UIPinSettingsWnd:__finalize()
 end
 
+
 function UIPinSettingsWnd:BackupTempSettings(restore)
     if not self.backups then
         self.backups = {}
     end
     if restore then
         dl("UIPinSettingsWnd | restoring old settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
-        widget_enable       = self.backups.enable
-        active_theme        = self.backups.active or active_theme
-        widget_hide_delay   = self.backups.autohide or widget_hide_delay
+        widget_enable           = self.backups.enable
+        active_theme            = self.backups.active or active_theme
+        widget_hide_delay       = self.backups.autohide or widget_hide_delay
+        widget_use_custom_pos   = self.backups.use_cust_pos or widget_use_custom_pos
+        widget_custom_pos       = self.backups.cust_pos or widget_custom_pos
+
         self.backups        = {}
     else
         dl("UIPinSettingsWnd | storing current settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
@@ -2652,17 +2782,20 @@ function UIPinSettingsWnd:BackupTempSettings(restore)
             enabled     = widget_enable,
             autohide    = widget_hide_delay,
             active      = active_theme,
+            use_cust_pos= widget_use_custom_pos,
+            cust_pos    = widget_custom_pos,
         }
-        active_theme        = "pin_sidebar"
-        widget_hide_delay   = 0
+        active_theme            = "pin_sidebar"
+        widget_hide_delay       = 0
+        widget_use_custom_pos   = true
     end
 end
 
 function UIPinSettingsWnd:HijackWidget()
+    reset_indicator(true,self.dialog)
     active_theme        = "pin_sidebar"
     widget_hide_delay   = 0
     widget_enable       = true
-    reset_indicator()
 end
 
 function UIPinSettingsWnd:InitControls()
@@ -2709,12 +2842,13 @@ function UIPinSettingsWnd:InitControls()
     local icopanel  = icon.."_panel"
     local icoframe  = icon.."_frame"
     local icowater  = icon.."_watermark"
-    local icoset_c  = texroot.."icoset_controls"
-    local icoset    = icoset_c..":"
-    local btn_iprev = icoset.."btn_ico_prev"
-    local btn_inext = icoset.."btn_ico_next"
-    local btn_sprev = icoset.."btn_set_prev"
-    local btn_snext = icoset.."btn_set_next"
+    --local icoset_c  = texroot.."icoset_controls"
+    --local icoset    = icoset_c..":"
+    --local btn_iprev = icoset.."btn_ico_prev"
+    --local btn_inext = icoset.."btn_ico_next"
+    --local btn_sprev = icoset.."btn_set_prev"
+    --local btn_snext = icoset.."btn_set_next"
+    --local btn_apply = icoset.."btn_apply"
     local caption   = texroot..tex.caption
     local bg        = texroot..tex.bg
     local dialog    = texroot..tex.dialog
@@ -2767,11 +2901,13 @@ function UIPinSettingsWnd:InitControls()
         local paw           = xml:InitTextWnd(paw,self.tbar)
         paw:SetText("PAW".." "..script_version)
         paw:SetFont(GetFontSmall())
-        paw:SetWndPos(vector2():set(195,33.75))
+        paw:SetWndPos(vector2():set(195,34))
         
-        self.sidebar        = xml:InitStatic(texroot.."bg_settings", self.dialog)
-        self.sidebar_ctrl   = xml:InitStatic(sidebar, self.sidebar)
-        psw_sidebar_state   = true
+        --self.sidebar        = xml:InitStatic(texroot.."bg_settings", self.dialog)
+        --self.sidebar_ctrl   = xml:InitStatic(sidebar, self.sidebar)
+        --self.sidebar:Show(false)
+        psw_sidebar_state   = false
+        show_indicator(false)
     end
 
     --================================================================--
@@ -2801,10 +2937,12 @@ function UIPinSettingsWnd:InitControls()
     self:RefreshIcon(self.icon_tex)
     --================================================================--
     --Set/pin controls
-    self.icoset_controls    = xml:InitStatic(icoset_c, self.dialog)
-    self.icon_controls      = xml:InitStatic(icoset_c, self.icoset_controls)
-    self.set_controls       = xml:InitStatic(icoset_c, self.icoset_controls)
-
+    --local widget_anchor     = GUI_PinInd:GetAnchorStatic() or self.dialog
+    --self.icoset_controls    = xml:InitStatic(icoset_c, widget_anchor)
+    --self.icon_controls      = xml:InitStatic(icoset_c, self.icoset_controls)
+    --self.set_controls       = xml:InitStatic(icoset_c, self.icoset_controls)
+    self.argb_controls      = xml:InitStatic(texroot.."argb_chrome",self.dialog)
+  --[[  
     function setup_icoset_ctrl(icoset_arg, pos_x, pos_y)
         local btnx_         = "btn_"
         local stub          = string.sub(icoset_arg,1,3)
@@ -2832,13 +2970,12 @@ function UIPinSettingsWnd:InitControls()
         --self.cap[icoset_arg]:TextControl():SetText(text_cap)
         self[icoset_ctrl]:SetWndPos(vector2():set(pos_x,pos_y))
     end
-    
+--]]
     --================================================================--
-
-    self.argb_controls = xml:InitStatic(texroot.."argb_chrome",self.dialog)
 
     local function setup_argb_control(color,pos_x,pos_y)
         local inputx = "input_"..color
+        vl("Initializing ARGB control %s for color %s at %s,%s",inputx,color,pos_x,pos_y)
         local xsh = color.."_sh"
         local xtx = color.."_tx"
         local xmlnode   = tex.root..":"..tex[inputx]
@@ -2873,6 +3010,7 @@ function UIPinSettingsWnd:InitControls()
 
     local function setup_checkbox(setting,pos_x,pos_y,captext)
         local checkopt = "check_"..setting
+        vl("Initializing checkbox %s (%s) at %s,%s | %s",checkopt,setting,pos_x,pos_y,captext)
         self[checkopt]  = xml:InitCheck(check,self.dialog)
         self:Register(self[checkopt], checkopt..self.init_time)
         self[checkopt]:SetWndPos(vector2():set(pos_x,pos_y))
@@ -2882,9 +3020,10 @@ function UIPinSettingsWnd:InitControls()
         self.cap[checkopt]:SetVTextAlignment(1)
     end
 
-    local function setup_button(button,pos_x,pos_y,xmlnode)
+    function setup_button(button,pos_x,pos_y,xmlnode)
         local buttonx = "btn_"..button
-        self[buttonx] = xml:Init3tButton(xmlnode, self.dialog)
+        vl("Initializing button %s (%s) at %s,%s",buttonx,button,pos_x,pos_y)
+        self[buttonx] = xml:Init3tButton(xmlnode,self.dialog)
         self:Register(self[buttonx],buttonx)
         self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))
     end
@@ -2892,8 +3031,8 @@ function UIPinSettingsWnd:InitControls()
     --================================================================--
     -- Setup and place all elements
     --========================= X ===== Y ============================--
-    setup_icoset_ctrl( "icon",  130,     27 )
-    setup_icoset_ctrl( "set",   130,     150 )
+    --setup_icoset_ctrl( "icon",  230,     37 )
+    --setup_icoset_ctrl( "set",   130,     150 )
 
     setup_argb_control( "a",    15,     17.5 )
     setup_argb_control( "r",    65,     17.5 )
@@ -2908,32 +3047,21 @@ function UIPinSettingsWnd:InitControls()
     self:RefreshChecks()
 
     setup_button(   "sidebar",  230,    0,      sb_btn )
-    setup_button(   "delete",   5.5,    245,    delete )
-    setup_button(   "ok",       93,     245,    btn_ok )
-    setup_button(   "cancel",   150,    245,    cancel )
+    setup_button(   "delete",   9.5,    245.5,    delete )
+    setup_button(   "ok",       97,     245.5,    btn_ok )
+    setup_button(   "cancel",   154,    245.5,    cancel )
 
     --================================================================--
 
-    self.icoset_controls:SetWndPos(vector2():set(   150,48))
-    self.sidebar:SetWndPos(vector2():set(           242,10))
-    self.icon_controls:SetWndPos(vector2():set(     0,  0))
-    self.set_controls:SetWndPos(vector2():set(      0,  112))
-    self.icon_display_panel:SetWndPos(vector2():set(154.5,73))
-    self.argb_controls:SetWndPos(vector2():set(    -1,  188))
+    --widget_custom_pos     = { x= 237,  y= 48 }
+    widget_custom_pos     = { x= 143,  y= 60.5 }
+    --self.icoset_controls:SetWndPos(vector2():set(   230,48))
+    --self.sidebar:SetWndPos(vector2():set(           242,10))
+    --self.icon_controls:SetWndPos(vector2():set(     0,  0))
+    --self.set_controls:SetWndPos(vector2():set(      0,  50))
+    self.icon_display_panel:SetWndPos(vector2():set(151,90))
+    self.argb_controls:SetWndPos(vector2():set(    2,  188))
 
-    --[[Buttons
-    self.btn_cancel       = xml:Init3tButton(cancel, self.dialog)
-    self:Register(self.btn_cancel,tex.cancel)
-    self.btn_cancel:SetWndPos(vector2():set(12,239))
-
-    self.btn_ok             = xml:Init3tButton(btn_ok, self.dialog)
-    self:Register(self.btn_ok,tex.ok)
-    self.btn_ok:SetWndPos(vector2():set(93,239))
- 
-    self.btn_delete       = xml:Init3tButton(delete, self.dialog)
-    self:Register(self.btn_delete,tex.delete)
-    self.btn_delete:SetWndPos(vector2():set(144,239))
---]]
     self:InitCallBacks()
     self.init_done = true
 end
@@ -2945,12 +3073,30 @@ function UIPinSettingsWnd:InitCallBacks()
     self:AddCallback("btn_delete", ui_events.BUTTON_CLICKED, self.DeletePin, self)
     self:AddCallback("btn_sidebar", ui_events.BUTTON_CLICKED, self.ToggleSidebar, self)
 
+--[[
+    self:AddCallback("btn_apply", ui_events.BUTTON_CLICKED, self.ApplyIconToPin, self)
     self:AddCallback("btn_iprev", ui_events.BUTTON_CLICKED, self.IconPrev, self)
     self:AddCallback("btn_inext", ui_events.BUTTON_CLICKED, self.IconNext, self)
     self:AddCallback("btn_sprev", ui_events.BUTTON_CLICKED, self.SetPrev, self)
     self:AddCallback("btn_snext", ui_events.BUTTON_CLICKED, self.SetNext, self)
-    
+--]]
+end
 
+function UIPinSettingsWnd:GetAnchorStatic()
+    if self.dialog then
+        return self.dialog
+    else
+        dl("ERROR self.dialog was nil!")
+    end
+end
+
+
+function UIPinSettingsWnd:ApplyIconToPin(icon)
+    icon = icon or pawdata.curr_ico_name
+    local text = pins[self.pin_id].text
+    change_mapspot(text,self.pin_id,icon)
+    pins[self.pin_id].icon = icon
+    self:RefreshIcon()
 end
 
 function UIPinSettingsWnd:SetARGBVal(color,val)
@@ -2977,26 +3123,17 @@ function UIPinSettingsWnd:RefreshIcon(texture)
     return true
 end
 
-function UIPinSettingsWnd:IconPrev()
-    cycle_icons(-1,false)
-end
-
-function UIPinSettingsWnd:IconNext()
-    cycle_icons(1,false)
-end
-
-function UIPinSettingsWnd:SetPrev()
-    cycle_sets(-1,false)
-end
-
-function UIPinSettingsWnd:SetNext()
-    cycle_sets(1,false)
-end
 
 function UIPinSettingsWnd:ToggleSidebar()
-    printf("\n\nIs this even firing?\n\n")
     psw_sidebar_state = not psw_sidebar_state
-    self.sidebar_ctrl:Show(psw_sidebar_state)
+    vl("Toggling sidebar widget to %s",psw_sidebar_state)
+    GUI_PinInd:ShowDialog(psw_sidebar_state)
+    if psw_sidebar_state then
+        self.btn_sidebar:InitTexture("ui_paw_btn_close_sidebar")
+    else
+        self.btn_sidebar:InitTexture("ui_paw_btn_open_sidebar")
+    end
+    --self.icoset_controls:Show(psw_sidebar_state)
     play_sound_for_actor(snd_cycle_blip)
 end
 
@@ -3044,6 +3181,9 @@ function UIPinSettingsWnd:RefreshChecks()
     end
     if self.check_lock then
         self.check_lock:SetCheck(self.locked)
+    end
+    if self.check_argb then
+        self.check_argb:SetCheck(self.cust_argb)
     end
 end
 
@@ -3102,37 +3242,22 @@ end
 
 
 function UIPinSettingsWnd:Update()
+    --printf("PAW: psw_sidebar_state: %s | widget_active: %s",psw_sidebar_state,widget_active)
     if not self.init_done then return end
     if time_global() < self.next_update then return end
     self.next_update = time_global() + 10
 
     CUIScriptWnd.Update(self)
-    --[[
-    if self.icon_changed then
-        if self.set_changed then
-            self.cap["set"]:TextControl():SetText(local_set_name())
-        end
-        self.cap["icon"]:TextControl():SetText(local_icon_name())
-        self.icon_tex = get_current_texture(self.set_changed)
-        self.set_changed = false
-        self.icon_changed = false
-        if self.icon_tex then
-            self.icon:InitTexture(self.icon_tex)
-        end
-        self.new_icon = pawdata.curr_ico_name
-    end
-    --]]
+
     -- locking
     self.locked = self.check_lock:GetCheck()
-    --self.show_hud = self.check_hud:GetCheck()
-    --self.show_label = self.check_text:GetCheck()
     self.cust_argb = self.check_argb:GetCheck()
     self.argb_controls:Show(self.cust_argb)
     self.btn_delete:Enable(not self.locked)
-    self.btn_iprev:Enable(not self.locked)
-    self.btn_inext:Enable(not self.locked)
-    self.btn_sprev:Enable(not self.locked)
-    self.btn_snext:Enable(not self.locked)
+    --self.btn_iprev:Enable(not self.locked)
+    --self.btn_inext:Enable(not self.locked)
+    --self.btn_sprev:Enable(not self.locked)
+    --self.btn_snext:Enable(not self.locked)
     self.check_text:Enable(not self.locked)
     self.check_hud:Enable(not self.locked)
     self.check_argb:Enable(not self.locked)
@@ -3229,7 +3354,11 @@ function UIPinSettingsWnd:Close()
     self:HideDialog()
     self:Show(false)
     Unregister_UI("UIPinSettingsWnd")
+    if GUI_PinInd then
+        _ = GUI_PinInd:SettingsMode(false)
+    end
     play_sound_for_actor(snd_cycle_blip)
+    reset_indicator()
     destroy_pin_window()
 end
 
@@ -3240,13 +3369,18 @@ end
 -- ====================================================================]]
 
 
-GUI = nil
+GUI_PinInd = nil
 
 class "UIPAWIndicator" (CUIScriptWnd)
 
-function UIPAWIndicator:__init() super()
-    vl("PAW init called, active theme is %s | widget_active %s | widget_enabled %s",active_theme,widget_active,widget_enabled)
-    if not widget_enabled then return end
+function UIPAWIndicator:__init(settings_mode,anchor) super()
+    vl("PAW init called, active theme is %s | widget_active %s | widget_enabled %s | settingsmode %s",active_theme,widget_active,widget_enabled,settingsmode)
+    if not (widget_enabled or pin_window_is_open()) then return end
+    self.anchor = anchor
+    if settings_mode then
+        _ = self:SettingsMode(true)
+    end
+
     self.theme = hud_themes[active_theme]
     self:InitControls()
     self:DrawIndicator(self.theme)
@@ -3258,6 +3392,66 @@ end
 function UIPAWIndicator:__finalize()
 end
 
+
+function UIPAWIndicator:InitControls()
+    self.pda_active = item_device.is_pda_active()
+    self.icon_curr = get_active_icon()
+    self.set_curr = pawdata.curr_set_name
+   
+    vl("UIPAWIndicator:InitControls: active icon is %s",self.icon_curr)
+end
+
+
+function UIPAWIndicator:GetAnchorStatic()
+    if self.dialog then
+        dl("Passing widget handler back to calling func")
+        return self.dialog
+    else
+        dl("ERROR self.dialog was nil!")
+    end
+end
+
+function UIPAWIndicator:BackupRestoreSettings(restore)
+    if not self.backups then
+        self.backups = {}
+    end
+    if restore then
+        dl("UIPinSettingsWnd | restoring old settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
+        widget_enable           = self.backups.enable
+        active_theme            = self.backups.active or active_theme
+        widget_hide_delay       = self.backups.autohide or widget_hide_delay
+        widget_use_custom_pos   = self.backups.use_cust_pos or widget_use_custom_pos
+        widget_custom_pos       = self.backups.cust_pos or widget_custom_pos
+        self.anchor             = self
+        self.backups        = {}
+    else
+        dl("UIPinSettingsWnd | storing current settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
+        self.backups = {
+            enabled     = widget_enable,
+            autohide    = widget_hide_delay,
+            active      = active_theme,
+            use_cust_pos= widget_use_custom_pos,
+            cust_pos    = widget_custom_pos,
+        }
+    end
+end
+
+
+function UIPAWIndicator:SettingsMode(onoff)
+    self.settings_mode = onoff and true or false
+    if onoff then
+        _ = self:BackupRestoreSettings()
+        active_theme            = "pin_sidebar"
+        widget_hide_delay       = 0
+        widget_use_custom_pos   = true
+        --widget_custom_pos       = {x=634,y=260}
+        --self.anchor = GUI_PinOpts and GUI_PinOpts:GetAnchorStatic() or self
+    else
+        _ = self:BackupRestoreSettings(true)
+        self.anchor = self
+    end
+    self:InitCallBacks()
+end
 
 function UIPAWIndicator:Reset(theme)
     vl("UIPAWIndicator:Reset called with theme %s",theme and theme.name)
@@ -3290,6 +3484,106 @@ function UIPAWIndicator:actor_on_net_destroy()
 end
 
 
+function UIPAWIndicator:IconPrev()
+    printf("UIPAWIndicator:IconPrev fired")
+    cycle_icons(-1,false)
+end
+
+function UIPAWIndicator:IconNext()
+    printf("UIPAWIndicator:IconNext fired")
+    cycle_icons(1,false)
+end
+
+function UIPAWIndicator:SetPrev()
+    printf("UIPAWIndicator:SetPrev fired")
+    cycle_sets(-1,false)
+end
+
+function UIPAWIndicator:SetNext()
+    printf("UIPAWIndicator:SetNext fired")
+    cycle_sets(1,false)
+end
+
+
+function UIPAWIndicator:InitIcosetControls()
+    local xml       = CScriptXmlInit()
+    xml:ParseFile("paw_ui_elements.xml")
+    local icoset_c  = "icoset_controls"
+    local icoset    = icoset_c..":"
+    --local btn_iprev = icoset.."btn_ico_prev"
+    --local btn_inext = icoset.."btn_ico_next"
+    --local btn_sprev = icoset.."btn_set_prev"
+    --local btn_snext = icoset.."btn_set_next"
+    local btn_iprev = icoset.."btn_ico_prev"
+    local btn_inext = icoset.."btn_ico_next"
+    local btn_sprev = icoset.."btn_set_prev"
+    local btn_snext = icoset.."btn_set_next"
+    local btn_apply = icoset.."btn_apply"
+    
+    self.icoset_controls    = xml:InitStatic(icoset_c, self.dialog)
+    self.icon_controls      = xml:InitStatic(icoset_c, self.icoset_controls)
+    self.set_controls       = xml:InitStatic(icoset_c, self.icoset_controls)
+
+    printf("icon name: %s | set name: %s",local_icon_name(),local_set_name())
+    function setup_icoset_ctrl(icoset_arg, pos_x, pos_y)
+        local btnx_         = "btn_"
+        local stub          = string.sub(icoset_arg,1,3)
+        local abbr          = string.sub(icoset_arg,1,1)
+        local button_prev   = btnx_..abbr.."prev"
+        local button_next   = btnx_..abbr.."next"
+        local node_prev     = icoset..btnx_..stub.."_prev"
+        local node_next     = icoset..btnx_..stub.."_next"
+        local icoset_ctrl   = icoset_arg.."_controls"
+        local text_cap      = (abbr == "s") and
+                                local_set_name() or local_icon_name()
+
+        printf("setup_icoset_ctrl(%s,%s,%s) for %s\nstub = %s\nabbr = %s\nbutton_prev = %s\nbutton_next = %s\nnode_prev = %s\nnode_next = %s\nicoset_ctrl = %s\n",icoset_arg, pos_x, pos_y,text_cap,stub,abbr,button_prev,button_next,node_prev,node_next,icoset_ctrl)
+
+        self[button_prev]       = xml:Init3tButton(node_prev, self[icoset_ctrl])
+        self:Register(self[button_prev],button_prev)
+
+        local logo         = xml:InitStatic(icoset.."logo_"..icoset_arg, self[icoset_ctrl])
+        unsquish_aspect(logo)
+
+        self[button_next]       = xml:Init3tButton(node_next, self[icoset_ctrl])
+        self:Register(self[button_next],button_next)
+
+        --self.cap[icoset_arg]    = xml:InitStatic(caption,self[button_prev])
+        --self.cap[icoset_arg]:TextControl():SetText(text_cap)
+        self[icoset_ctrl]:SetWndPos(vector2():set(pos_x,pos_y))
+    end
+
+    function setup_button(button,pos_x,pos_y,xmlnode)
+        local buttonx = "btn_"..button
+        vl("Initializing button %s (%s) at %s,%s",buttonx,button,pos_x,pos_y)
+        self[buttonx] = xml:Init3tButton(xmlnode, self.icoset_controls)
+        self:Register(self[buttonx],buttonx)
+        self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))
+    end
+
+    setup_icoset_ctrl(  "icon",     91.5,     34 )
+    setup_icoset_ctrl(  "set",      109,      113 )
+    setup_button(       "apply",    82,    64, btn_apply )
+
+    --================================================================--
+
+    self.icoset_controls:Show(self.settings_mode)
+end
+
+function UIPAWIndicator:ApplyIconToPin()
+    GUI_PinOpts:ApplyIconToPin()
+end
+
+function UIPAWIndicator:InitCallBacks()
+    vl("UIPAWIndicator registering callbacks")
+
+    self:AddCallback("btn_apply", ui_events.BUTTON_CLICKED, self.ApplyIconToPin, self)
+    self:AddCallback("btn_iprev", ui_events.BUTTON_CLICKED, self.IconPrev, self)
+    self:AddCallback("btn_inext", ui_events.BUTTON_CLICKED, self.IconNext, self)
+    self:AddCallback("btn_sprev", ui_events.BUTTON_CLICKED, self.SetPrev, self)
+    self:AddCallback("btn_snext", ui_events.BUTTON_CLICKED, self.SetNext, self)
+end
+
 function UIPAWIndicator:DrawIndicator(theme)
     vl("UIPAWIndicator:DrawIndicator called with theme %s | self %s",theme and theme.name,self.theme)
     local pos = theme.pos
@@ -3297,7 +3591,9 @@ function UIPAWIndicator:DrawIndicator(theme)
     local xml = CScriptXmlInit()
     xml:ParseFile(theme.file)
 
-    self.dialog = xml:InitStatic(theme.node, self)
+    --self.dialog = xml:InitStatic(theme.node, self.anchor or self)
+    local anchor = self.anchor or self--GUI_PinOpts and GUI_PinOpts.dialog
+    self.dialog = xml:InitStatic(theme.node, anchor)
     self.dialog:SetWndPos(vector2():set(pos.x,pos.y))
     if theme.tex then
         self.dialog:InitTexture(theme.tex)
@@ -3325,42 +3621,40 @@ function UIPAWIndicator:DrawIndicator(theme)
     elseif theme.style == "minimal" then
         self.box_text:SetText(ts("ui_mcm_lst_"..self.icon_curr))
     end
+
+    self:InitIcosetControls()
     vl("UIPAWIndicator:DrawIndicator completed")
 end
 
 
-function UIPAWIndicator:InitControls()
-    self.pda_active = item_device.is_pda_active()
-    self.icon_curr = get_active_icon()
-    self.set_curr = pawdata.curr_set_name
-    vl("UIPAWIndicator:InitControls: active icon is %s",self.icon_curr)
-end
-
-function UIPAWIndicator:SettingsMode(onoff)
-    self.settings_mode = true
-end
-
 function UIPAWIndicator:Update(force)
+    if self.killswitch then return end
+
     CUIScriptWnd.Update(self)
     self.dialog:Show(false)
-    if not (widget_enabled and main_hud_shown()) then return end
+
+    if not ((widget_enabled and main_hud_shown()) or pin_window_is_open()) then return end
 
     local theme = self.theme
     local pda_changed = false
 
-    if self.pda_active ~= item_device.is_pda_active() then
-        pda_changed = true
-    end
-    if item_device.is_pda_active() then
-        local thm = theme.pda_thm
-        if thm then
-            
-            theme = hud_themes[thm]
+    if not pin_window_is_open() then
+        if self.pda_active ~= item_device.is_pda_active() then
+            pda_changed = true
         end
-    end
-    if pda_changed then
-        vl("PDA mode has changed, resetting theme")
-        self:Reset(theme)
+        if item_device.is_pda_active() then
+            local thm = theme.pda_thm
+            if thm then
+                
+                theme = hud_themes[thm]
+            end
+        end
+        if pda_changed then
+            vl("PDA mode has changed, resetting theme")
+            self:Reset(theme)
+        end
+    else
+        widget_active = psw_sidebar_state
     end
 
     if theme.tex then self.dialog:InitTexture(theme.tex) end
@@ -3397,23 +3691,23 @@ function UIPAWIndicator:Update(force)
 end
 
 
-function reset_indicator()
+function reset_indicator(force,anchor)
     vl("Resetting PAW indicator")
-    if GUI then GUI:Destroy() end
-    if not widget_enabled then return end
+    if GUI_PinInd then GUI_PinInd:Destroy() end
+    if not (force or widget_enabled) then return end
     vl("Re-initializing PAW indicator")
-    GUI = UIPAWIndicator()
+    GUI_PinInd = UIPAWIndicator(force,anchor)
 end
 
 
 function show_indicator(tf)
-    if not (GUI and widget_enabled) then return end
-    if show_indicator == nil then
-        widget_active = -widget_active
+    if not (GUI_PinInd and widget_enabled) then return end
+    if tf == nil then
+        widget_active = not widget_active
     else
         widget_active = (tf == true) or false
     end        
-    GUI:Show(widget_active)
+    GUI_PinInd:Show(widget_active)
 end
 
 
