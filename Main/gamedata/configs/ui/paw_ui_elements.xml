@@ -191,8 +191,8 @@
 			<texture>ui_paw_btn_arw_nobg_left</texture>
 		</btn_set_prev>
 
-		<logo_set x="16" y="4" width="24" height="28" align="c" vert_align="c" stretch="1">
-			<texture>ui_icons_paw_btn_set</texture>
+		<logo_set x="17" y="6.5" width="19.5" height="22" align="c" vert_align="c" stretch="1">
+			<texture>ui_icons_paw_btn_setemboss</texture>
 		</logo_set>
 
 		<btn_set_next x="31" y="4" width="9" height="28">
@@ -216,11 +216,15 @@
 		</btn_apply>
 	</icoset_controls>
 
+	<mwheel_ind x="0" y="0" width="7" height="12" stretch="1">
+		<texture>ui_paw_mwheel_ind_icon</texture>
+	</mwheel_ind>
+
 	<pawhudind_pin_sidebar x="0" y="0" width="161.25" height="158" stretch="1"> 
-		<head x="20" y="5" width="98" height="12" stretch="1">
-			<text color="ui_gray_2" align="r" vert_align="c" stretch="1" font="arial_14"/>
+		<head x="29" y="130.5" width="70" align="r" height="12" stretch="1">
+			<text color="ui_gray_2" align="r" stretch="1" font="arial_14"/>
 		</head>
-		<head2 x="97" y="1" width="1" height="1" stretch="1" />
+		<head2 x="43" y="7" width="98" height="12" align="r" stretch="1" />
 		<next x="125" y="34.5" width="18" height="24" stretch="1"/>
 		<curr x="120" y="58.5" width="27.75" height="37" stretch="1"/>
 		<prev x="125" y="95.5" width="18" height="24" stretch="1"/>

@@ -726,7 +726,7 @@
 	</string>
 
 	<string id="ui_mcm_pawsys_pawhud_hudsound">
-		<text>Воспроизведение звукового эффекта при изменении иконки / набора</text>
+		<text>Воспроизведение звукового эффекта при взаимодействии с UI</text>
 	</string>
 
 	<string id ="ui_mcm_pawsys_pawhud_pingsound">
@@ -1505,11 +1505,11 @@
 	</string>
 
 	<string id="ui_mcm_pawsys_pawmenu_hide_label">
-		<text>Hide map label</text>
+		<text>Скрыть ярлык карты</text>
 	</string>
 
 	<string id="ui_mcm_pawsys_pawmenu_pn_settings">
-		<text>Pin Settings</text>
+		<text>Настройки маркеров</text>
 	</string>
 		
 	<string id="st_paw_argb_a">
@@ -1536,8 +1536,110 @@
 		<text>BWHR (иконка "Помеченная цель")</text>
 	</string>
 
-	<string id="ui_mcm_pawsys_pawmenu_convert">
+	<string id="ui_mcm_pawsys_pawmenu_convert_to_pin">
 		<text>Преобразование в настраиваемый маркер</text>
+	</string>
+
+	<string id="ui_paw_hint_sidebar_desc">
+		<text>Открывайте или закрывайте боковую панель для управления булавками и настройками</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_wp_settings">
+		<text>Настройки путевых точек</text>
+	</string>
+
+	<string id="st_paw_target">
+		<text>Цель</text>
+	</string>
+
+	<string id="st_paw_wp_active">
+		<text>Активна ли точка маршрута</text>
+	</string>
+
+	<string id="st_paw_none">
+		<text>Нет</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_use_custom_backpack_icon">
+		<text>Настройте иконку для тайников, размещенных игроком</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_use_custom_backpack_icon_desc">
+		<text>Если эта функция включена, PAW попытается заменить обычную иконку тайника на выбранную вами, когда вы размещаете тайник с помощью рюкзака.</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_custom_backpack_icon">
+		<text>Значок для использования из набора Избранное</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_custom_backpack_icon_desc">
+		<text>Если вы не видите здесь нужной вам иконки, отредактируйте configs\ui\icon_set_faves.ltx и добавьте ее в список.</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_stash_backpack">
+		<text>Тайник в рюкзаке</text>
+	</string>
+
+	<!-- Everything after this still needs translation -->
+
+	<string id="ui_mcm_lst_paw_bwhr_stash">
+		<text>BWHR Stash Icon</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_sidebar_desc">
+		<text>$clr_whtOpen or close the$clr_yel Icon Library Sidebar$clr_wht, which lets you browse through all of your sets and replace the pin's current icon with any other. You can scroll your mouse wheel while hovering certain controls to cycle through sets and icons.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_delete_desc">
+		<text>$clr_whtClicking this button will$clr_orn immediately and permanently remove this pin.$clr_wht There is no confirmation, and this cannot be undone.\nYou can$clr_yel lock$clr_wht a pin to protect it from accidental deletion.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_ok_desc">
+		<text>$clr_whtAccept any changes to this pin and close the dialog.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_cancel_desc">
+		<text>$clr_whtDiscard any changes to this pin and close the dialog.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_sound_desc">
+		<text>$clr_whtToggle $clr_yelUI sound effects on or off$clr_wht. This can also be set in PAW's MCM menu.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_lock_desc">
+		<text>$clr_whtA$clr_yel locked$clr_wht pin is protected from any and all changes other than the pin data wipe in MCM. Even the$clr_yel Clear All Pins$clr_wht context action will ignore it.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_text_desc">
+		<text>$clr_whtShow or hide the pin's text as a$clr_yel visible label$clr_wht on the PDA map.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_hud_desc">
+		<text>$clr_whtShow or hide a$clr_yel visible HUD marker$clr_wht for this pin.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_desc">
+		<text>$clr_whtClick here to$clr_yel edit the label$clr_wht for this pin.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_argb_desc">
+		<text>$clr_whtEnable or disable$clr_yel color and transparency customization$clr_wht for this pin's icon. Note that all changes are relative to the starting color of the icon--some changes will look better than others, but only black-and-white icons can be made any color.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_a_desc">
+		<text>$clr_whtClick here to$clr_yel edit the Alpha (transparency)$clr_wht for this pin's icon. Setting it to 0 will make the pin invisible; 255 is completely opaque.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_r_desc">
+		<text>$clr_whtClick here to$clr_yel edit the Red channel$clr_wht for this pin's icon color. This change is relative to the starting color of the icon--only black-and-white icons can be made any color.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_g_desc">
+		<text>$clr_whtClick here to$clr_yel edit the Green channel$clr_wht for this pin's icon color. This change is relative to the starting color of the icon--only black-and-white icons can be made any color.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_b_desc">
+		<text>$clr_whtClick here to$clr_yel edit the Blue channel$clr_wht for this pin's icon color. This change is relative to the starting color of the icon--only black-and-white icons can be made any color.</text>
 	</string>
 
 </string_table>

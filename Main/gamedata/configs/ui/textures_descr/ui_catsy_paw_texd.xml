@@ -24,14 +24,6 @@
 
 		<texture id = "ui_icons_paw_pin_stalker64" x="0" y="32" width="64" height="64" />
 
-		<texture id = "ui_icons_paw_yelcircle256" x="480" y="0" width="256" height="256" />
-
-		<texture id = "ui_icons_paw_yelcircle256" x="480" y="0" width="256" height="256" />
-
-		<texture id = "ui_icons_paw_reticule256" x="736" y="0" width="256" height="256" />
-
-		<texture id = "ui_icons_paw_reticule128" x="736" y="256" width="128" height="128" />
-
 		<texture id = "ui_icons_paw_magnifier32" x="64" y="32" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_pin_bwhr_loot64" x="128" y="32" width="64" height="64" />
@@ -54,6 +46,8 @@
 
 		<texture id = "ui_icons_paw_pin_bwhr_info64" x="704" y="32" width="64" height="64" />
 		
+		<texture id = "ui_icons_paw_pin_bwhr_stash64" x="960" y="32" width="64" height="64" />
+
 		<texture id = "ui_icons_paw_ping_spot" x="768" y="32" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_ping_spot_alpha" x="832" y="32" width="64" height="64" />
@@ -65,6 +59,8 @@
 		<texture id = "ui_icons_paw_btn_icon" x="192" y="160" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_btn_set" x="256" y="160" width="64" height="64" />
+
+		<texture id = "ui_icons_paw_btn_setemboss" x="192" y="96" width="64" height="64" />
 
 		<texture id = "ui_icons_paw_pin_redskull" x="320" y="160" width="64" height="64" />
 
@@ -112,12 +108,16 @@
 
 		<texture id = "ui_paw_dialog_bg_gray1" x="0" y="702" width="640" height="320" />
 
-    	<texture id="paw_backpack_stash_icon_green" x="258" y="2" width="27" height="27" />
+    	<texture id="paw_backpack_stash_icon_green" x="257" y="1" width="29" height="29" />
+
+    	<texture id="paw_backpack_stash_icon_green64" x="608" y="224" width="64" height="64" />
 
     	<texture id="ui_icons_paw_argb_a" x="289" y="1" width="29" height="29" />
     	<texture id="ui_icons_paw_argb_r" x="321" y="1" width="29" height="29" />
     	<texture id="ui_icons_paw_argb_g" x="353" y="1" width="29" height="29" />
     	<texture id="ui_icons_paw_argb_b" x="385" y="1" width="29" height="29" />
+
+    	<texture id="paw_vanilla_stash_icon_white" x="418" y="2" width="27" height="27" />
 
 	</file>
 
@@ -184,16 +184,16 @@
 
     <file name="ui\ui_common">
     	<texture id = "ui_paw_wnd_title_1" x="3" y="87" width="113" height="25" />
-
+    <!--
 		<texture id = "ui_paw_dialog_icobg1" x="826" y="252" width="96" height="96" />
-
+	-->
 
    	</file>
 
 
     <file name="ui\ui_actor_hint_wnd">
     	<texture id="paw_vanilla_stash_icon_green" x="51" y="562" width="27" height="27" />
-	    <texture id="paw_vanilla_stash_icon_white" x="932" y="932" width="27" height="27" />
+	    <texture id="paw_vanilla_stash_icon_gold" x="932" y="932" width="27" height="27" />
 	    <texture id="paw_vanilla_stash_icon_purple" x="962" y="932" width="27" height="27" />
 	    <texture id="paw_vanilla_stash_icon_red"  x="932" y="962" width="27" height="27" />
    	</file>
@@ -236,16 +236,32 @@
 
 		<texture id = "ui_paw_dialog_classic_chrome" x="656" y="688" width="360" height="355" />
 		<texture id = "ui_paw_dialog_classic_bg" x="674" y="715" width="338" height="300" />
+		<texture id = "ui_paw_dialog_optbg_trans" x="674" y="715" width="338" height="300" />
+		<texture id = "ui_paw_dialog_large_text_field" x="0" y="592" width="228" height="188" />
+		<texture id = "ui_paw_dialog_classic_chrome_top" x="656" y="688" width="360" height="154" />
+		<texture id = "ui_paw_dialog_classic_chrome_btm" x="656" y="921" width="360" height="102" />		
+		<texture id = "ui_paw_dialog_classic_chrome_wpdesc" x="681" y="69" width="342" height="47" />		
 
+<!--
+		<texture id = "ui_paw_dialog_classic_tl" x="656" y="688" width="161" height="154" />
+		<texture id = "ui_paw_dialog_classic_tm" x="817" y="688" width="140" height="154" />
+		<texture id = "ui_paw_dialog_classic_tr" x="955" y="688" width="60" height="154" />
+
+		<texture id = "ui_paw_dialog_classic_ml" x="656" y="842" width="161" height="80" />
+		<texture id = "ui_paw_dialog_classic_mm" x="817" y="842" width="140" height="80" />
+		<texture id = "ui_paw_dialog_classic_mr" x="955" y="842" width="59" height="80" />
+
+		<texture id = "ui_paw_dialog_classic_bl" x="656" y="922" width="161" height="101" />
+		<texture id = "ui_paw_dialog_classic_b" x="817" y="922" width="140" height="101" />
+		<texture id = "ui_paw_dialog_classic_br" x="955" y="922" width="59" height="101" />
+-->
 		<texture id = "ui_paw_dialog_iconframe" x="917" y="635" width="53" height="53" />
 
 		<texture id = "ui_paw_dialog_iconframe_hq" x="833" y="445" width="190" height="190" />
 
-		<texture id = "ui_paw_dialog_iconwater" x="970" y="635" width="53" height="53" />
-
 		<texture id = "ui_paw_dialog_iconwater_hq" x="833" y="255" width="190" height="190" />
 
-		<texture id = "ui_paw_dialog_argb" x="685" y="188" width="338" height="66" />
+		<texture id = "ui_paw_dialog_argb" x="685" y="191" width="332" height="60" />
 		
 		<texture id = "ui_paw_dialog_argb_single_nobg" x="769" y="593" width="65" height="31" />		
 
@@ -332,7 +348,17 @@
 		<texture id = "ui_paw_btn_blank_e" x="551" y="606" width="60" height="28" />
 		<texture id = "ui_paw_btn_blank_d" x="551" y="635" width="60" height="28" />
 	
+		<texture id = "ui_paw_btn_soundon_d" x="704" y="287" width="64" height="64" />
+		<texture id = "ui_paw_btn_soundon_e" x="769" y="287" width="64" height="64" />
+		<texture id = "ui_paw_btn_soundon_h" x="704" y="352" width="64" height="64" />
+		<texture id = "ui_paw_btn_soundon_t" x="769" y="352" width="64" height="64" />
 
+		<texture id = "ui_paw_btn_soundoff_e" x="704" y="287" width="64" height="64" />
+		<texture id = "ui_paw_btn_soundoff_d" x="769" y="287" width="64" height="64" />
+		<texture id = "ui_paw_btn_soundoff_h" x="640" y="287" width="64" height="64" />
+		<texture id = "ui_paw_btn_soundoff_t" x="769" y="352" width="64" height="64" />
+
+		<texture id = "ui_paw_mwheel_ind_icon" x="745" y="591" width="16" height="24" />
 	</file>
 
 	<file name ="ui\paw\paw_mcm_assets">
