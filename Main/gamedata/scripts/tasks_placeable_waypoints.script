@@ -2970,8 +2970,8 @@ function UIPinSettingsWnd:BackupTempSettings(restore)
         self.backups = {}
     end
     if restore then
-        dl("UIPinSettingsWnd | restoring old settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
-        widget_enable           = self.backups.enable
+        dl("UIPinSettingsWnd | restoring old settings:\nwidget_enabled = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
+        widget_enabled          = self.backups.enable
         active_theme            = self.backups.active or active_theme
         widget_hide_delay       = self.backups.autohide or widget_hide_delay
         widget_use_custom_pos   = self.backups.use_cust_pos or widget_use_custom_pos
@@ -2979,9 +2979,9 @@ function UIPinSettingsWnd:BackupTempSettings(restore)
 
         self.backups        = {}
     else
-        dl("UIPinSettingsWnd | storing current settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
+        dl("UIPinSettingsWnd | storing current settings:\nwidget_enabled = %s\nwidget_hide_delay = %s | active_theme = %s",widget_enable,widget_hide_delay,active_theme)
         self.backups = {
-            enabled     = widget_enable,
+            enabled     = widget_enabled,
             autohide    = widget_hide_delay,
             active      = active_theme,
             use_cust_pos= widget_use_custom_pos,
@@ -3598,11 +3598,11 @@ class "UIPAWIndicator" (CUIScriptWnd)
 
 function UIPAWIndicator:__init(settings_mode,anchor) super()
     vl("PAW init called, active theme is %s | widget_active %s | widget_enabled %s | settingsmode %s",active_theme,widget_active,widget_enabled,settingsmode)
-    if not (widget_enabled or pin_window_is_open()) then return end
     self.anchor = anchor
     if settings_mode then
         self:SettingsMode(true)
     end
+    if not widget_enabled then return end
 
     self.theme = hud_themes[active_theme]
     self:InitControls()
@@ -3640,8 +3640,8 @@ function UIPAWIndicator:BackupRestoreSettings(restore)
     end
     if restore then
         local pos               = self.backups.cust_pos
-        dl("UIPinSettingsWnd | restoring old settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s | cust pos = %s,%s",widget_enable,widget_hide_delay,active_theme,pos.x,pos.y)
-        widget_enable           = self.backups.enable
+        dl("UIPinSettingsWnd | restoring old settings:\nwidget_enabled = %s\nwidget_hide_delay = %s | active_theme = %s | cust pos = %s,%s",widget_enable,widget_hide_delay,active_theme,pos.x,pos.y)
+        widget_enabled          = self.backups.enable
         active_theme            = self.backups.active
         widget_hide_delay       = self.backups.autohide
         widget_use_custom_pos   = self.backups.use_cust_pos
@@ -3650,9 +3650,9 @@ function UIPAWIndicator:BackupRestoreSettings(restore)
         self.backups            = {}
     else
         local pos               = widget_custom_pos
-        dl("UIPinSettingsWnd | storing current settings:\nwidget_enable = %s\nwidget_hide_delay = %s | active_theme = %s | cust pos = %s,%s",widget_enable,widget_hide_delay,active_theme,pos.x,pos.y)
+        dl("UIPinSettingsWnd | storing current settings:\nwidget_enabled = %s\nwidget_hide_delay = %s | active_theme = %s | cust pos = %s,%s",widget_enable,widget_hide_delay,active_theme,pos.x,pos.y)
         self.backups = {
-            enabled     = widget_enable,
+            enabled     = widget_enabled,
             autohide    = widget_hide_delay,
             active      = active_theme,
             use_cust_pos= widget_use_custom_pos,
@@ -3669,7 +3669,7 @@ function UIPAWIndicator:SettingsMode(onoff)
         active_theme            = "pin_sidebar"
         widget_hide_delay       = 0
         widget_use_custom_pos   = true
-        widget_enable           = true
+        widget_enabled          = true
     else
         self:BackupRestoreSettings(true)
     end
