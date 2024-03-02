@@ -279,7 +279,7 @@ function populate_autotag_menus()
 	table.insert(gr,divider)
 
 	vl("results for populate_autotag_menus:")
-	if verbose then
+	if debuglogs and verbose then
 		for k,v in pairs(gr) do
 			local st = k..string.format("=%s",v)..":\n{"
 		    for m,o in pairs(v) do
@@ -436,6 +436,9 @@ function on_mcm_load()
 		{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
 		{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
 		{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
+		{id = "wp_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+		{id = "wp_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
+		{id = "wp_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
 		{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
 		{id = "pingsound", type= "check", val = 1, def = true},
 		{id = "s_device_pda_1", type= "check", val = 1, def = true},

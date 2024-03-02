@@ -1644,8 +1644,32 @@ This message won't bother you again. Good hunting, %s.</text>
 		<text>$clr_whtClick here to$clr_yel edit the Blue channel$clr_wht for this pin's icon color. This change is relative to the starting color of the icon--only black-and-white icons can be made any color.</text>
 	</string>
 
-	<string id="ui_paw_hint_btn_reset_desc">
-		<text>$clr_whtResets all waypoint settings back to their defaults, including any text customizations.</text>
+	<string id="ui_paw_hint_btn_wpreset_desc">
+		<text>$clr_whtResets all waypoint settings back to their defaults, including any text customizations above. The current waypoint, if any, is preserved.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_near_fade_dist">
+		<text>Waypoint near fade-out distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_near_fade_dist_desc">
+		<text>When the player comes within this distance of the waypoint, it will begin to fade out.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_fade_dist">
+		<text>Waypoint far fade-out distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_fade_dist_desc">
+		<text>When the player gets this far away from the waypoint, it will begin to fade out.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_hide_dist">
+		<text>Waypoint far hide distance (in meters)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_hide_dist_desc">
+		<text>If the player is more than this far beyond where the fade-out begins, the waypoint will disappear completely.</text>
 	</string>
 
 </string_table>

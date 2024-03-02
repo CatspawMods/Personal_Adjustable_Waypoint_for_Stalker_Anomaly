@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 2.1-b3 (public test)
-    Updated: 20240228
+    Version: 2.1
+    Updated: 20240301
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -40,12 +40,12 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "2.1-b3"
-release_date            = 20240228
+script_version          = "2.1"
+release_date            = 20240301
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
-debuglogs               = true   -- Controls debug logging if you don't have MCM
+debuglogs               = false   -- Controls debug logging if you don't have MCM
 verbose                 = true
 -- Verbose being on won't do anything if debuglogs isn't also enabled,
 -- but it will ensure that if anyone has to turn on debug logging, 
@@ -81,7 +81,7 @@ waypoint_active         = false -- runtime flag
 waypoint_canceling      = false -- runtime flag
 disable_load_warning    = false
 local load_failed       = false -- runtime flag
-local welcome_msg_shown = false
+welcome_msg_shown       = false -- if you don't have MCM, setting this true will disable the welcome message
 local get_game_time     = game.get_game_time
 local get_start_time    = level.get_start_time
 local ts                = game.translate_string
@@ -155,6 +155,7 @@ allow_non_wp_targets        = false
 -- ======================================================================
 enable_wp_proxcheck         = true
 show_pins                   = true
+local script_zone_changed   = false -- runtime flag
 local custom_task_info      = false
 local icon_cycle_active     = false
 local set_cycle_active      = false
@@ -178,8 +179,11 @@ autotag_lifetime            = 120 * 6 -- time in ms before autotags are cleared 
 autotags_time_out           = autotag_lifetime > 0
 clear_pin_on_death          = true  -- when set on a living thing, pin will be cleared if it dies
 pin_near_fade_dist          = 5     -- min distance within which pins will begin to fade out, set to 0 to disable
-pin_far_fade_dist           = 0     -- distance beyond which pins will begin to fade out, set to 0 to disable
-pin_far_hide_dist           = 10    -- max distance after far_fade at which pins will hide, set to 0 to disable
+pin_far_fade_dist           = 100   -- distance beyond which pins will begin to fade out, set to 0 to disable
+pin_far_hide_dist           = 150   -- max distance after far_fade at which pins will hide, set to 0 to disable
+wp_near_fade_dist           = 5     -- same but for waypoints
+wp_far_fade_dist            = 100   -- same but for waypoints
+wp_far_hide_dist            = 150   -- same but for waypoints
 ret_fade_attack_time        = 400
 ret_fade_decay_time         = 600
 
@@ -748,9 +752,9 @@ function safename(id)
     local name      = se_obj:name() or text
     local cls       = se_obj:clsid()
 
-    if pins[id] then
+    if pins[id] and not script_zones[id] then
         -- If there's a pin for this ID, use its text above all else
-        text = pins[id].text or pins[id].name
+        text = pins[id].name
         vl("%s (%s) is a pin: %s",name,id,text)
     elseif (cls == clsid.script_zone) then
         text = ts("st_paw_pin_default_name")
@@ -948,7 +952,7 @@ end
 
 function change_mapspot(text,id,icon,old_icon)
     if not id then return end
-    text        = text or (pins and pins[id] and pins[id].text)
+    text        = text or (pins and pins[id] and pins[id].text or pins[id].name)
     icon        = icon or (pins and pins[id] and pins[id].icon) or default_mapspot
     old_icon    = old_icon or icon
     vl("Trying to change mapspot with id %s from icon %s to icon %s with text %s",id,old_icon,icon,text)
@@ -968,10 +972,10 @@ function get_mapspot(id,icon)
     else
         for k,v in pairs(stash_icons) do
             local has_spot = has_mapspot(id,v)
-            printf("id %s has mapspot %s: %s",id,v,has_spot)
+            --printf("id %s has mapspot %s: %s",id,v,has_spot)
             if has_spot then
                 found = v
-                printf("found %s",found)
+                --printf("found %s",found)
                 --return v
 
             end
@@ -1002,7 +1006,7 @@ function remove_stash_mapspots(id)
     end
 end
 
-
+--[[
 function func_add_mapspot(text,args)
     local id        = args.id
     local icon      = args.icon or map_pin_icon
@@ -1016,7 +1020,7 @@ function func_add_mapspot(text,args)
     add_mapspot(text,id,icon)
 end
 
---[[
+
 function func_ren_mapspot(text,args)
     local id        = args.id
     local icon      = map_pin_icon
@@ -1126,7 +1130,7 @@ function init_new_pin(id,name,text,icon)
         pins[id] = {
             id      = id,
             name    = name or ts("st_paw_pin_default_name"),
-            text    = text or name,
+            text    = nil,
             icon    = icon,
             hud     = false
         }
@@ -1147,6 +1151,7 @@ function register_script_zone(...)
         created = now,
         cleanup = now + ping_lifetime,
     }
+    script_zone_changed = true
     vl("Script zone %s spawned for mapspot",id)
     return se_obj
 end
@@ -1158,6 +1163,7 @@ function deregister_script_zone(id)
     if not se_obj then return end
     alife_release(se_obj)
     script_zones[id] = nil
+    script_zone_changed = true
     vl("Script zone %s released",id)
 end
 
@@ -1207,6 +1213,7 @@ function script_zone_cleanup()
             deregister_script_zone(k)
         end
     end
+    script_zone_changed = false
     dl("script_zone_cleanup completed")
     return true
 end
@@ -1235,6 +1242,7 @@ function set_pin_persistence(id,onoff,lifetime)
         local now = get_time_elapsed()
         pins[id].cleanup = now + (lifetime or autotag_lifetime or 0)
         dl("Pin %s flagged as temporary, it will be subject to cleanup at %s",id,pins[id].cleanup)
+        script_zone_changed = true
     end
     return true
 end
@@ -1248,6 +1256,7 @@ function set_pingspot_persistence(id,onoff)
     else
         script_zones[id].cleanup = get_time_elapsed()
         dl("Persistent pingspot %s flagged as unused, it will be subject to cleanup",id)
+        script_zone_changed = true
     end
     return true
 end
@@ -1294,11 +1303,34 @@ function init_mapspot_label_wnd(mapspot_text,id,icon,anchor)
     local cap       = {}
     cap.id          = id
     cap.box         = xml:InitStatic(xmlroot,anchor)
+    local tokens    = 0
 
-    mapspot_text    = psk(mapspot_text,{["obj_id"] = id})
-    _,tokens        = mapspot_text:gsub("%$","%$")
-    local plaintext = psk(mapspot_text,null_tokens)
-    mapspot_text    = psk(mapspot_text,text_colors)
+    if string.find(mapspot_text,"$") then
+        local levelname = ts(level.name())
+        local se_obj    = alife_object(id)
+        local pos       = se_obj and se_obj.position
+        local coord_x,coord_y,coord_z,coords
+        if pos then
+            coord_x     = string.format("%.2f",pos.x)
+            coord_y     = string.format("%.2f",pos.y)
+            coord_z     = string.format("%.2f",pos.z)
+            coords      = string.format("XYZ %s, %s, %s",coord_x,coord_y,coord_z)
+        end
+        local token_subs = {
+            ["obj_id"]  = id,
+            ["name"]    = safename(id),
+            ["level"]   = levelname,
+            ["coords"]  = coords,   -- XYZ coordinates formatted as above
+            ["coord_x"] = coord_x,  -- X coordinate to 2 decimal places
+            ["coord_y"] = coord_y,  -- Y coordinate to 2 decimal places
+            ["coord_z"] = coord_z,  -- Z coordinate to 2 decimal places
+        }
+        mapspot_text    = psk(mapspot_text,token_subs)
+        _,tokens        = mapspot_text:gsub("%$","%$")
+        local plaintext = psk(mapspot_text,null_tokens)
+        mapspot_text    = psk(mapspot_text,text_colors)
+    end
+
     local token_adj = tokens * 17
     _, nlcnt        = mapspot_text:gsub("\\n", "\\n")
     local w         = clamp(#mapspot_text * 6,15,200)
@@ -1331,38 +1363,19 @@ function init_mapspot_label_wnd(mapspot_text,id,icon,anchor)
             cap.box:Show(tf)
         end
     )
-
-    --[[
-    -- deprecated, do not use without testing
-    cap.box:InitTexture("ui_paw_dialog_bg_gray1")
-    cap.box:SetTextureColor(GetARGB(128,220,220,220))
-    cap.UL      = xml:InitStatic(frm.."UL",cap.box)
-    cap.UM      = xml:InitStatic(frm.."UM",cap.box)
-    cap.UR      = xml:InitStatic(frm.."UR",cap.box)
-
-    cap.LM      = xml:InitStatic(frm.."LM",cap.box)
-    cap.content = xml:InitStatic(xmlroot..":content",cap.box)
-    cap.text    = xml:InitTextWnd(xmlroot..":content:text",cap.content)
-    cap.text:SetText(mapspot_text or "")
-    cap.RM      = xml:InitStatic(frm.."RM",cap.box)
-
-    cap.BL      = xml:InitStatic(frm.."BL",cap.box)
-    cap.BM      = xml:InitStatic(frm.."BM",cap.box)
-    cap.BR      = xml:InitStatic(frm.."BR",cap.box)
-    --]]
-
     return cap
 end
 
 
 function show_pin_label(id,onoff,destroy)
     vl("show_pin_label(%s,%s,%s)",id,onoff,destroy)
-    onoff = onoff and true or false
     if not (id and pins[id]) then return end
+    onoff = onoff and true or false
+
     if not map_labels[id] then
-        printf("pin label container doesn't exist yet")
+        --printf("pin label container doesn't exist yet")
         local icon = pins[id].icon
-        local text = pins[id].text
+        local text = pins[id].text or pins[id].name
         if not (icon and text) then return end
         map_labels[id] = init_mapspot_label_wnd(text,id,icon)
     end
@@ -1446,7 +1459,7 @@ function do_paw_action(act,se_obj,acode,args)
                 get_hud():RemoveDialogToRender(hud_pin_objs[id])
                 hud_pin_objs[id] = nil
             end
-            vl("Pin %s (%s) deleted",pins[id].text,id)
+            vl("Pin %s (%s) deleted",pins[id].name,id)
             pins[id] = nil
             if icon then remove_mapspot(id,icon) end
         end
@@ -2272,6 +2285,9 @@ function mcm_reload_general_settings()
     pin_near_fade_dist          = tonumber(load_mcm("pawgen/pin_near_fade_dist",pin_near_fade_dist))
     pin_far_fade_dist           = tonumber(load_mcm("pawgen/pin_far_fade_dist",pin_far_fade_dist))
     pin_far_hide_dist           = tonumber(load_mcm("pawgen/pin_far_hide_dist",pin_far_hide_dist))
+    wp_near_fade_dist           = tonumber(load_mcm("pawgen/wp_near_fade_dist",wp_near_fade_dist))
+    wp_far_fade_dist            = tonumber(load_mcm("pawgen/wp_far_fade_dist",wp_far_fade_dist))
+    wp_far_hide_dist            = tonumber(load_mcm("pawgen/wp_far_hide_dist",wp_far_hide_dist))
     wp_clear_dist               = tonumber(load_mcm("pawgen/wp_clear_dist",wp_clear_dist))
     tip_on_icoset_change    = load_mcm("pawgen/tip_on_icoset_change",tip_on_icoset_change)
     welcome_msg_shown       = load_mcm("pawgen/welcome_msg_shown",welcome_msg_shown)
@@ -2305,23 +2321,32 @@ function mcm_reload_keybind_settings()
     cart_shows_smarts       = load_mcm("pawbinds/cart_shows_smarts",cart_shows_smarts)
     mwheel_notify           = load_mcm("pawbinds/mwheel_notify")
     cartmode_unfade         = load_mcm("pawbinds/cartmode_unfade",cartmode_unfade)
-    local tmp               = ui_mcm.get("pawsys/pawbinds/mwheel_enabled")
+    local tmp
+
+    tmp                     = ui_mcm.get("pawsys/pawbinds/mwheel_override")
+    if tmp ~= nil then
+        dl("MCM override found for mwheel_avail (old = %s | new = %s)",mwheel_avail,tmp)
+        mwheel_override     = tmp
+        if mwheel_override then
+            mwheel_avail = true
+        end
+    end
+
+    tmp                     = ui_mcm.get("pawsys/pawbinds/mwheel_enabled")
     if tmp and type(tmp) == "number" then
         tmp                 = (tmp ~= 0)
     end
     mwheel_enabled          = tmp and mwheel_avail
-    
-    tmp                     = ui_mcm.get("pawsys/pawbinds/mwheel_override")
-    if tmp ~= nil then
-        dl("MCM override found for mwheel_avail (old = %s | new = %s)",mwheel_avail,tmp)
-        mwheel_avail        = tmp
-    end
 
     tmp                     = ui_mcm.get("pawsys/pawbinds/right_click_override")
     -- if set to true, will force on_map_right_click support on
     if tmp ~= nil then
         dl("MCM override found for right_click_avail (old = %s | new = %s)",right_click_avail,tmp)
-        right_click_override= tmp
+        right_click_override = tmp
+        if right_click_override then
+            right_click_avail = true
+            RegisterScriptCallback("on_map_right_click",on_map_right_click)
+        end
     end        
     
     tmp                     = ui_mcm.get("pawsys/pawgen/disable_mcmups")
@@ -2547,6 +2572,7 @@ end
 function tick()
     if not paw_enabled then
         UnregisterScriptCallback("actor_on_update",actor_on_update)
+        return
     end
     local now = time_global()
     if enable_wp_proxcheck and waypoint_active and (next_wp_proxcheck <= now) then
@@ -2555,7 +2581,9 @@ function tick()
     end
     if (next_gc_check <= now) then
         next_gc_check = now + garbcollect_interval
-        script_zone_cleanup()
+        if script_zone_changed then
+            script_zone_cleanup()
+        end
         temp_pin_cleanup()
     end
     if disable_mcm_updates then return end
@@ -2642,12 +2670,13 @@ function UIWPSettings:__init() super()
     self.args       = args
     self.cap        = {}
 
+    self:InitControls()
+    self:InitCallBacks()
+
     self.control_hints = {
         ["btn_wpreset"]   = true,
     }
-
-    self:InitControls()
-    self:InitCallBacks()
+    self.hint_wnd   = utils_ui.UIHint(self)
 end
 
 function UIWPSettings:__finalize()
@@ -2687,7 +2716,6 @@ function UIWPSettings:InitControls()
 
     xml:ParseFile   (tex.file)
 
-    self.hint_wnd   = utils_ui.UIHint(self)
     self.dialog     = xml:InitStatic(root, self)
     local bg_top    = xml:InitStatic(rootand.."bg_top",self.dialog)
     local bg_btm    = xml:InitStatic(rootand.."bg_btm",self.dialog)
@@ -2757,11 +2785,8 @@ function UIWPSettings:InitControls()
         local buttonx = "btn_"..button
         vl("Initializing button %s (%s) at %s,%s",buttonx,button,pos_x,pos_y)
         self[buttonx] = xml:Init3tButton(xmlnode,self.dialog)
-        printf("1")
         self:Register(self[buttonx],buttonx)
-        printf("2")
         self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))
-        printf("Setup of button %s completed",buttonx)
     end
 
     setup_checkbox( "wpactive",         15,     152,     ts("st_paw_wp_active"), waypoint_active )
@@ -2778,7 +2803,7 @@ function UIWPSettings:InitControls()
     setwndpos(      self.wpname,        25,     38   )
     --setwndpos(  self.descbg,        25,     90  )
     setwndpos(      self.wpdesc,        25,     4  )
-    setup_button(   "wpreset",            20,     210,  reset )
+    setup_button(   "wpreset",          20,     210,  reset )
     setup_button(   "ok",               112,    210,  btn_ok )
     setup_button(   "cancel",           183,    210,  cancel )
 
@@ -2932,6 +2957,7 @@ function UIPinSettingsWnd:__init(id,args) super()
     self:Reset(id,args)
     self:InitControls()
     self:HijackWidget()
+    self.hint_wnd   = utils_ui.UIHint(self)
     self:AllowMovement(true)
 end
 
@@ -3208,7 +3234,6 @@ function UIPinSettingsWnd:InitControls()
     self.icon_display_panel:SetWndPos(vector2():set(150,77))
     self.argb_controls:SetWndPos(vector2():set(    -5.5,  192))
 
-    self.hint_wnd   = utils_ui.UIHint(self)
     self:InitCallBacks()
     self.init_done  = true
 
@@ -3245,9 +3270,9 @@ end
 
 function UIPinSettingsWnd:SetARGBVal(color,val)
         local inputx = "input_"..color
-            printf("SetARGB method - inputx: %s | color: %s | val %s",inputx,color,val)
+            --printf("SetARGB method - inputx: %s | color: %s | val %s",inputx,color,val)
     if color and val and self[inputx] then
-        printf("Current color for %s is %s, setting to value %s",color,self[inputx]:GetText(),val)
+        --printf("Current color for %s is %s, setting to value %s",color,self[inputx]:GetText(),val)
         self[inputx]:SetText(val)
     end
 end
@@ -3480,7 +3505,9 @@ function UIPinSettingsWnd:OnAccept()
         dl("UIPinSettingsWnd:OnAccept: Pin %s has new icon %s, calling change_mapspot",self.pin_id,self.new_icon)
         change_mapspot(self.pin_text,id,self.new_icon,old_icon)
     end
-    pins[id].text = self.input:GetText()
+    local new_text = self.input:GetText()
+    local old_text = pins[id].text
+    pins[id].text  = self.input:GetText()
     pins[id].custom_colors = self.cust_argb
     if self.cust_argb then
         local a,r,g,b = clamp(tonumber(self.input_a:GetText()) or 255,0,255),
@@ -3500,7 +3527,11 @@ function UIPinSettingsWnd:OnAccept()
     end
 
     self.show_label = self.check_text:GetCheck()
+    if map_labels[id] and (old_text ~= new_text) then
+        show_pin_label(id,false,true)
+    end
     show_pin_label(id,self.show_label)
+
     vl("UIPinSettingsWnd:OnAccept: show_label is %s",self.show_label)
 
     pins[id].hud = self.check_hud:GetCheck()
@@ -3678,22 +3709,22 @@ end
 
 
 function UIPAWIndicator:IconPrev()
-    printf("UIPAWIndicator:IconPrev fired")
+    --printf("UIPAWIndicator:IconPrev fired")
     cycle_icons(-1,false)
 end
 
 function UIPAWIndicator:IconNext()
-    printf("UIPAWIndicator:IconNext fired")
+    --printf("UIPAWIndicator:IconNext fired")
     cycle_icons(1,false)
 end
 
 function UIPAWIndicator:SetPrev()
-    printf("UIPAWIndicator:SetPrev fired")
+    --printf("UIPAWIndicator:SetPrev fired")
     cycle_sets(-1,false)
 end
 
 function UIPAWIndicator:SetNext()
-    printf("UIPAWIndicator:SetNext fired")
+    --printf("UIPAWIndicator:SetNext fired")
     cycle_sets(1,false)
 end
 
@@ -3713,7 +3744,7 @@ function UIPAWIndicator:InitIcosetControls()
     self.icon_controls      = xml:InitStatic(icoset_c, self.icoset_controls)
     self.set_controls       = xml:InitStatic(icoset_c, self.icoset_controls)
 
-    printf("icon name: %s | set name: %s",local_icon_name(),local_set_name())
+    --printf("icon name: %s | set name: %s",local_icon_name(),local_set_name())
     function setup_icoset_ctrl(icoset_arg, pos_x, pos_y)
         local btnx_         = "btn_"
         local stub          = string.sub(icoset_arg,1,3)
@@ -3728,7 +3759,7 @@ function UIPAWIndicator:InitIcosetControls()
         --local text_cap      = (abbr == "s") and
         --                        local_set_name() or local_icon_name()
 
-        printf("setup_icoset_ctrl(%s,%s,%s) for %s\nstub = %s\nabbr = %s\nbutton_prev = %s\nbutton_next = %s\nnode_prev = %s\nnode_next = %s\nicoset_ctrl = %s\n",icoset_arg, pos_x, pos_y,text_cap,stub,abbr,button_prev,button_next,node_prev,node_next,icoset_ctrl)
+        --printf("setup_icoset_ctrl(%s,%s,%s) for %s\nstub = %s\nabbr = %s\nbutton_prev = %s\nbutton_next = %s\nnode_prev = %s\nnode_next = %s\nicoset_ctrl = %s\n",icoset_arg, pos_x, pos_y,text_cap,stub,abbr,button_prev,button_next,node_prev,node_next,icoset_ctrl)
 
         self[button_prev]       = xml:Init3tButton(node_prev, self[icoset_ctrl])
         self:Register(self[button_prev],button_prev)
@@ -4167,7 +4198,7 @@ function get_screen_coords(id)
         local exit = (is_wp and " canceling waypoint and") or (pin and " clearing pin and") or ""
         dl("get_screen_coords: no valid game or server object could be found for %s,%s exiting",id,exit)
         return
-    end 
+    end
     
     if (obj and IsStalker(obj) or IsMonster(obj)) then
         pos         = obj and utils_obj.safe_bone_pos(obj,"bip01_head")
@@ -4210,7 +4241,7 @@ function get_screen_coords(id)
     local mid_dist      = 15    -- dist at which far adjustments begin
     local max_dist      = 60    -- distance ceiling for the far adjustment range
     local near_adj      = 0     -- max icon vertical position change from proximity
-    local far_adj       = 1.75   -- max icon vertical position change from distance
+    local far_adj       = 1.75  -- max icon vertical position change from distance
     local vert_adj      = 0     -- icon position above object will be adjusted by this
 
     if is_place then
@@ -4346,6 +4377,14 @@ function UIPAWHUDWaypoint:Update()
                 local dist = db.actor:position():distance_to(se_obj.position)
                 local h,v = scale_by_dist(self.marker,dist,20,20,50,100,200,true)
                 self.marker:SetWndSize(vector2():set(h,v))
+
+                local f_near    = wp_near_fade_dist
+                local f_far     = wp_far_fade_dist
+                local f_hide    = wp_far_hide_dist
+                fade_by_dist(self.marker,   dist,f_near,f_far,f_hide)
+                fade_by_dist(self.dist,     dist,f_near,f_far,f_hide,255,230,230,230,1)
+                fade_by_dist(self.dist_sh,  dist,f_near,f_far,f_hide,255,0,0,0,1)
+
                 if marker_dist_shown("wp") then
                     local pos = self.marker:GetWndPos()
                     --local dist_txt = string.format("%.1f",dist)..ts("st_paw_meters_abbr")
@@ -4434,7 +4473,8 @@ function UIPAWHUDPin:InitControls(id)
     self.xml:ParseFile("paw_hud_pin_icon.xml")
     self.marker = self.xml:InitStatic("marker",self)
     local tex = texture_for_icon(pins[id].icon)
-    local name = pins[id].text
+    --local name = pins[id].text or pins[id].name
+    local name = pins[id].name
     self.marker:InitTexture(tex)
     local color = colors.active
     if pins[id].custom_colors then
@@ -5078,9 +5118,9 @@ function on_mouse_wheel(scroll_dir, flags)
     local cycling_active    = (icon_cycle_active or set_cycle_active)
     local invalid_uistate   = actor_menu.inventory_opened() or not cycling_active
     local pin_wnd_open      = pin_window_is_open()
-    printf("on_mouse_wheel: cycling_active %s | invalid_uistate %s | pin_wnd_open %s",cycling_active,invalid_uistate,pin_wnd_open)
+    --printf("on_mouse_wheel: cycling_active %s | invalid_uistate %s | pin_wnd_open %s",cycling_active,invalid_uistate,pin_wnd_open)
     if invalid_uistate and not pin_wnd_open then
-        printf("Invalid UI state for mouse wheel use, aborting")
+        --printf("Invalid UI state for mouse wheel use, aborting")
         return
     end
 
@@ -5092,7 +5132,7 @@ function on_mouse_wheel(scroll_dir, flags)
 
     if pin_wnd_open and GUI_PinInd then
         for ctrl,icoset in pairs(hover_elements) do
-            printf("Checking hover state for GUI_PinInd[%s]",ctrl)
+            --printf("Checking hover state for GUI_PinInd[%s]",ctrl)
             if GUI_PinInd[ctrl]:IsCursorOverWindow() then
                 cycle_items(cycle_dir,icoset)
                 return
@@ -5230,3 +5270,4 @@ if not load_file_data() then
 end
 
 -- ======================================================================
+
