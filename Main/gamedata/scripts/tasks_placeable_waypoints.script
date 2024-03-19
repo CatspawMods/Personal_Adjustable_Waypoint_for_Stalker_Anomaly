@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 2.1
-    Updated: 20240301
+    Version: 2.1.1
+    Updated: 20240307
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -40,8 +40,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "2.1"
-release_date            = 20240301
+script_version          = "2.1.1"
+release_date            = 20240307
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -230,7 +230,7 @@ current_body_icon           = nil
 body_icon_mode              = "off"
 patch_res                   = "badge"
 local custom_pin_icon       = false
-use_custom_backpack_icon    = true -- Customize the icon for player stashes
+use_custom_backpack_icon    = false -- Customize the icon for player stashes
 init_backpack_as_pin        = true -- Player stash icons are created as pins
 local default_mapspot       = "paw_pin_redpush32"
 local smart_terrain_icon    = "paw_pin_magnifier32"
@@ -1314,20 +1314,20 @@ function init_mapspot_label_wnd(mapspot_text,id,icon,anchor)
             coord_x     = string.format("%.2f",pos.x)
             coord_y     = string.format("%.2f",pos.y)
             coord_z     = string.format("%.2f",pos.z)
-            coords      = string.format("XYZ %s, %s, %s",coord_x,coord_y,coord_z)
+            --coords      = string.format("XYZ %s, %s, %s",coord_x,coord_y,coord_z)
         end
         local token_subs = {
             ["obj_id"]  = id,
             ["name"]    = safename(id),
-            ["level"]   = levelname,
-            ["coords"]  = coords,   -- XYZ coordinates formatted as above
+            --["level"]   = levelname,-- currently wrong
+            --["coords"]  = coords,   -- XYZ coordinates formatted as above
             ["coord_x"] = coord_x,  -- X coordinate to 2 decimal places
             ["coord_y"] = coord_y,  -- Y coordinate to 2 decimal places
             ["coord_z"] = coord_z,  -- Z coordinate to 2 decimal places
         }
         mapspot_text    = psk(mapspot_text,token_subs)
         _,tokens        = mapspot_text:gsub("%$","%$")
-        local plaintext = psk(mapspot_text,null_tokens)
+        plaintext       = psk(mapspot_text,null_tokens)
         mapspot_text    = psk(mapspot_text,text_colors)
     end
 
@@ -3499,15 +3499,17 @@ end
 
 function UIPinSettingsWnd:OnAccept()
     local id = self.pin_id
+    local new_text = self.input:GetText()
+    local old_text = pins[id].text
+    pins[id].text  = self.input:GetText()
+
     if self.new_icon then
         local old_icon = pins[id].icon
         pins[id].icon = self.new_icon
         dl("UIPinSettingsWnd:OnAccept: Pin %s has new icon %s, calling change_mapspot",self.pin_id,self.new_icon)
-        change_mapspot(self.pin_text,id,self.new_icon,old_icon)
+        change_mapspot(new_text,id,self.new_icon,old_icon)
     end
-    local new_text = self.input:GetText()
-    local old_text = pins[id].text
-    pins[id].text  = self.input:GetText()
+
     pins[id].custom_colors = self.cust_argb
     if self.cust_argb then
         local a,r,g,b = clamp(tonumber(self.input_a:GetText()) or 255,0,255),
@@ -5146,7 +5148,9 @@ function on_mouse_wheel(scroll_dir, flags)
     cycle_items(cycle_dir)
 end
 
+--[[
 function actor_on_stash_create(data)
+    -- figure out why this causes busyhands with hideout furniture
     if not use_custom_backpack_icon then return end
     local id = data and data.stash_id
     if not id then return end
@@ -5179,10 +5183,11 @@ function actor_on_stash_remove(data)
         remove_mapspot(id,mapspot)
     end
 end
+--]]
 
 function unregister_all_callbacks()
     UnregisterScriptCallback("actor_on_update",actor_on_update)
-    UnregisterScriptCallback("actor_on_stash_create",actor_on_stash_create)
+    --UnregisterScriptCallback("actor_on_stash_create",actor_on_stash_create)
     UnregisterScriptCallback("actor_on_stash_remove",actor_on_stash_remove)    
     UnregisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)
     UnregisterScriptCallback("actor_on_first_update",actor_on_first_update)
@@ -5206,7 +5211,7 @@ end
 
 function register_all_callbacks()
     RegisterScriptCallback("actor_on_update",actor_on_update)
-    RegisterScriptCallback("actor_on_stash_create",actor_on_stash_create)
+    --RegisterScriptCallback("actor_on_stash_create",actor_on_stash_create)
     RegisterScriptCallback("actor_on_stash_remove",actor_on_stash_remove)    
     RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
     RegisterScriptCallback("actor_on_first_update",actor_on_first_update)

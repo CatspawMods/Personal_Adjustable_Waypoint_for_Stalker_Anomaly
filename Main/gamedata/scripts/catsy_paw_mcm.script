@@ -361,6 +361,7 @@ function populate_set_menus()
 							   {"set","pawsys_cfg_bodyset"},
 							}
 						})
+	--[[
 	table.insert(gr,{id = "use_custom_backpack_icon", type = "check", val = 1, def = false})
 	table.insert(gr,{
 				id = "custom_backpack_icon",
@@ -371,6 +372,7 @@ function populate_set_menus()
 				on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
 				content = populate_icon_list("faves")
 			})
+	--]]
 	table.insert(gr,{id = "use_custom_pin_icon", type = "check", val = 1, def = false})
 	table.insert(gr,{id = "custom_pin_icon", type = "input", val = 0, def = "user_defined"})
 	vl("results for populate_set_menus:")
