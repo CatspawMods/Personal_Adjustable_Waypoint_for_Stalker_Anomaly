@@ -47,11 +47,14 @@ icon 		= stash_green
 ; in the context menu when you right-click on
 ; any mapspot. You can make more than one as 
 ; long as each has a unique section name.
+;
+; NOTE: this file will be overwritten when PAW is
+; updated. Back up your customizations.
 ; ==================================================
 
 [mping]
 ; Ping the map
-mode        = 4
+mode        = 2
 enable      = true
 text        = ui_mcm_pawsys_pawmenu_mping
 act 		= mping
@@ -62,20 +65,6 @@ mode        = 4
 enable      = true
 text        = ui_mcm_pawsys_pawmenu_wp_set
 act         = wp_set
-
-[waypoint_rename]
-mode        = 2
-enable      = true
-text        = ui_mcm_pawsys_pawmenu_waypoint_rename
-act 		= waypoint_rename
-field 		= name
-
-[waypoint_redesc]
-mode        = 2
-enable      = true
-text        = ui_mcm_pawsys_pawmenu_waypoint_redesc
-act 		= waypoint_redesc
-field 		= desc
 
 [wp_mov]
 ; Move an existing waypoint to here
@@ -105,23 +94,30 @@ enable      = true
 text        = ui_mcm_pawsys_pawmenu_pn_del
 act         = pn_del
 
-[pn_ren]
-; Rename a map pin
+[pn_settings]
+; Open Pin Settings window
 mode        = 4
 enable      = true
-text        = ui_mcm_pawsys_pawmenu_pn_ren
-act         = pn_ren
+text        = ui_mcm_pawsys_pawmenu_pn_settings
+act         = pn_settings
+
+[wp_settings]
+; Open Waypoint Settings window
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_wp_settings
+act         = wp_settings
 
 [hud_vis_on]
 ; Shows a pin on the HUD
-mode        = 4
+mode        = 2
 enable      = true
 text        = ui_mcm_pawsys_pawmenu_hud_vis_on
 act         = hud_vis_on
 
 [hud_vis_off]
 ; Hides a pin from the HUD
-mode        = 4
+mode        = 2
 enable      = true
 text        = ui_mcm_pawsys_pawmenu_hud_vis_off
 act         = hud_vis_off
@@ -154,9 +150,29 @@ enable      = true
 text        = ui_mcm_pawsys_pawmenu_unlock_pin
 act         = unlock_pin
 
+[show_label]
+; Show a hint-like label/caption banner above pin on PDA map
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_show_label
+act         = show_label
+
+[hide_label]
+; Hide the label/caption banner
+mode        = 2
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_hide_label
+act         = hide_label
+
+[convert_to_pin]
+mode        = 4
+enable      = true
+text        = ui_mcm_pawsys_pawmenu_convert_to_pin
+act         = convert_to_pin
+
 [pn_clr]
 ; Clear all map pins - no confirmation!
-; Disabled by default
+; Disabled by default, set mode nonzero to enable
 mode        = 0
 enable      = true
 text        = ui_mcm_pawsys_pawmenu_pn_clr

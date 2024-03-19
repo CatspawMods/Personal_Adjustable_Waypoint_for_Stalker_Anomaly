@@ -34,6 +34,9 @@ function UIPAWReticle:__init() super()
     --printf("UIPAWReticle:__init(%s)",id)
     self:InitControls()
     RegisterScriptCallback("actor_on_net_destroy", self)
+    RegisterScriptCallback("npc_on_death_callback", self)
+    RegisterScriptCallback("npc_on_net_destroy", self)
+    -- Nasty crashes can occur if the last target object is destroyed, so clear it on death or destruction
 end
 
 
@@ -334,7 +337,9 @@ end
 
 
 function UIPAWReticle:Update()
+    if has_alife_info("BAR_ARENA_FIGHT") then return end
     local mode      = paw.reticle_mode
+    local tag_mode  = paw.autotag_mode
     local cart_mode = paw.cart_mode
     local enabled   = false
     if autotag_milpda and pda_feature_en then

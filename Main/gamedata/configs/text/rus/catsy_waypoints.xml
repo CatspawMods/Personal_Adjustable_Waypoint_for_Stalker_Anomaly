@@ -726,7 +726,7 @@
 	</string>
 
 	<string id="ui_mcm_pawsys_pawhud_hudsound">
-		<text>Воспроизведение звукового эффекта при изменении иконки / набора</text>
+		<text>Воспроизведение звукового эффекта при взаимодействии с UI</text>
 	</string>
 
 	<string id ="ui_mcm_pawsys_pawhud_pingsound">
@@ -1497,5 +1497,175 @@
 	<string id="ui_mcm_pawsys_pawgen_wp_clear_dist_desc">
 		<text>Когда игрок приблизится на это расстояние к маркеру  точки маршрута, он будет автоматически очищен. Если установить это значение в ноль, то автоочистка будет полностью отключена.</text>
 	</string>
-	
+
+<!-- Added in 2.1 -->
+
+	<string id="ui_mcm_pawsys_pawmenu_show_label">
+		<text>Показать этикетку на карте</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_hide_label">
+		<text>Скрыть ярлык карты</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_pn_settings">
+		<text>Настройки маркеров</text>
+	</string>
+		
+	<string id="st_paw_argb_a">
+		<text>А</text>
+	</string>
+
+	<string id="st_paw_argb_r">
+		<text>R</text>
+	</string>
+
+	<string id="st_paw_argb_g">
+		<text>G</text>
+	</string>
+
+	<string id="st_paw_argb_b">
+		<text>B</text>
+	</string>
+
+	<string id="ui_paw_use_custom_color">
+		<text>Настроить цвет</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_bwhr_tag">
+		<text>BWHR (иконка "Помеченная цель")</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_convert_to_pin">
+		<text>Преобразование в настраиваемый маркер</text>
+	</string>
+
+	<string id="ui_paw_hint_sidebar_desc">
+		<text>Открывайте или закрывайте боковую панель для управления булавками и настройками</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawmenu_wp_settings">
+		<text>Настройки путевых точек</text>
+	</string>
+
+	<string id="st_paw_target">
+		<text>Цель</text>
+	</string>
+
+	<string id="st_paw_wp_active">
+		<text>Активна ли точка маршрута</text>
+	</string>
+
+	<string id="st_paw_none">
+		<text>Нет</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_use_custom_backpack_icon">
+		<text>Настройте иконку для тайников, размещенных игроком</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_use_custom_backpack_icon_desc">
+		<text>Если эта функция включена, PAW попытается заменить обычную иконку тайника на выбранную вами, когда вы размещаете тайник с помощью рюкзака.</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_custom_backpack_icon">
+		<text>Значок для использования из набора Избранное</text>
+	</string>
+
+	<string id ="ui_mcm_pawsys_pawpins_custom_backpack_icon_desc">
+		<text>Если вы не видите здесь нужной вам иконки, отредактируйте configs\ui\icon_set_faves.ltx и добавьте ее в список.</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_stash_backpack">
+		<text>Тайник в рюкзаке</text>
+	</string>
+
+	<string id="ui_mcm_lst_paw_bwhr_stash">
+		<text>BWHR (иконка "Тайник")</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_sidebar_desc">
+		<text>$clr_whtОткройте или закройте боковую панель библиотеки иконок $clr_yel$clr_wht, которая позволяет просматривать все ваши наборы и заменять текущую иконку пина на любую другую. Для перебора наборов и значков можно прокручивать колесико мыши при наведении на некоторые элементы управления.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_delete_desc">
+		<text>$clr_whtНажав на эту кнопку, вы $clr_orn немедленно и навсегда удалите этот значок$clr_wht. Подтверждения нет, и отменить его нельзя.\nВы можете$clr_yel заблокировать$clr_wht пин, чтобы защитить его от случайного удаления.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_ok_desc">
+		<text>$clr_whtПримите все изменения этого маркера и закройте диалог.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_cancel_desc">
+		<text>$clr_whtОтмените все изменения этого маркера и закройте диалог.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_sound_desc">
+		<text>$clr_yelВключение или выключение звуковых эффектов пользовательского интерфейса$clr_wht. Это также можно установить в меню MCM PAW.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_lock_desc">
+		<text>$clr_yelЗаблокированный $clr_whtпин защищен от любых изменений, кроме стирания данных пина в MCM. Даже контекстное действие $clr_yelОчистите все маркеры$clr_wht будет игнорировать его.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_text_desc">
+		<text>$clr_whtПоказать или скрыть текст булавки в виде$clr_yel видимой метки$clr_wht на карте КПК.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_hud_desc">
+		<text>$clr_whtПоказать или скрыть$clr_yel видимый HUD-маркер$clr_wht для этого пина.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_desc">
+		<text>$clr_whtНажмите здесь, чтобы$clr_yel отредактировать метку карты$clr_wht для этой булавки.</text>
+	</string>
+
+	<string id="ui_paw_hint_check_argb_desc">
+		<text>$clr_whtВключите или отключите настройку$clr_yel цвета и прозрачности$clr_wht для иконки этого пина. Обратите внимание, что все изменения относятся к исходному цвету значка - некоторые изменения будут выглядеть лучше, чем другие, но только черно-белые значки могут быть сделаны любого цвета.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_a_desc">
+		<text>$clr_whtНажмите здесь, чтобы $clr_yel изменить значение альфа (прозрачности)$clr_wht для иконки этого значка. Если установить значение 0, значок станет невидимым; 255 - полностью непрозрачным.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_r_desc">
+		<text>$clr_whtНажмите здесь, чтобы$clr_yel изменить красный канал$clr_wht для цвета значка этого пина. Это изменение относится к начальному цвету значка - только черно-белые значки могут быть сделаны любого цвета.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_g_desc">
+		<text>$clr_whtНажмите здесь, чтобы$clr_yel изменить зеленый канал$clr_wht для цвета значка этого пина. Это изменение относится к начальному цвету значка - только черно-белые значки могут быть сделаны любого цвета.</text>
+	</string>
+
+	<string id="ui_paw_hint_input_b_desc">
+		<text>$clr_whtНажмите здесь, чтобы$clr_yel изменить синий канал$clr_wht для цвета значка этого пина. Это изменение относится к начальному цвету значка - только черно-белые значки могут быть сделаны любого цвета.</text>
+	</string>
+
+	<string id="ui_paw_hint_btn_wpreset_desc">
+		<text>$clr_whtВозвращает все настройки путевых точек к значениям по умолчанию, включая все настройки текста. Текущая путевая точка, если таковая имеется, сохраняется.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_near_fade_dist">
+		<text>Расстояние до затухания путевой точки (в метрах)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_near_fade_dist_desc">
+		<text>Когда игрок приближается на это расстояние к путевой точки, он начнет исчезать.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_fade_dist">
+		<text>Расстояние начала затухания путевой точки (в метрах)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_fade_dist_desc">
+		<text>Когда игрок окажется на таком расстоянии от путевой точки, он начнет исчезать.</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_hide_dist">
+		<text>Расстояние до исчезновения путевой точки (в метрах)</text>
+	</string>
+
+	<string id="ui_mcm_pawsys_pawgen_wp_far_hide_dist_desc">
+		<text>Если игрок находится более чем на таком расстоянии от места начала затухания, то маркер исчезнет полностью.</text>
+	</string>
+
 </string_table>

@@ -28,6 +28,7 @@ local icon_sets                 = {}
 local icons_ini                 = ini_file_ex("scripts\\paw\\icons.ltx")
 local icon_ltx                  = icons_ini:collect_section("icons")
 local icons                     = icon_ltx
+local all_icons 				= {}
 local pawmenu_path              = "ui_mcm_pawsys_pawmenu_"
 local actions_ini               = ini_file_ex("scripts\\paw\\menu_actions.ltx")
 local actions_ltx               = actions_ini:get_sections(true)
@@ -192,8 +193,13 @@ local function populate_set_list()
 end
 
 local function populate_icon_list(group)
-	dl("populate_icon_list called for group %s",group)
-	local ig = icon_sets[group].icons
+	local ig = icons
+	if group then
+		dl("populate_icon_list called for group %s",group)
+		ig = icon_sets[group].icons
+	else
+		dl("populate_icon_list called for full icon list")
+	end
 	local content = {}
 	for icon,_ in spairs (ig) do
 		local ic = icons[icon]
@@ -226,7 +232,7 @@ function populate_autotag_menus()
 			   {0,"pawsys_cmenu_off"},
 			}
 		},	
-
+		--{id = "show_reticle", type = "check", val = 1, def = true}, -- not implemented yet
 		{id = "reticle_alpha", type = "track", val = 2, min = 1, max = 255, step = 1, def = 120},
 		{id = "ret_fade_attack_time", type = "input", val = 2, min = 1, max = 5000, def = 150},
 		{id = "ret_fade_decay_time", type = "input", val = 2, min = 1, max = 5000, def = 250},
@@ -273,7 +279,7 @@ function populate_autotag_menus()
 	table.insert(gr,divider)
 
 	vl("results for populate_autotag_menus:")
-	if verbose then
+	if debuglogs and verbose then
 		for k,v in pairs(gr) do
 			local st = k..string.format("=%s",v)..":\n{"
 		    for m,o in pairs(v) do
@@ -355,6 +361,16 @@ function populate_set_menus()
 							   {"set","pawsys_cfg_bodyset"},
 							}
 						})
+	table.insert(gr,{id = "use_custom_backpack_icon", type = "check", val = 1, def = false})
+	table.insert(gr,{
+				id = "custom_backpack_icon",
+				type = "list",
+				val = 0,
+				def = "stash_backpack",
+				ui_hook_functor = {catsy_paw_mcm.init_mcm_set_ind},
+				on_selection_functor = {catsy_paw_mcm.mcm_on_value_select},
+				content = populate_icon_list("faves")
+			})
 	table.insert(gr,{id = "use_custom_pin_icon", type = "check", val = 1, def = false})
 	table.insert(gr,{id = "custom_pin_icon", type = "input", val = 0, def = "user_defined"})
 	vl("results for populate_set_menus:")
@@ -420,6 +436,9 @@ function on_mcm_load()
 		{id = "pin_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
 		{id = "pin_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
 		{id = "pin_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
+		{id = "wp_near_fade_dist", type= "track", val = 2, min = 0, max = 50, step = 1, def = 5},
+		{id = "wp_far_fade_dist", type= "track", val = 2, min = 20, max = 500, step = 1, def = 100},
+		{id = "wp_far_hide_dist", type= "track", val = 2, min = 1, max = 250, step = 1, def = 150},
 		{id = "tip_on_icoset_change", type= "check", val = 1, def = true},
 		{id = "pingsound", type= "check", val = 1, def = true},
 		{id = "s_device_pda_1", type= "check", val = 1, def = true},
@@ -443,7 +462,7 @@ function on_mcm_load()
 		table.insert(pawgen,7,{id = "disable_load_warning", type = "check", val = 1, def = false})
 		table.insert(pawgen,8,divider)
 	else
-		table.insert(pawgen,2,{id = "pawgen_header", type = "image", link = "ui_paw_emptytex", size = {512,155},
+		table.insert(pawgen,2,{id = "pawgen_header", type = "image", link = "ui_paw_emptytex", size = {512,160},
 			ui_hook_functor = {catsy_paw_mcm.mcm_init_header_text_block},
 		})
 
@@ -547,9 +566,9 @@ function on_mcm_load()
 		                    {2,"mcm_kb_mod_ctrl"}, 
 		                    {3,"mcm_kb_mod_alt"}
 		                }},
-					{id = "cartmode_toggle", type = "check", val = 1, def = false},
+					{id = "cartmode_toggle", type = "check", val = 1, def = true},
 					{id = "cartmode_unfade", type = "check", val = 1, def = true},
-					{id = "cart_shows_smarts", type = "check", val = 1, def = true},
+					{id = "cart_shows_smarts", type = "check", val = 1, def = false},
 
 					divider,
 
@@ -663,6 +682,25 @@ function on_mcm_load()
 					{id = "header", type= "slide", link= "ui_paw_menuslide_menus", size= {512,50}, borderless= true, spacing= 20},
 					{id = "headertxt", type = "desc", text = "ui_mcm_pawsys_pawmenu_headertxt"},
 
+
+					{id = "wp_settings", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "pn_settings", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
 					{id = "wp_set", type = "list", val = 2, def = 4, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
@@ -672,24 +710,6 @@ function on_mcm_load()
 						}
 					},
 					{id = "wp_mov", type = "list", val = 2, def = 4, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-
-					{id = "waypoint_rename", type = "list", val = 2, def = 2, 
-						content = {
-						   {4,"pawsys_cmenu_all"},
-						   {1,"pawsys_cmenu_norm"},
-						   {2,"pawsys_cmenu_cart"},
-						   {0,"pawsys_cmenu_off"},
-						}
-					},
-
-					{id = "waypoint_redesc", type = "list", val = 2, def = 2, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
 						   {1,"pawsys_cmenu_norm"},
@@ -724,7 +744,7 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
-
+--[[
 					{id = "pn_ren", type = "list", val = 2, def = 4, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
@@ -733,7 +753,7 @@ function on_mcm_load()
 						   {0,"pawsys_cmenu_off"},
 						}
 					},
-
+--]]
 					{id = "show_all_pins", type = "list", val = 2, def = 2, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
@@ -770,7 +790,7 @@ function on_mcm_load()
 						}
 					},
 
-					{id = "hud_vis_on", type = "list", val = 2, def = 4, 
+					{id = "hud_vis_on", type = "list", val = 2, def = 2, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
 						   {1,"pawsys_cmenu_norm"},
@@ -779,7 +799,7 @@ function on_mcm_load()
 						}
 					},
 
-					{id = "hud_vis_off", type = "list", val = 2, def = 4, 
+					{id = "hud_vis_off", type = "list", val = 2, def = 2, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
 						   {1,"pawsys_cmenu_norm"},
@@ -788,6 +808,14 @@ function on_mcm_load()
 						}
 					},
 
+					{id = "convert_to_pin", type = "list", val = 2, def = 2,
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
 
 					{id = "pn_clr", type = "list", val = 2, def = 0,
 						content = {
@@ -957,7 +985,7 @@ function init_mcm_header_ind(anchor, handlers, opts, flags)
 	
 	local xmlroot = "paw_mcm_indicator"
 
-    xml:ParseFile("paw_hud_indicator.xml")
+    xml:ParseFile("paw_ui_elements.xml")
 	box_wnd 	= xml:InitStatic(xmlroot,anchor)
 	box_wnd:SetWndSize(vector2():set(563,40))
 	box_img		= xml:InitStatic(xmlroot..":curr",box_wnd)
@@ -1067,7 +1095,7 @@ function init_mcm_pos_preview(anchor, handlers, opts, flags)
 	pws.cust_x 		= ui_mcm.get("pawsys/pawhud/pos_x") or 491
 	pws.cust_y 		= ui_mcm.get("pawsys/pawhud/pos_y") or 690
 
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	local theme 	= pws.curr_theme
 	box.wnd 		= xml:InitStatic(xmlroot,anchor)
 	box.wnd:SetWndSize(vector2():set(640 * unsquish_ratio,270))
@@ -1125,7 +1153,7 @@ end
 function init_theme_sim(theme)
 	if load_failed then return end
 	dl("init_theme_sim: attempting to initialize %s theme",theme and theme.name)
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	if theme_preview then
 		if theme_preview.wnd then theme_preview.wnd:Show(false) end
 		if theme_preview.empty then theme_preview.empty:Show(false) end
@@ -1211,7 +1239,7 @@ function mcm_init_widget_preview(anchor, handlers, opts, flags)
 	if desc then
 		desc:SetWndSize(vector2():set(300, desc:GetHeight()))
 	end
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	theme_box 	= xml:InitStatic(xmlroot,anchor)
 	theme_box:SetWndPos(vector2():set(330,-70))
 	theme_box:SetWndSize(vector2():set(200,200))
@@ -1229,18 +1257,18 @@ end
 
 
 function mcm_init_header_text_block(anchor, handlers, opts, flags)
-	xml:ParseFile("paw_hud_indicator.xml")
+	xml:ParseFile("paw_ui_elements.xml")
 	local head 			= xml:InitStatic(xmlroot,anchor)
 	local tbg1			= xml:InitStatic(xmlroot,anchor)
 	local tbox1			= xml:InitTextWnd(xmlroot,tbg1)
 
 	if (opts and opts.id) == "pawgen_header" then
-		tbg1:SetWndSize(vector2():set(usr(640),155))
+		tbg1:SetWndSize(vector2():set(usr(640),160))
 		tbg1:SetWndPos(vector2():set(10,0))
 		tbg1:InitTexture("ui_paw_mcm_messagebox_transbg")
 
 		local text = psk(ts("ui_mcm_pawsys_pawgen_headertxt"),text_colors)
-		tbox1:SetWndSize(vector2():set(usr(620),145))
+		tbox1:SetWndSize(vector2():set(usr(620),150))
 		tbox1:SetText(text)
 		tbox1:SetWndPos(vector2():set(10,12))
 
@@ -1299,7 +1327,7 @@ end
 function mcm_init_load_error_block(anchor, handlers, opts, flags)
 	local id = opts and opts.id
 	if id == "fix_load_order" then
-		xml:ParseFile("paw_hud_indicator.xml")
+		xml:ParseFile("paw_ui_elements.xml")
 		local pic = handlers and handlers.pic
 		if not pic then return end
 		pic:InitTexture("ui_paw_emptytex")
