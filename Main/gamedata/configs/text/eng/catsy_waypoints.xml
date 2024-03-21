@@ -1501,11 +1501,11 @@ This message won't bother you again. Good hunting, %s.</text>
 <!-- Added in 2.1 -->
 
 	<string id="ui_mcm_pawsys_pawmenu_show_label">
-		<text>Show map label</text>
+		<text>Show Map Label</text>
 	</string>
 
 	<string id="ui_mcm_pawsys_pawmenu_hide_label">
-		<text>Hide map label</text>
+		<text>Hide Map Label</text>
 	</string>
 
 	<string id="ui_mcm_pawsys_pawmenu_pn_settings">
@@ -1670,6 +1670,20 @@ This message won't bother you again. Good hunting, %s.</text>
 
 	<string id="ui_mcm_pawsys_pawgen_wp_far_hide_dist_desc">
 		<text>If the player is more than this far beyond where the fade-out begins, the waypoint will disappear completely.</text>
+	</string>
+
+
+<!-- Added in 2.1.2 -->
+
+	<string id="ui_paw_mapspot_tooltip_mode">
+		<text>Tooltip Mode</text>
+	</string>
+
+	<string id="ui_mcm_lst_pawsys_msttmode_text">
+		<text>Use Pin Text</text>
+	</string>
+	<string id="ui_mcm_lst_pawsys_msttmode_obj">
+		<text>Use Object Name</text>
 	</string>
 
 </string_table>

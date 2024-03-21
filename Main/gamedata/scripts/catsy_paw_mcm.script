@@ -801,7 +801,25 @@ function on_mcm_load()
 						}
 					},
 
-					{id = "hud_vis_off", type = "list", val = 2, def = 2, 
+					{id = "hud_vis_off", type = "list", val = 2, def = 4, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "show_label", type = "list", val = 2, def = 2, 
+						content = {
+						   {4,"pawsys_cmenu_all"},
+						   {1,"pawsys_cmenu_norm"},
+						   {2,"pawsys_cmenu_cart"},
+						   {0,"pawsys_cmenu_off"},
+						}
+					},
+
+					{id = "hide_label", type = "list", val = 2, def = 4, 
 						content = {
 						   {4,"pawsys_cmenu_all"},
 						   {1,"pawsys_cmenu_norm"},

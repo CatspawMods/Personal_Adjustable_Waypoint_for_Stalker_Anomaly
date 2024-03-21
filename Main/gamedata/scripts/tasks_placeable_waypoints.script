@@ -8,8 +8,8 @@
     https://www.youtube.com/channel/UCtG8fiWPUZEzWlkUn60btAw
 
     Source: https://www.moddb.com/mods/stalker-anomaly/addons/personal-adjustable-waypoint-for-anomaly-151-152-and-gamma
-    Version: 2.1.1
-    Updated: 20240307
+    Version: 2.1.2
+    Updated: 20240320
 
     You may alter any part of this mod and do whatever you like with it, 
     just give credit where due.
@@ -40,8 +40,8 @@
 --  SHORTCUTS, FLAGS, AND SYSTEM STUFF
     (Most of which you probably shouldn't muck with)
 -- ===================================================================--]]
-script_version          = "2.1.1"
-release_date            = 20240307
+script_version          = "2.1.2"
+release_date            = 20240320
 local scriptname        = "tasks_placeable_waypoints"
 local logprefix         = "<PAW> "
 local language          = "eng"
@@ -152,6 +152,7 @@ cart_shows_smarts           = true
 cartmode_unfade             = true
 tip_on_icoset_change        = false
 allow_non_wp_targets        = false
+local pin_tooltip_mode      = 2
 -- ======================================================================
 enable_wp_proxcheck         = true
 show_pins                   = true
@@ -913,6 +914,7 @@ end
 function add_mapspot(text,id,icon)
     if not id then return end
     icon = icon or default_mapspot
+    text = text or get_tooltip_for_pin(id) or ""
     vl("Adding mapspot %s for id %s with icon %s",text,id,icon)
     level.map_add_object_spot(id,icon,text)
     if not pins[id] then return end
@@ -952,7 +954,7 @@ end
 
 function change_mapspot(text,id,icon,old_icon)
     if not id then return end
-    text        = text or (pins and pins[id] and pins[id].text or pins[id].name)
+    text        = text or get_tooltip_for_pin(id)
     icon        = icon or (pins and pins[id] and pins[id].icon) or default_mapspot
     old_icon    = old_icon or icon
     vl("Trying to change mapspot with id %s from icon %s to icon %s with text %s",id,old_icon,icon,text)
@@ -960,6 +962,20 @@ function change_mapspot(text,id,icon,old_icon)
     return add_mapspot(text,id,icon)
 end
 
+function get_tooltip_for_pin(id)
+    local pin = pins and pins[id]
+    local text = ""
+    if pin then
+        local mode = pin.tooltip or pin_tooltip_mode
+        if mode > 1 then
+            text = pin.text or pin.name or ts("st_paw_pin_default_name")
+        elseif mode > 0 then
+            text = pin.name or ts("st_paw_pin_default_name")
+        end
+        vl("get_tooltip_for_pin(%s): tooltip mode %s\n* Returning hint: \"%s\"",id,mode,text)
+        return text
+    end
+end
 
 function has_mapspot(id,icon)
     return level.map_has_object_spot(id,icon) == 1
@@ -1006,37 +1022,6 @@ function remove_stash_mapspots(id)
     end
 end
 
---[[
-function func_add_mapspot(text,args)
-    local id        = args.id
-    local icon      = args.icon or map_pin_icon
-    if text == "" or text == nil then
-        pins[id] = nil
-        vl("Empty text input returned for pin %s, removing",id)
-    return end
-    vl("func_add_mapspot called for id %s | %s | %s",id,icon,text)
-    text = psk(text,{["obj_id"] = id})
-    pins[id].text = text
-    add_mapspot(text,id,icon)
-end
-
-
-function func_ren_mapspot(text,args)
-    local id        = args.id
-    local icon      = map_pin_icon
-    local old_icon  = args.icon
-    if text == "" or text == nil then
-        vl("Empty text input returned for pin %s, making no change",id)
-        text = pins[id].text
-        icon = old_icon
-    end
-    text = psk(text,{["obj_id"] = id})
-    pins[id].text   = text
-    vl("func_ren_mapspot called for id %s | %s | %s",id,icon,text)
-    remove_mapspot(id,old_icon)
-    add_mapspot(text,id,old_icon)
-end
---]]
 
 function func_ren_waypoint(text,args)
     if text == "" then text = nil end
@@ -1130,7 +1115,7 @@ function init_new_pin(id,name,text,icon)
         pins[id] = {
             id      = id,
             name    = name or ts("st_paw_pin_default_name"),
-            text    = nil,
+            text    = text,
             icon    = icon,
             hud     = false
         }
@@ -1438,9 +1423,12 @@ function do_paw_action(act,se_obj,acode,args)
     elseif act == "pn_add" then
         dl("Received call to add new pin to map for %s (%s)",name,id)
         local icon = icons[ac.icon] or map_pin_icon
-        local defname = ts("st_paw_pin_default_name")
-        init_new_pin(id,name,defname,icon)
-        add_mapspot(defname,id,icon)
+        local text = ts("st_paw_pin_default_name")
+        if not script_zones[id] then
+            text = name
+        end
+        init_new_pin(id,name,text,icon)
+        add_mapspot(text,id,icon)
         open_pin_settings(id)
     elseif act == "pn_settings" then
         if not (id and pins[id]) then return end
@@ -1759,7 +1747,7 @@ function drop_quick_pin(id,force_text,force_pin,no_tip,no_fast_travel)
     local mapspot_text  = force_text or ts("st_paw_pin_quick_name")
     local tip_text      = ts("st_paw_pin_dropped")
     init_new_pin(id,name,mapspot_text,icon)
-    pins[id].quick = not no_fast_travel
+    pins[id].quick      = not no_fast_travel
     dl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
     play_ui_sound(snd_place_pin)
     add_mapspot(mapspot_text,id,icon)
@@ -1898,7 +1886,7 @@ function execute_context_menu_option(property_ui,id,level_name,prop)
     vl("passed id : %s",id)
     id = last_clicked_id
     last_clicked_id = nil
-    vl("execute_context_menu_option called for id %s\n| prop: %s\n| action %s)",id,prop,action[prop])
+    vl("execute_context_menu_option called for id %s\n| prop: %s\n| action %s",id,prop,action[prop])
     if not (paw_enabled and id and valid_pda()) then return end
     if not (id and (id > 0)) then return end
     local se_obj = alife_object(id)
@@ -2220,7 +2208,7 @@ function show_all_pins(onoff)
         vl("Showing all recorded pins")
         for id,pin in pairs(pins) do
             local icon = pin.icon
-            local mapspot_text = pin.text
+            local mapspot_text = get_tooltip_for_pin(id)
             vl("calling add_mapspot with %s | %s | %s",mapspot_text,id,icon)
             add_mapspot(mapspot_text,id,icon)
 
@@ -2384,7 +2372,7 @@ function mcm_reload_pin_settings()
     current_active_set  = pig
 
     dl("MCM: icon %s | icon set: %s",icon,pig)
-
+--[[
     use_custom_backpack_icon = load_mcm("pawpins/use_custom_backpack_icon",use_custom_backpack_icon)
     if use_custom_backpack_icon then
         local psicon = stash_icons["player"]
@@ -2394,7 +2382,7 @@ function mcm_reload_pin_settings()
         end
         dl("MCM: Overriding player stash icon with custom value: %s",stash_icons["player"])
     end
-
+--]]
     local cp            = ui_mcm.get("pawsys/pawpins/use_custom_pin_icon") or false
     if cp then
         custom_pin_icon = true
@@ -2686,35 +2674,22 @@ function UIWPSettings:InitControls()
     self:SetWndRect(Frect():set(0,0,1024,768))
     self:SetAutoDelete(true)
 
-    local tex = {
-        file    = "paw_input_window.xml",
-        tbar    = "titlebar",
-        paw     = "paw",
-        icon    = "icon",
-        text    = "text",
-        root    = "wp_dialog",
-        name    = "input_name",
-        desc    = "input_desc",
-        ok      = "btn_ok",
-        cancel  = "btn_cancel",
-    }
-
     local xml       = CScriptXmlInit()
-    local root      = tex.root
+    local file      = "paw_input_window.xml"
+    local root      = "wp_dialog"
     local rootand   = root..":"
-    local tbar      = rootand..tex.tbar
-    local paw       = tbar..":"..tex.paw
-    local text      = tbar..":"..tex.text
-    local icon      = tbar..":"..tex.icon
+    local tbar      = rootand.."titlebar"
+    local paw       = tbar..":paw"
+    local text      = tbar..":text"
+    local icon      = tbar..":icon"
     local reset     = rootand.."btn_wpreset"
-    local cancel    = rootand..tex.cancel
-    local input_n   = rootand..tex.name
-    local input_d   = rootand..tex.desc
-    local btn_ok    = rootand..tex.ok
+    local cancel    = rootand.."btn_cancel"
+    local input_n   = rootand.."input_name"
+    local input_d   = rootand.."input_desc"
+    local btn_ok    = rootand.."btn_ok"
     local caption   = rootand.."caption"
 
-
-    xml:ParseFile   (tex.file)
+    xml:ParseFile   (file)
 
     self.dialog     = xml:InitStatic(root, self)
     local bg_top    = xml:InitStatic(rootand.."bg_top",self.dialog)
@@ -2849,7 +2824,7 @@ function UIWPSettings:Update()
             local st_hint = hint_path..ctrl.."_desc"
             local hint = ts(st_hint)
             self.hint = hint
-            vl("Showing hint for %s: %s\n\"%s\"",ctrl,st_hint,hint)
+            --vl("Showing hint for %s: %s\n\"%s\"",ctrl,st_hint,hint)
         end
     end
     self:ShowHint(self.hint)
@@ -2953,10 +2928,12 @@ function UIPinSettingsWnd:__init(id,args) super()
     end
     self.init_time      = tostring(get_time_elapsed())
     self.next_update    = time_global()
+    self.icon_refresh   = true
     --self:BackupTempSettings()
     self:Reset(id,args)
     self:InitControls()
     self:HijackWidget()
+    self:RefreshIcon()
     self.hint_wnd   = utils_ui.UIHint(self)
     self:AllowMovement(true)
 end
@@ -3000,31 +2977,9 @@ end
 function UIPinSettingsWnd:InitControls()
     self:SetWndRect(Frect():set(0,0,1024,768))
     self:SetAutoDelete(true)
-    self.empty = "ui_paw_emptytex"
-    self.cap = {}
-    local tex = {
-        file    = "paw_input_window.xml",
-        tbar    = "titlebar",
-        paw     = "paw",
-        icon    = "icon",
-        text    = "text",
-        caption = "caption",
-        root    = "pin_dialog",
-        dialog  = "pin_settings",
-        chrome  = "chrome",
-        bg      = "bg_settings",
-        input   = "input_name",
-        input_a = "input_a",
-        input_r = "input_r",
-        input_g = "input_g",
-        input_b = "input_b",
-        check   = "check",
-        ok      = "btn_ok",
-        cancel  = "btn_cancel",
-        delete  = "btn_delete",
-        mainwnd = "main_settings_area",
-        opt_icon= "opt_icon"
-    }
+    self.empty  = "ui_paw_emptytex"
+    self.cap    = {}
+    local pin   = self.pin or self.pin_id and pins[self.pin_id]
 
     self.control_hints = {
         ["check_hud"]   = true,
@@ -3050,43 +3005,45 @@ function UIPinSettingsWnd:InitControls()
         b = ts("st_paw_argb_b")
     }
 
-
     local xml       = CScriptXmlInit()
-    local texroot   = tex.root..":"
-    local tbar      = texroot..tex.tbar
-    local icon      = texroot..tex.icon
-    local paw       = tbar..":"..tex.paw
+    local xmlfile   = "paw_input_window.xml"
+    local xmlroot   = "pin_dialog"
+    local root      = xmlroot..":"
+    local tbar      = root.."titlebar"
+    local icon      = root.."icon"
+    local paw       = tbar..":paw"
     local icopanel  = icon.."_panel"
     local icoframe  = icon.."_frame"
     local icowater  = icon.."_watermark"
-    local caption   = texroot..tex.caption
-    local bg        = texroot..tex.bg
-    local dialog    = texroot..tex.dialog
-    local chrome    = texroot..tex.chrome
-    local input     = texroot..tex.input
-    local input_a   = texroot..tex.input_a
-    local input_r   = texroot..tex.input_r
-    local input_g   = texroot..tex.input_g
-    local input_b   = texroot..tex.input_b
-    local btn_ok    = texroot..tex.ok
-    local cancel    = texroot..tex.cancel
-    local delete    = texroot..tex.delete
-    local check     = texroot..tex.check
-    local opt_icon  = texroot..tex.opt_icon
-    local opt_cap   = opt_icon..":"..tex.caption
-    local sidebar   = texroot.."sidebar"
-    local sb_btn    = texroot.."btn_sidebar"
-    local btn_sound = texroot.."btn_sound"
+    local caption   = root.."caption"
+    local bg        = root.."bg_settings"
+    local dialog    = root.."pin_settings"
+    local chrome    = root.."chrome"
+    local input     = root.."input_name"
+    local input_a   = root.."input_a"
+    local input_r   = root.."input_r"
+    local input_g   = root.."input_g"
+    local input_b   = root.."input_b"
+    local btn_ok    = root.."btn_ok"
+    local cancel    = root.."btn_cancel"
+    local delete    = root.."btn_delete"
+    local check     = root.."check"
+    local listbox   = root.."listbox"
+    local opt_icon  = root.."opt_icon"
+    local opt_cap   = opt_icon..":caption"
+    local sidebar   = root.."sidebar"
+    local sb_btn    = root.."btn_sidebar"
+    local btn_sound = root.."btn_sound"
     local head_txt  = self.title
     local lock_txt  = ts("ui_mcm_pawsys_pawmenu_lock_pin")
     local label_txt = ts("ui_mcm_pawsys_pawmenu_show_label")
     local hud_txt   = ts("ui_mcm_pawsys_pawmenu_hud_vis_on")
     local argb_txt  = ts("ui_paw_use_custom_color")
-
+    local mstt_txt  = ts("ui_paw_mapspot_tooltip_mode")
     local set_curr  = ts("ui_mcm_lst_pawsys_pg_"..pawdata.curr_set_name)
     local ico_curr  = ts("ui_mcm_lst_"..pawdata.curr_ico_name)
 
-    xml:ParseFile   (tex.file)
+    xml:ParseFile   (xmlfile)
 
     --================================================================--
     --Title bar
@@ -3142,7 +3099,7 @@ function UIPinSettingsWnd:InitControls()
         self.icon:SetWndPos(vector2():set(11.75,16))
     end
     self:RefreshIcon(self.icon_tex)
-    self.argb_controls      = xml:InitStatic(texroot.."argb_chrome",self.dialog)
+    self.argb_controls      = xml:InitStatic(root.."argb_chrome",self.dialog)
     --================================================================--
 
     local function setup_argb_control(color,pos_x,pos_y)
@@ -3150,7 +3107,7 @@ function UIPinSettingsWnd:InitControls()
         vl("Initializing ARGB control %s for color %s at %s,%s",inputx,color,pos_x,pos_y)
         local xsh = color.."_sh"
         local xtx = color.."_tx"
-        local xmlnode   = tex.root..":"..tex[inputx]
+        local xmlnode   = root..":"..inputx
         self.argb_box = {}
         self.argb_box[color]    = xml:InitStatic(xmlnode,self.argb_controls)
         self.argb_box[color]:SetWndSize(vector2():set(65,31))
@@ -3181,11 +3138,11 @@ function UIPinSettingsWnd:InitControls()
     local function setup_checkbox(setting,pos_x,pos_y,captext)
         local checkopt = "check_"..setting
         vl("Initializing checkbox %s (%s) at %s,%s | %s",checkopt,setting,pos_x,pos_y,captext)
-        self[checkopt]  = xml:InitCheck(check,self.dialog)
+        self[checkopt] = xml:InitCheck(check,self.dialog)
         self:Register(self[checkopt], checkopt..self.init_time)
         self[checkopt]:SetWndPos(vector2():set(pos_x,pos_y))
         if captext then
-            self.cap[checkopt]  = xml:InitTextWnd(caption,self[checkopt])
+            self.cap[checkopt] = xml:InitTextWnd(caption,self[checkopt])
             self.cap[checkopt]:SetWndPos(vector2():set(30,8))
             self.cap[checkopt]:SetText(captext)
             self.cap[checkopt]:SetVTextAlignment(1)
@@ -3201,6 +3158,45 @@ function UIPinSettingsWnd:InitControls()
         self[buttonx]:SetWndPos(vector2():set(pos_x,pos_y))
     end
 
+--[[
+    -- not ready yet
+
+    function setup_listbox(setting,pos_x,pos_y,captext,opts)
+        local num_opts = #opts or 0
+        if num_opts < 1 then
+            vl("Unable to initialize list %s, no opts passed",setting)
+            return
+        end
+
+        local listopt = "lst_"..setting
+        vl("Initializing list %s at %s,%s with %s options",listopt,pos_x,pos_y,num_opts)
+
+        self[listopt] = xml:InitComboBox(listbox,self.dialog)
+        self[listopt]:SetWndPos(vector2():set(pos_x,pos_y))
+        if captext then
+            self.cap[listopt] = xml:InitTextWnd(caption,self[listopt])
+            self.cap[listopt]:SetWndPos(vector2():set(0,-10))
+            self.cap[listopt]:SetText(captext)
+            self.cap[listopt]:SetVTextAlignment(1)
+        end        
+
+        local def = pin.tooltip or pin_tooltip_mode
+        local opt,tsopt
+        for i=1,num_opts do
+            tsopt   = opts[i][2]
+            tsopt   = tsopt and "ui_mcm_lst_pawsys_"..tsopt
+            opt     = ts(tsopt)
+            vl("+ Adding list option %s: %s (%s)\n+- %s",i,opts[i][2],opts[i][1],opt)
+            self[listopt]:AddItem(opt,i)
+            if opts[i][1] == def then
+                vl("* +- %s is default value",def)
+                self[listopt]:enable_id(def)
+                self[listopt]:SetText(opt)
+            end
+            self:Register(self[listopt],listopt)
+        end
+    end
+--]]
     --================================================================--
     -- Setup and place all elements
     --========================= X ===== Y ============================--
@@ -3210,25 +3206,32 @@ function UIPinSettingsWnd:InitControls()
     setup_argb_control( "g",    125,    13 )
     setup_argb_control( "b",    180,    13 )
 
-    setup_checkbox( "hud",      5,      80,     hud_txt )
-    setup_checkbox( "text",     5,      105,    label_txt )
-    setup_checkbox( "lock",     5,      130,    lock_txt )
-    setup_checkbox( "argb",     5,      155,    argb_txt )
+--[[
+    -- not ready yet
+    setup_listbox("tooltip",    5,      70,     mstt_txt,
+        {
+            {2, "msttmode_text"},
+            {1, "msttmode_obj"},
+            {0, "cmenu_off"},
+        }
+    )
+--]]
+
+    setup_checkbox( "hud",      5,      85,     hud_txt )
+    setup_checkbox( "text",     5,      110,    label_txt )
+    setup_checkbox( "lock",     5,      135,    lock_txt )
+    setup_checkbox( "argb",     5,      160,    argb_txt )
     
     self:RefreshChecks()
 
-    setup_button(   "sidebar",  230,    -10,      sb_btn )
+    setup_button(   "sidebar",  230,    -10,    sb_btn )
     setup_button(   "delete",   5.5,    245.5,  delete )
     setup_button(   "ok",       95,     245.5,  btn_ok )
     setup_button(   "cancel",   154,    245.5,  cancel )
-    setup_button(   "sound",    235.5,  267.5,    btn_sound)
-
-    --self.check_sound:InitTexture("ui_paw_checkbox_sound")
-    --self.btn_sound:SetWndSize(vector2():set(12,16))
+    setup_button(   "sound",    235.5,  267.5,  btn_sound)
 
     --================================================================--
 
-    --widget_custom_pos     = { x= 237,  y= 48 }
     widget_custom_pos     = { x= 141,  y= 46 }
 
     self.icon_display_panel:SetWndPos(vector2():set(150,77))
@@ -3260,11 +3263,13 @@ end
 
 function UIPinSettingsWnd:ApplyIconToPin(icon)
     icon = icon or pawdata.curr_ico_name
-    local text = pins[self.pin_id].text
+    pins[self.pin_id].text = pins[self.pin_id].text or pins[self.pin_id].name
+    local text = get_tooltip_for_pin(self.pin_id)
     local old_icon = pins[self.pin_id].icon
     pins[self.pin_id].icon = icon
     change_mapspot(text,self.pin_id,icon,old_icon)
     self.new_icon = nil
+    self.icon_refresh = true
     self:RefreshIcon()
 end
 
@@ -3278,18 +3283,21 @@ function UIPinSettingsWnd:SetARGBVal(color,val)
 end
 
 function UIPinSettingsWnd:RefreshIcon(texture)
+    if not (texture or self.icon_refresh) then return end
     if not self.icon then return end
+    vl("UIPinSettingsWnd:RefreshIcon(%s) %s",texture,self.icon_refresh and "| self.icon_refresh flagged" or "",self.icon_refresh)
+
     self.icon_curr = pins[self.pin_id].icon or self.icon_curr
     texture = texture or texture_for_icon(self.icon_curr)
     if texture then
         self.icon:InitTexture(texture)
+        self.icon:SetTextureColor(GetARGB(self.colors.a,self.colors.r,self.colors.g,self.colors.b))
+        self.icon_refresh = false
+        return true
     else
         dl("No texture found by UIPinSettingsWnd:RefreshIcon!")
         return
     end
-    self.icon:InitTexture(texture)
-    self.icon:SetTextureColor(GetARGB(self.colors.a,self.colors.r,self.colors.g,self.colors.b))
-    return true
 end
 
 function UIPinSettingsWnd:SetSoundIcon()
@@ -3358,19 +3366,19 @@ end
 function UIPinSettingsWnd:RefreshChecks()
     if self.check_text then
         self.check_text:SetCheck(self.show_label)
-        vl("check_text after refresh: %s",self.check_text:GetCheck())
+        --vl("check_text after refresh: %s",self.check_text:GetCheck())
     end
     if self.check_hud then
         self.check_hud:SetCheck(self.show_hud)
-        vl("check_hud after refresh: %s",self.check_hud:GetCheck())
+        --vl("check_hud after refresh: %s",self.check_hud:GetCheck())
     end
     if self.check_lock then
         self.check_lock:SetCheck(self.locked)
-        vl("check_lock after refresh: %s",self.check_lock:GetCheck())
+        --vl("check_lock after refresh: %s",self.check_lock:GetCheck())
     end
     if self.check_argb then
         self.check_argb:SetCheck(self.cust_argb)
-        vl("check_argb after refresh: %s",self.check_argb:GetCheck())
+        --vl("check_argb after refresh: %s",self.check_argb:GetCheck())
     end
     self:SetSoundIcon()
 end
@@ -3381,7 +3389,6 @@ function UIPinSettingsWnd:Reset(id,args)
     if args and args.wipe then
         self.icon_changed       = false
         self.set_changed        = false
-        self.new_icon_on_accept = false
 
         self.cust_argb  = nil
         self.title      = nil
@@ -3394,6 +3401,7 @@ function UIPinSettingsWnd:Reset(id,args)
         self.init_time  = nil
         self.icon_tex   = nil
         self.colors     = nil
+        self.tooltip    = nil
         self.icon:InitTexture(self.empty)
         return
     end
@@ -3405,7 +3413,7 @@ function UIPinSettingsWnd:Reset(id,args)
     self.locked     = self.pin.locked
     self.show_hud   = self.pin.hud
     self.show_label = self.pin.show_label
-
+    self.tooltip    = self.pin.tooltip
     self.pin_text   = self.pin.text or self.pin.name
     self.init_time  = tostring(get_time_elapsed())
     self.icon_tex   = texture_for_icon(self.pin.icon)
@@ -3444,7 +3452,7 @@ function UIPinSettingsWnd:Update()
             local st_hint = hint_path..ctrl.."_desc"
             local hint = ts(st_hint)
             self.hint = hint
-            vl("Showing hint for %s: %s\n\"%s\"",ctrl,st_hint,hint)
+            --vl("Showing hint for %s: %s\n\"%s\"",ctrl,st_hint,hint)
         end
     end
     self:ShowHint(self.hint)
@@ -3498,16 +3506,26 @@ end
 
 
 function UIPinSettingsWnd:OnAccept()
-    local id = self.pin_id
-    local new_text = self.input:GetText()
-    local old_text = pins[id].text
-    pins[id].text  = self.input:GetText()
+    local id            = self.pin_id
+    dl("UIPinSettingsWnd:OnAccept - applying changes to Pin %s",id)
 
-    if self.new_icon then
-        local old_icon = pins[id].icon
-        pins[id].icon = self.new_icon
-        dl("UIPinSettingsWnd:OnAccept: Pin %s has new icon %s, calling change_mapspot",self.pin_id,self.new_icon)
-        change_mapspot(new_text,id,self.new_icon,old_icon)
+    --local old_tooltip   = get_tooltip_for_pin(id)
+    --pins[id].tooltip    = self["lst_tooltip"] and self["lst_tooltip"]:CurrentID() or pin_tooltip_mode
+    --printf("Tooltip mode: %s",pins[id].tooltip)
+    local new_text      = self.input:GetText()
+    local old_text      = pins[id].text or pins[id].name
+    pins[id].text       = new_text
+    --local hint_is_new   = pins[id].tooltip ~= old_tooltip
+    local has_new_text  = old_text ~= new_text
+
+    if has_new_text then --or self.new_icon then --or hint_is_new then
+        --local old_icon      = pins[id].icon
+        --pins[id].icon       = self.new_icon or pins[id].icon
+        local mapspot_text  = get_tooltip_for_pin(id)
+        --dl("UIPinSettingsWnd:OnAccept: Pin %s has new icon or hint, calling change_mapspot\n* Icon: %s\n* Hint: %s",self.pin_id,pins[id].icon,mapspot_text)
+        --change_mapspot(mapspot_text,id,pins[id].icon,old_icon)
+        dl("UIPinSettingsWnd:OnAccept: Pin %s has new icon or hint, calling level.map_change_spot_hint",self.pin_id,pins[id].icon,mapspot_text)
+        level.map_change_spot_hint(id,pins[id].icon,mapspot_text)
     end
 
     pins[id].custom_colors = self.cust_argb
@@ -3529,7 +3547,7 @@ function UIPinSettingsWnd:OnAccept()
     end
 
     self.show_label = self.check_text:GetCheck()
-    if map_labels[id] and (old_text ~= new_text) then
+    if map_labels[id] and new_name then
         show_pin_label(id,false,true)
     end
     show_pin_label(id,self.show_label)
@@ -5188,7 +5206,7 @@ end
 function unregister_all_callbacks()
     UnregisterScriptCallback("actor_on_update",actor_on_update)
     --UnregisterScriptCallback("actor_on_stash_create",actor_on_stash_create)
-    UnregisterScriptCallback("actor_on_stash_remove",actor_on_stash_remove)    
+    --UnregisterScriptCallback("actor_on_stash_remove",actor_on_stash_remove)    
     UnregisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)
     UnregisterScriptCallback("actor_on_first_update",actor_on_first_update)
     UnregisterScriptCallback("load_state",load_state)
@@ -5212,7 +5230,7 @@ end
 function register_all_callbacks()
     RegisterScriptCallback("actor_on_update",actor_on_update)
     --RegisterScriptCallback("actor_on_stash_create",actor_on_stash_create)
-    RegisterScriptCallback("actor_on_stash_remove",actor_on_stash_remove)    
+    --RegisterScriptCallback("actor_on_stash_remove",actor_on_stash_remove)    
     RegisterScriptCallback("actor_on_net_destroy",actor_on_net_destroy)    
     RegisterScriptCallback("actor_on_first_update",actor_on_first_update)
     RegisterScriptCallback("load_state",load_state)

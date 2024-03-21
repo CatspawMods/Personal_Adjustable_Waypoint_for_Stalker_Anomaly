@@ -1671,5 +1671,17 @@
 	<string id="ui_mcm_pawsys_pawgen_wp_far_hide_dist_desc">
 		<text>Если игрок окажется дальше того места, где начинается затухание, точка маршрута полностью исчезнет.</text>
 	</string>
+
+<!-- Added in 2.1.2 -->
+
+	<string id="ui_paw_mapspot_tooltip_mode">
+		<text>Режим всплывающих подсказок</text>
+	</string>
+	<string id="ui_mcm_lst_pawsys_msttmode_text">
+		<text>Используйте текст метки</text>
+	</string>
+	<string id="ui_mcm_lst_pawsys_msttmode_obj">
+		<text>Используйте название объекта</text>
+	</string>
 	
 </string_table>
